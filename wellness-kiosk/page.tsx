@@ -1,10 +1,6 @@
 // @ts-nocheck
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-...
-
-'use client';
-import { useState, useEffect, useRef, useCallback } from 'react';
 
 // ============================================================
 // QR Code Generator
