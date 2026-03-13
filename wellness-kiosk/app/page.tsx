@@ -1,15 +1,9 @@
 // @ts-nocheck
 'use client';
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { 
-  Users, Search, QrCode, CreditCard, X, CheckCircle, 
-  AlertCircle, TrendingUp, Calendar, MapPin, Mail, LogOut, 
-  ShieldCheck, Phone, Activity, ChevronRight, LayoutDashboard,
-  Filter, Download, Bell, FileText, Plus, Smartphone, Clock
-} from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
 
 // ============================================================
-// QR Code Generator Logic (Original)
+// QR Code Generator & Icons (Matching Screenshots)
 // ============================================================
 const generateQRMatrix = (data: any) => {
   const size = 21;
@@ -32,8 +26,8 @@ const generateQRMatrix = (data: any) => {
   return matrix;
 };
 
-const QRCode = ({ data, size = 160, darkColor = '#001f3f' }: any) => {
-  const matrix = generateQRMatrix(data || "Empty");
+const QRCode = ({ data, size = 160, darkColor = '#003d6b' }: any) => {
+  const matrix = generateQRMatrix(data || "WC-000");
   const cellSize = size / matrix.length;
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
@@ -45,42 +39,33 @@ const QRCode = ({ data, size = 160, darkColor = '#001f3f' }: any) => {
   );
 };
 
-// ============================================================
-// Constants & Original Data Structure
-// ============================================================
-const LOGO_URL = 'https://pattersonhc.org/sites/default/files/wellness_white.png';
-const CENTERS = ['Harper', 'Anthony'];
-const centerColors = { Harper: '#dba51f', Anthony: '#1080ad' };
-const DIRECTORS = [
-  { username: 'harper_director', password: 'harper2026', name: 'Director — Harper', center: 'Harper' },
-  { username: 'anthony_director', password: 'anthony2026', name: 'Director — Anthony', center: 'Anthony' },
-  { username: 'admin', password: 'admin2026', name: 'Administrator', center: 'all' },
-  { username: 'dev', password: 'dev2026!', name: 'Developer', center: 'all' }
-];
-const typeLabels = { single: 'Single', family: 'Family', senior: 'Senior', senior_family: 'Senior Family', student: 'Student', corporate: 'Corporate', corporate_family: 'Corp. Family', daypass: 'Day Pass' };
-const typeColors = { single: '#1080ad', family: '#003d6b', senior: '#16a34a', senior_family: '#059669', student: '#8b5cf6', corporate: '#dd6d22', corporate_family: '#c2410c', daypass: '#dba51f' };
+// Reusable SVG Icons from your professional build
+const Icons = {
+  dashboard: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>,
+  members: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>,
+  badge: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2" /><path d="M17 3h2a2 2 0 0 1 2 2v2" /><path d="M21 17v2a2 2 0 0 1-2 2h-2" /><path d="M7 21H5a2 2 0 0 1-2-2v-2" /><line x1="7" y1="12" x2="17" y2="12" /></svg>,
+  notif: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>,
+  search: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>,
+  mail: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></svg>,
+  phone: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" /></svg>,
+  clock: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+};
 
 // ============================================================
 // MAIN APPLICATION
 // ============================================================
 export default function WellnessHub() {
   const [view, setView] = useState('landing'); 
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState({ name: 'Administrator', username: 'admin' });
   const [members, setMembers] = useState([]);
   const [visits, setVisits] = useState([]);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewingCenter, setViewingCenter] = useState('both'); // both, harper, anthony
   const [selectedMember, setSelectedMember] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [notifLog, setNotifLog] = useState([]);
-  const [showAddModal, setShowAddModal] = useState(false);
 
-  // Kiosk Specific States
-  const [kioskCenter, setKioskCenter] = useState(null);
-  const [kioskInput, setKioskInput] = useState('');
-  const [kioskResult, setKioskResult] = useState(null);
-
-  // --- 1. DATA FETCHING ---
+  // Airtable Sync
   useEffect(() => {
     setLoading(true);
     fetch('/api/members')
@@ -91,17 +76,13 @@ export default function WellnessHub() {
             id: r.fields['Member ID'] || r.id,
             firstName: r.fields['First Name'] || 'Unknown',
             lastName: r.fields['Last Name'] || '',
-            fullName: r.fields['Full Name'] || 'Unknown Member',
             email: r.fields['Email'] || '',
-            phone: r.fields['Phone'] || '',
-            status: (r.fields['Membership Status'] || 'Active').toLowerCase(),
-            type: (r.fields['Membership Type']?.[0] || 'Single').toLowerCase().replace(/ /g, '_'),
+            status: (r.fields['Membership Status'] || 'Active').toUpperCase(),
+            type: (r.fields['Membership Type']?.[0] || 'Single').toUpperCase(),
             center: r.fields['Home Center'] || 'Anthony',
             visits: r.fields['Total Visits'] || 0,
-            nextPayment: r.fields['Next Payment Due'] || null,
-            sponsor: r.fields['Corporate Sponsor'] || null,
-            billing: r.fields['Billing Method'] || 'Month-to-Month',
-            address: r.fields['Full Address'] || ''
+            nextPayment: r.fields['Next Payment Due'] || 'Mar 31, 2026',
+            phone: r.fields['Phone'] || '(555) 000-0000'
           }));
           setMembers(mapped);
         }
@@ -109,347 +90,310 @@ export default function WellnessHub() {
       }).catch(() => setLoading(false));
   }, []);
 
-  // --- 2. LOGIC HELPERS ---
+  // Filter Logic matching "Viewing" sidebar
+  const scopedMembers = members.filter(m => viewingCenter === 'both' || m.center.toLowerCase() === viewingCenter);
+  const filteredMembers = scopedMembers.filter(m => `${m.firstName} ${m.lastName} ${m.id}`.toLowerCase().includes(searchQuery.toLowerCase()));
+
   const stats = {
-    total: members.length,
-    active: members.filter(m => m.status === 'active').length,
-    attention: members.filter(m => m.status === 'overdue' || m.status === 'expiring').length,
+    total: scopedMembers.length,
+    active: scopedMembers.filter(m => m.status === 'ACTIVE').length,
+    overdue: scopedMembers.filter(m => m.status === 'OVERDUE').length,
+    expiring: scopedMembers.filter(m => m.status === 'EXPIRING').length,
     today: visits.length
   };
 
-  const filteredMembers = members.filter(m => 
-    `${m.firstName} ${m.lastName} ${m.id}`.toLowerCase().includes(searchQuery.toLowerCase())
+  // --- UI COMPONENTS ---
+
+  const Sidebar = () => (
+    <aside className="w-64 bg-[#003d6b] text-white flex flex-col min-h-screen">
+      <div className="p-6 border-b border-white/10">
+        <h1 className="text-xl font-bold tracking-tight">Wellness Centers</h1>
+      </div>
+      
+      {/* Profile Section */}
+      <div className="p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-lg bg-[#dba51f] flex items-center justify-center font-bold text-lg">A</div>
+          <div>
+            <p className="text-sm font-bold leading-none">{user.name}</p>
+            <p className="text-[11px] text-white/50">{user.username}</p>
+          </div>
+        </div>
+        <button onClick={() => setView('landing')} className="flex items-center gap-2 text-xs text-white/40 hover:text-white transition-colors">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg> Sign Out
+        </button>
+      </div>
+
+      {/* Center Filter */}
+      <div className="px-4 mb-8">
+        <p className="px-2 text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3">Viewing</p>
+        <div className="space-y-1">
+          {['Both Centers', 'Harper', 'Anthony'].map(c => {
+             const key = c.toLowerCase().split(' ')[0];
+             const active = viewingCenter === key;
+             return (
+               <button key={c} onClick={() => setViewingCenter(key)} className={`w-full text-left px-3 py-2 rounded-md text-sm transition-all ${active ? 'bg-white/20 font-bold' : 'text-white/60 hover:bg-white/5'}`}>{c}</button>
+             );
+          })}
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 px-4 space-y-1">
+        {[
+          { id: 'dashboard', label: 'Dashboard', icon: Icons.dashboard },
+          { id: 'members', label: 'Members', icon: Icons.members },
+          { id: 'badge', label: 'Badge In', icon: Icons.badge },
+          { id: 'notif', label: 'Notifications', icon: Icons.notif },
+        ].map(item => (
+          <button key={item.id} onClick={() => setActiveTab(item.id)} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all ${activeTab === item.id ? 'bg-[#1080ad] text-white font-bold shadow-lg' : 'text-white/60 hover:bg-white/5'}`}>
+            {item.icon} {item.label}
+            {item.id === 'notif' && stats.overdue > 0 && <span className="ml-auto w-5 h-5 rounded-full bg-red-500 text-[10px] flex items-center justify-center font-bold">{stats.overdue}</span>}
+          </button>
+        ))}
+      </nav>
+    </aside>
   );
 
-  const handleKioskCheckIn = () => {
-    const id = kioskInput.toUpperCase().trim();
-    const member = members.find(m => m.id === id);
-    if (member) {
-      const newVisit = { name: member.fullName, center: kioskCenter, time: new Date().toISOString(), type: member.type };
-      setVisits(prev => [newVisit, ...prev]);
-      if (member.status === 'overdue') {
-        setKioskResult({ ok: false, title: 'Attention Required', msg: `${member.firstName}, your membership is past due. Please see the desk.`, member });
-      } else {
-        setKioskResult({ ok: true, title: `Welcome, ${member.firstName}!`, msg: 'Access Granted. Enjoy your workout!', member });
-      }
-    } else {
-      setKioskResult({ ok: false, title: 'Not Found', msg: 'We could not find that Member ID. Please try again.' });
-    }
-    setKioskInput('');
-    setTimeout(() => setKioskResult(null), 5000);
-  };
-
-  // --- VIEWS ---
-
-  // A. LANDING
   if (view === 'landing') {
     return (
-      <div className="min-h-screen bg-[#001f3f] flex flex-col items-center justify-center p-6 text-white font-sans relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-500/10 rounded-full blur-[120px] -mr-48 -mt-48"></div>
-        <div className="z-10 text-center max-w-4xl w-full">
-          <img src={LOGO_URL} alt="Patterson" className="h-24 mx-auto mb-10 opacity-90" />
-          <h1 className="text-7xl font-black mb-4 tracking-tighter italic">WELLNESS HUB</h1>
-          <p className="text-blue-200/60 text-xl mb-16 uppercase tracking-[0.5em] font-light">Anthony & Harper Health Centers</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <button onClick={() => setView('login')} className="group bg-white/5 p-12 rounded-[3rem] border border-white/10 hover:bg-white/10 hover:border-blue-400 transition-all text-left">
-               <ShieldCheck size={48} className="text-blue-400 mb-6" />
-               <h3 className="text-3xl font-bold mb-2">Director Portal</h3>
-               <p className="text-slate-400 mb-8 leading-relaxed">Full management suite for membership records, billing, and corporate reporting.</p>
-               <div className="flex items-center gap-2 text-blue-400 font-bold group-hover:translate-x-2 transition-transform">Authorize Access <ChevronRight size={20} /></div>
-            </button>
-            <button onClick={() => setView('kiosk')} className="group bg-white/5 p-12 rounded-[3rem] border border-white/10 hover:bg-white/10 hover:border-emerald-400 transition-all text-left">
-               <Smartphone size={48} className="text-emerald-400 mb-6" />
-               <h3 className="text-3xl font-bold mb-2">iPad Badge-In</h3>
-               <p className="text-slate-400 mb-8 leading-relaxed">Self-service station for members to check-in via QR code or manual ID entry.</p>
-               <div className="flex items-center gap-2 text-emerald-400 font-bold group-hover:translate-x-2 transition-transform">Open Kiosk <ChevronRight size={20} /></div>
-            </button>
+      <div className="min-h-screen bg-[#003d6b] flex items-center justify-center font-sans p-6">
+        <div className="text-center">
+          <h1 className="text-white text-4xl font-bold mb-12">Wellness Hub</h1>
+          <div className="flex gap-6">
+             <button onClick={() => setView('dashboard')} className="bg-white/10 border border-white/20 p-10 rounded-2xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 w-64">
+                <ShieldCheck size={48} className="text-[#dba51f]" />
+                <span className="text-xl font-bold">Director Login</span>
+             </button>
+             <button onClick={() => {setView('dashboard'); setActiveTab('badge');}} className="bg-white/10 border border-white/20 p-10 rounded-2xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 w-64">
+                <Smartphone size={48} className="text-[#1080ad]" />
+                <span className="text-xl font-bold">iPad Badge-In</span>
+             </button>
           </div>
         </div>
       </div>
     );
   }
 
-  // B. LOGIN
-  if (view === 'login') {
-    return (
-      <div className="min-h-screen bg-[#001f3f] flex items-center justify-center p-4">
-        <div className="bg-white rounded-[3rem] shadow-2xl p-12 w-full max-w-md">
-          <h2 className="text-4xl font-black text-slate-900 mb-2 tracking-tight">Login</h2>
-          <p className="text-slate-400 mb-10 font-medium tracking-tight">Enter director credentials to proceed.</p>
-          <input type="text" placeholder="Username" id="u_in" className="w-full p-5 bg-slate-100 rounded-2xl mb-4 outline-none border-2 border-transparent focus:border-blue-500/20 text-lg" />
-          <input type="password" placeholder="Password" id="p_in" className="w-full p-5 bg-slate-100 rounded-2xl mb-8 outline-none border-2 border-transparent focus:border-blue-500/20 text-lg" />
-          <button onClick={() => {
-            const u = document.getElementById('u_in').value;
-            const p = document.getElementById('p_in').value;
-            const found = DIRECTORS.find(d => d.username === u && d.password === p);
-            if(found) { setUser(found); setView('dashboard'); } else { alert('Invalid credentials'); }
-          }} className="w-full bg-[#001f3f] text-white p-5 rounded-2xl font-bold text-xl shadow-xl hover:bg-blue-900 transition-all">Sign In</button>
-          <button onClick={() => setView('landing')} className="w-full mt-6 text-slate-400 font-bold">Cancel</button>
-        </div>
-      </div>
-    );
-  }
-
-  // C. KIOSK (iPad Mode)
-  if (view === 'kiosk') {
-    if (!kioskCenter) {
-      return (
-        <div className="min-h-screen bg-[#001f3f] flex flex-col items-center justify-center p-6 text-white font-sans">
-          <h2 className="text-4xl font-black mb-2">Location Setup</h2>
-          <p className="text-blue-200/50 mb-12 uppercase tracking-widest font-bold">Select the center for this iPad</p>
-          <div className="flex gap-8">
-            {CENTERS.map(c => (
-              <button key={c} onClick={() => setKioskCenter(c)} className="w-64 p-12 rounded-[2.5rem] border-2 border-white/10 hover:border-blue-400 bg-white/5 transition-all">
-                <div className="text-6xl font-black mb-4" style={{ color: centerColors[c] }}>{c[0]}</div>
-                <div className="text-2xl font-bold">{c}</div>
-              </button>
-            ))}
-          </div>
-          <button onClick={() => setView('landing')} className="mt-12 text-slate-500 font-bold">Exit Kiosk</button>
-        </div>
-      );
-    }
-    return (
-      <div className="min-h-screen bg-[#001f3f] flex flex-col items-center justify-center p-6 text-white font-sans relative">
-        <button onClick={() => setKioskCenter(null)} className="absolute top-8 left-8 text-slate-500 font-bold">← Change Location</button>
-        <div className="text-center max-w-xl w-full">
-           {!kioskResult ? (
-             <>
-               <img src={LOGO_URL} className="h-20 mx-auto mb-10" />
-               <h2 className="text-5xl font-black mb-4">Welcome!</h2>
-               <p className="text-blue-200/50 mb-12 text-lg uppercase tracking-widest font-bold">Scan Badge or Enter ID</p>
-               <input 
-                autoFocus
-                value={kioskInput}
-                onChange={(e) => setKioskInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleKioskCheckIn()}
-                placeholder="WC-000"
-                className="w-full p-8 bg-white/10 rounded-[2rem] text-center text-4xl font-black tracking-widest border-4 border-white/5 outline-none mb-8 placeholder:text-white/5" 
-               />
-               <button onClick={handleKioskCheckIn} className="w-full py-6 rounded-[2rem] text-2xl font-black uppercase tracking-widest shadow-2xl" style={{ backgroundColor: centerColors[kioskCenter] }}>Check In</button>
-             </>
-           ) : (
-             <div className={`p-16 rounded-[3rem] border-4 ${kioskResult.ok ? 'bg-emerald-500/10 border-emerald-500/50' : 'bg-red-500/10 border-red-500/50'}`}>
-                <div className={`w-24 h-24 rounded-full mx-auto mb-8 flex items-center justify-center ${kioskResult.ok ? 'bg-emerald-500' : 'bg-red-500'}`}>
-                   {kioskResult.ok ? <CheckCircle size={48}/> : <AlertCircle size={48}/>}
-                </div>
-                <h2 className="text-5xl font-black mb-4">{kioskResult.title}</h2>
-                <p className="text-xl text-slate-300 leading-relaxed mb-8">{kioskResult.msg}</p>
-                <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden">
-                   <div className={`h-full animate-[shrink_5s_linear_forwards] ${kioskResult.ok ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
-                </div>
-                <style>{`@keyframes shrink { from { width: 100%; } to { width: 0%; } }`}</style>
-             </div>
-           )}
-        </div>
-      </div>
-    );
-  }
-
-  // D. DASHBOARD UI
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex font-sans">
-      <aside className="w-24 bg-[#001f3f] flex flex-col items-center py-10 text-white shadow-2xl z-20">
-        <div className="p-3 bg-blue-500 rounded-2xl shadow-lg mb-12"><Activity size={32} /></div>
-        <div className="flex-1 space-y-10">
-          <button onClick={() => setActiveTab('overview')} className={`p-3 rounded-xl transition-all ${activeTab === 'overview' ? 'bg-white/20 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}><LayoutDashboard size={24}/></button>
-          <button onClick={() => setActiveTab('members')} className={`p-3 rounded-xl transition-all ${activeTab === 'members' ? 'bg-white/20 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}><Users size={24}/></button>
-          <button onClick={() => setActiveTab('notifications')} className={`p-3 rounded-xl transition-all ${activeTab === 'notifications' ? 'bg-white/20 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}><Bell size={24}/></button>
-          <button onClick={() => setActiveTab('reports')} className={`p-3 rounded-xl transition-all ${activeTab === 'reports' ? 'bg-white/20 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}><FileText size={24}/></button>
-        </div>
-        <button onClick={() => { setUser(null); setView('landing'); }} className="p-3 rounded-xl text-slate-400 hover:text-red-400 transition-colors mt-auto"><LogOut size={24} /></button>
-      </aside>
+    <div className="flex min-h-screen bg-[#f0f2f5] font-sans text-slate-800">
+      <Sidebar />
 
-      <main className="flex-1 p-8 md:p-12 max-w-7xl mx-auto">
-        <div className="flex justify-between items-start mb-12">
-          <div>
-            <h1 className="text-5xl font-black text-slate-900 tracking-tight mb-2 uppercase">Director Portal</h1>
-            <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-xs">Patterson Health · {user?.name}</p>
-          </div>
-          <div className="flex gap-4">
-             <button onClick={() => setShowAddModal(true)} className="flex items-center gap-2 bg-[#001f3f] text-white px-8 py-4 rounded-2xl font-bold shadow-xl shadow-blue-900/20 hover:-translate-y-1 transition-all"><Plus size={20}/> New Enrollment</button>
-          </div>
+      <main className="flex-1 p-10">
+        <div className="mb-10">
+           <h2 className="text-3xl font-bold text-[#003d6b] capitalize">{activeTab}</h2>
+           <p className="text-sm text-slate-400 font-medium">{viewingCenter === 'both' ? 'All Centers' : viewingCenter + ' Center'} · Wednesday, March 11, 2026</p>
         </div>
 
-        {/* TAB: OVERVIEW */}
-        {activeTab === 'overview' && (
+        {/* VIEW: DASHBOARD */}
+        {activeTab === 'dashboard' && (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
-              <div className="bg-white p-8 rounded-[2.5rem] border shadow-sm flex items-center justify-between">
-                <div><p className="text-slate-400 font-black uppercase text-[10px] tracking-widest mb-1">Total</p><h3 className="text-4xl font-black">{stats.total}</h3></div>
-                <Users size={32} className="text-slate-200" />
-              </div>
-              <div className="bg-emerald-50/50 p-8 rounded-[2.5rem] border border-emerald-100 flex items-center justify-between">
-                <div><p className="text-emerald-600 font-black uppercase text-[10px] tracking-widest mb-1">Active</p><h3 className="text-4xl font-black text-emerald-600">{stats.active}</h3></div>
-                <CheckCircle size={32} className="text-emerald-200" />
-              </div>
-              <div className="bg-red-50/50 p-8 rounded-[2.5rem] border border-red-100 flex items-center justify-between">
-                <div><p className="text-red-600 font-black uppercase text-[10px] tracking-widest mb-1">Due</p><h3 className="text-4xl font-black text-red-600">{stats.attention}</h3></div>
-                <AlertCircle size={32} className="text-red-200" />
-              </div>
-              <div className="bg-blue-50/50 p-8 rounded-[2.5rem] border border-blue-100 flex items-center justify-between">
-                <div><p className="text-blue-600 font-black uppercase text-[10px] tracking-widest mb-1">Today</p><h3 className="text-4xl font-black text-blue-600">{stats.today}</h3></div>
-                <Clock size={32} className="text-blue-200" />
-              </div>
+            <div className="grid grid-cols-5 gap-6 mb-8">
+               {[
+                 { l: 'Total Members', v: stats.total, c: '#003d6b' },
+                 { l: 'Active', v: stats.active, c: '#16a34a' },
+                 { l: 'Overdue', v: stats.overdue, c: '#dc2626' },
+                 { l: 'Expiring', v: stats.expiring, c: '#f59e0b' },
+                 { l: 'Check-ins Today', v: stats.today, c: '#1080ad' }
+               ].map((s, i) => (
+                 <div key={i} className="bg-white p-6 rounded-xl shadow-sm border-l-[6px]" style={{ borderLeftColor: s.c }}>
+                    <p className="text-5xl font-bold mb-1" style={{ color: s.c }}>{s.v}</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-tight">{s.l}</p>
+                 </div>
+               ))}
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-               <div className="bg-white rounded-[3rem] p-10 shadow-xl border overflow-hidden">
-                  <h3 className="text-2xl font-black mb-8">Recent Check-ins</h3>
+
+            <div className="grid grid-cols-2 gap-8">
+               <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+                  <h3 className="text-lg font-bold mb-6 text-[#003d6b]">Today's Check-ins</h3>
                   <div className="space-y-4">
-                     {visits.length === 0 ? <p className="text-slate-300 italic">No check-ins today.</p> : visits.map((v, i) => (
-                       <div key={i} className="flex justify-between items-center p-5 bg-slate-50 rounded-[1.5rem]">
-                         <div><p className="font-black text-slate-800">{v.name}</p><p className="text-xs text-slate-400 font-bold uppercase tracking-widest">{v.center} Wellness Center</p></div>
-                         <div className="text-right"><p className="font-bold text-blue-600">{new Date(v.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</p><p className="text-[10px] font-black uppercase text-slate-300 tracking-tighter">{typeLabels[v.type] || 'Standard'}</p></div>
+                     {visits.length === 0 ? <p className="text-slate-300 italic">Waiting for activity...</p> : visits.map((v, i) => (
+                       <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
+                         <div><p className="font-bold">{v.name}</p><p className="text-[11px] text-slate-400 uppercase font-bold">{v.center} · {v.type}</p></div>
+                         <div className="flex items-center gap-2 text-slate-400 text-xs font-medium">{Icons.clock} {new Date(v.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
                        </div>
                      ))}
                   </div>
                </div>
-               <div className="bg-white rounded-[3rem] p-10 shadow-xl border border-[#dba51f]/20">
-                  <h3 className="text-2xl font-black mb-8 text-[#001f3f]">Center Usage</h3>
-                  <div className="space-y-6">
-                     {CENTERS.map(c => {
-                       const count = members.filter(m => m.center === c).length;
-                       const p = Math.round((count / members.length) * 100);
-                       return (
-                         <div key={c}>
-                            <div className="flex justify-between mb-2"><span className="font-black uppercase tracking-widest text-xs">{c} Center</span><span className="font-black">{count} members ({p}%)</span></div>
-                            <div className="h-3 bg-slate-100 rounded-full overflow-hidden"><div className="h-full transition-all duration-1000" style={{ width: `${p}%`, backgroundColor: centerColors[c] }}></div></div>
-                         </div>
-                       );
-                     })}
+               <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+                  <h3 className="text-lg font-bold mb-6 text-[#003d6b]">Needs Attention</h3>
+                  <div className="space-y-4">
+                     {scopedMembers.filter(m => m.status !== 'ACTIVE').map(m => (
+                       <div key={m.id} className={`flex items-center justify-between p-4 rounded-xl border ${m.status === 'OVERDUE' ? 'bg-red-50 border-red-100' : 'bg-amber-50 border-amber-100'}`}>
+                          <div><p className="font-bold">{m.firstName} {m.lastName}</p><p className="text-[11px] text-slate-400 uppercase font-bold">{m.status === 'OVERDUE' ? `Overdue since ${m.nextPayment}` : `Expiring ${m.nextPayment}`}</p></div>
+                          <span className={`px-3 py-1 rounded-full text-[10px] font-black ${m.status === 'OVERDUE' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>{m.status}</span>
+                       </div>
+                     ))}
                   </div>
                </div>
             </div>
           </>
         )}
 
-        {/* TAB: MEMBERS */}
+        {/* VIEW: MEMBERS TABLE */}
         {activeTab === 'members' && (
-          <div className="bg-white rounded-[3rem] p-10 shadow-xl border border-white">
-            <div className="flex justify-between items-center mb-12">
-               <h2 className="text-3xl font-black tracking-tight uppercase">Member Database</h2>
-               <div className="relative w-full max-w-md">
-                 <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300" size={22} />
-                 <input type="text" placeholder="Find by Name, Email, or ID..." className="w-full pl-16 pr-6 py-5 rounded-2xl bg-slate-100 border-none outline-none text-lg focus:ring-4 focus:ring-blue-500/10 transition-all" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-               </div>
-            </div>
-            {loading ? <div className="text-center py-20 text-slate-300 font-bold italic">Syncing Airtable...</div> : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredMembers.map(m => (
-                  <div key={m.id} onClick={() => setSelectedMember(m)} className="group p-8 rounded-[2.5rem] border bg-white hover:shadow-2xl hover:-translate-y-2 transition-all cursor-pointer relative overflow-hidden">
-                     <div className={`absolute top-0 right-0 w-32 h-32 -mr-12 -mt-12 rounded-full blur-3xl opacity-10 group-hover:opacity-20 transition-opacity ${m.status === 'active' ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
-                     <div className="flex justify-between items-start mb-6">
-                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.1em] ${m.status === 'active' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>{m.status}</span>
-                        <span className="text-xs font-mono text-slate-300 font-black">#{m.id}</span>
-                     </div>
-                     <h4 className="text-2xl font-black mb-1 leading-tight group-hover:text-blue-700 transition-colors">{m.firstName}<br/>{m.lastName}</h4>
-                     <p className="text-slate-400 text-sm font-medium mb-6 truncate">{m.email}</p>
-                     <div className="pt-6 border-t flex justify-between items-center">
-                        <span className="text-[10px] font-black uppercase tracking-widest p-2 rounded-lg bg-slate-50 text-slate-500">{m.center}</span>
-                        <span className="text-sm font-black text-slate-700">{m.visits} <span className="text-xs font-normal text-slate-400">Visits</span></span>
-                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+             <div className="p-6 border-b flex justify-between items-center bg-slate-50/50">
+                <div className="flex gap-4 items-center">
+                   <div className="relative">
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300">{Icons.search}</div>
+                      <input className="pl-10 pr-4 py-2 border rounded-lg text-sm w-80 outline-none" placeholder="Search members..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                   </div>
+                   <select className="px-4 py-2 border rounded-lg text-sm bg-white outline-none"><option>All Types</option></select>
+                   <select className="px-4 py-2 border rounded-lg text-sm bg-white outline-none"><option>All Centers</option></select>
+                </div>
+                <button className="bg-[#003d6b] text-white px-6 py-2 rounded-lg font-bold text-sm shadow-lg shadow-blue-900/20 hover:bg-[#00294a] transition-all flex items-center gap-2">
+                   <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add Member
+                </button>
+             </div>
+             <table className="w-full text-left border-collapse">
+                <thead className="bg-slate-50 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b">
+                   <tr>
+                      <th className="px-8 py-4">Member</th>
+                      <th className="px-8 py-4">ID</th>
+                      <th className="px-8 py-4">Type</th>
+                      <th className="px-8 py-4">Center</th>
+                      <th className="px-8 py-4">Status</th>
+                      <th className="px-8 py-4">Next Payment</th>
+                      <th className="px-8 py-4">Visits</th>
+                      <th className="px-8 py-4">Actions</th>
+                   </tr>
+                </thead>
+                <tbody className="text-sm">
+                   {filteredMembers.map(m => (
+                     <tr key={m.id} className="border-b hover:bg-slate-50/80 cursor-pointer transition-colors" onClick={() => setSelectedMember(m)}>
+                        <td className="px-8 py-5">
+                           <p className="font-bold text-slate-800">{m.firstName} {m.lastName}</p>
+                           <p className="text-[11px] text-slate-400">{m.email}</p>
+                        </td>
+                        <td className="px-8 py-5 font-mono text-slate-400">{m.id}</td>
+                        <td className="px-8 py-5"><span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black tracking-tight">{m.type}</span></td>
+                        <td className="px-8 py-5 text-slate-600 font-medium">{m.center}</td>
+                        <td className="px-8 py-5"><span className={`px-3 py-1 rounded-full text-[10px] font-black ${m.status === 'ACTIVE' ? 'bg-green-100 text-green-600' : m.status === 'OVERDUE' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>{m.status}</span></td>
+                        <td className="px-8 py-5 text-slate-600">{m.nextPayment}</td>
+                        <td className="px-8 py-5 font-bold">{m.visits}</td>
+                        <td className="px-8 py-5"><button className="p-2 bg-[#1080ad] text-white rounded-lg shadow-md"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 7V5a2 2 0 0 1 2-2h2" /><path d="M17 3h2a2 2 0 0 1 2 2v2" /><path d="M21 17v2a2 2 0 0 1-2 2h-2" /><path d="M7 21H5a2 2 0 0 1-2-2v-2" /></svg></button></td>
+                     </tr>
+                   ))}
+                </tbody>
+             </table>
           </div>
         )}
 
-        {/* TAB: NOTIFICATIONS (Restored) */}
-        {activeTab === 'notifications' && (
-          <div className="bg-white rounded-[3rem] p-10 shadow-xl border border-white">
-             <div className="flex justify-between items-center mb-10">
-                <h2 className="text-3xl font-black tracking-tight uppercase">Reminders & Log</h2>
-                <button onClick={() => alert('Sending bulk reminders...')} className="bg-orange-500 text-white px-8 py-4 rounded-2xl font-black shadow-lg hover:bg-orange-600 transition-all flex items-center gap-2">Send All Overdue</button>
+        {/* VIEW: NOTIFICATIONS */}
+        {activeTab === 'notif' && (
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+             <div className="p-8 bg-white flex justify-between items-center">
+                <div>
+                   <h3 className="text-xl font-bold text-[#003d6b]">Due for Reminder</h3>
+                   <p className="text-xs text-slate-400 font-medium">Payment reminders via email & SMS</p>
+                </div>
+                <button className="bg-[#dd6d22] text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-orange-900/20 flex items-center gap-2">
+                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg> Send All Due
+                </button>
              </div>
-             <div className="space-y-4">
-                {members.filter(m => m.status === 'overdue').map(m => (
-                  <div key={m.id} className="flex justify-between items-center p-6 bg-red-50/50 border border-red-100 rounded-3xl">
-                     <div><p className="font-black text-red-900">{m.fullName}</p><p className="text-xs text-red-400 font-bold uppercase">Balance Unpaid since {m.nextPayment || 'TBD'}</p></div>
-                     <div className="flex gap-4">
-                        <button className="p-4 bg-white rounded-xl text-blue-500 border border-blue-100 shadow-sm"><Mail size={20}/></button>
-                        <button className="p-4 bg-white rounded-xl text-orange-500 border border-orange-100 shadow-sm"><Phone size={20}/></button>
-                     </div>
-                  </div>
-                ))}
-                {notifLog.length === 0 && <p className="text-center py-10 text-slate-300 italic font-medium">No sent logs for this session.</p>}
+             <table className="w-full text-left">
+                <thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-y">
+                   <tr>
+                      <th className="px-8 py-4">Member</th>
+                      <th className="px-8 py-4">Type</th>
+                      <th className="px-8 py-4">Status</th>
+                      <th className="px-8 py-4">Due</th>
+                      <th className="px-8 py-4">Actions</th>
+                   </tr>
+                </thead>
+                <tbody>
+                   {scopedMembers.filter(m => m.status !== 'ACTIVE').map(m => (
+                     <tr key={m.id} className="border-b">
+                        <td className="px-8 py-5">
+                           <p className="font-bold text-slate-800">{m.firstName} {m.lastName}</p>
+                           <p className="text-[11px] text-slate-400">{m.email}</p>
+                        </td>
+                        <td className="px-8 py-5"><span className="px-3 py-1 rounded-full bg-blue-50 text-blue-500 text-[10px] font-black">{m.type}</span></td>
+                        <td className="px-8 py-5"><span className={`px-3 py-1 rounded-full text-[10px] font-black ${m.status === 'OVERDUE' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>{m.status}</span></td>
+                        <td className="px-8 py-5 text-slate-600 font-medium">{m.nextPayment}</td>
+                        <td className="px-8 py-5 flex gap-2">
+                           <button className="p-2 bg-[#1080ad] text-white rounded-lg shadow-md">{Icons.mail}</button>
+                           <button className="p-2 bg-[#dd6d22] text-white rounded-lg shadow-md">{Icons.phone}</button>
+                        </td>
+                     </tr>
+                   ))}
+                </tbody>
+             </table>
+             <div className="p-8 border-t bg-slate-50/50 min-h-[200px] flex flex-col">
+                <p className="text-xs font-black uppercase text-slate-400 mb-8">Log</p>
+                <p className="text-center text-slate-300 italic text-sm my-auto">No notifications sent yet.</p>
              </div>
           </div>
         )}
 
-        {/* TAB: REPORTS (Restored) */}
-        {activeTab === 'reports' && (
-          <div className="bg-white rounded-[3rem] p-10 shadow-xl border-l-8 border-[#dd6d22]">
-             <div className="flex justify-between items-center mb-12">
-               <div><h3 className="text-3xl font-black text-[#001f3f] tracking-tight uppercase">HD6 Corporate Export</h3><p className="text-slate-400 mt-1">Payroll-ready CSV data for employee participation.</p></div>
-               <button onClick={() => {
-                 const hd6 = members.filter(m => m.sponsor && m.sponsor.includes('Harper'));
-                 const csv = ["ID,Name,Email,Visits,Center", ...hd6.map(m => `${m.id},"${m.fullName}",${m.email},${m.visits},${m.center}`)].join('\n');
-                 const blob = new Blob([csv], { type: 'text/csv' });
-                 const url = window.URL.createObjectURL(blob);
-                 const a = document.createElement('a'); a.href = url; a.download = `HD6_Report_${new Date().toISOString().slice(0,10)}.csv`; a.click();
-               }} className="bg-[#dd6d22] text-white px-8 py-5 rounded-2xl font-black flex items-center gap-3 shadow-2xl hover:bg-orange-700 transition-all"><Download size={22}/> Download CSV</button>
+        {/* VIEW: BADGE IN (KIOSK) */}
+        {activeTab === 'badge' && (
+          <div className="flex gap-8">
+             <div className="bg-white p-12 rounded-3xl shadow-sm border border-slate-200 flex-1">
+                <div className="w-64 h-64 border-2 border-dashed rounded-3xl mx-auto mb-10 flex flex-col items-center justify-center text-slate-300">
+                   <div className="scale-150 opacity-50 mb-4">{Icons.badge}</div>
+                   <p className="text-[10px] font-bold uppercase tracking-widest">Camera in production</p>
+                </div>
+                <p className="text-center text-xs font-bold text-slate-400 uppercase mb-4 tracking-tighter">Enter member ID:</p>
+                <div className="flex gap-4 max-w-sm mx-auto mb-8">
+                   <input className="flex-1 p-4 border rounded-xl outline-none font-mono text-xl text-center" placeholder="e.g. WC-001" id="kiosk_in" />
+                   <button onClick={() => {
+                     const id = document.getElementById('kiosk_in').value.toUpperCase();
+                     const m = members.find(m => m.id === id);
+                     if(m) setVisits(prev => [{name: m.firstName + ' ' + m.lastName, center: viewingCenter.toUpperCase(), time: new Date().toISOString(), type: m.type}, ...prev]);
+                     document.getElementById('kiosk_in').value = '';
+                   }} className="bg-[#003d6b] text-white px-8 rounded-xl font-bold">Check In</button>
+                </div>
+                <p className="text-center text-[10px] text-slate-400 font-medium">Try: {members.slice(0,4).map(m => m.id).join(', ')}</p>
              </div>
-             <div className="grid grid-cols-3 gap-8">
-                <div className="bg-slate-50 p-10 rounded-[2.5rem]"><p className="text-[10px] font-black text-slate-400 uppercase mb-2 tracking-[0.2em]">Employees</p><p className="text-6xl font-black">{members.filter(m => m.sponsor?.includes('Harper')).length}</p></div>
-                <div className="bg-slate-50 p-10 rounded-[2.5rem]"><p className="text-[10px] font-black text-slate-400 uppercase mb-2 tracking-[0.2em]">Total Usage</p><p className="text-6xl font-black text-blue-600">{members.filter(m => m.sponsor?.includes('Harper')).reduce((s, m) => s + m.visits, 0)}</p></div>
+             <div className="w-[440px] space-y-8">
+                <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 min-h-[160px] flex items-center justify-center">
+                   <p className="text-slate-300 italic font-medium">Waiting for scan...</p>
+                </div>
+                <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
+                   <p className="text-sm font-bold text-[#003d6b] mb-6 tracking-tight">Recent</p>
+                   <div className="space-y-4">
+                      {visits.map((v, i) => (
+                        <div key={i} className="flex justify-between items-center text-sm border-b pb-4 last:border-0">
+                           <span className="font-bold text-slate-800">{v.name}</span>
+                           <span className="text-xs text-slate-400 font-medium">{new Date(v.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                        </div>
+                      ))}
+                   </div>
+                </div>
              </div>
           </div>
         )}
       </main>
 
-      {/* MODAL: ADD MEMBER (Restored) */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#001f3f]/80 backdrop-blur-md">
-           <div className="bg-white rounded-[3rem] w-full max-w-3xl overflow-hidden shadow-2xl p-12">
-              <h2 className="text-3xl font-black mb-8 uppercase tracking-tighter">New Enrollment</h2>
-              <div className="grid grid-cols-2 gap-6 mb-10">
-                 <input placeholder="First Name" className="p-5 bg-slate-100 rounded-2xl outline-none" />
-                 <input placeholder="Last Name" className="p-5 bg-slate-100 rounded-2xl outline-none" />
-                 <input placeholder="Email" className="p-5 bg-slate-100 rounded-2xl outline-none col-span-2" />
-                 <select className="p-5 bg-slate-100 rounded-2xl outline-none">
-                    {Object.entries(typeLabels).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
-                 </select>
-                 <select className="p-5 bg-slate-100 rounded-2xl outline-none">
-                    {CENTERS.map(c => <option key={c} value={c}>{c} Center</option>)}
-                 </select>
+      {/* DETAIL MODAL (Matching Original Pro Style) */}
+      {selectedMember && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#001f3f]/90 backdrop-blur-md">
+           <div className="bg-white rounded-[2rem] w-full max-w-4xl flex overflow-hidden shadow-2xl relative">
+              <button onClick={() => setSelectedMember(null)} className="absolute top-6 right-6 text-slate-300 hover:text-red-500 transition-all"><X size={24}/></button>
+              <div className="w-1/3 bg-slate-50 p-12 flex flex-col items-center justify-center border-r">
+                 <div className="bg-white p-6 rounded-2xl shadow-xl mb-8 border border-slate-100">
+                    <QRCode data={selectedMember.id} size={180} />
+                 </div>
+                 <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Member Identity</p>
+                 <p className="text-xl font-bold text-[#003d6b]">#{selectedMember.id}</p>
               </div>
-              <div className="flex gap-4">
-                 <button onClick={() => setShowAddModal(false)} className="flex-1 py-5 rounded-2xl font-black text-slate-400">Cancel</button>
-                 <button onClick={() => { alert('Saving to Airtable...'); setShowAddModal(false); }} className="flex-1 py-5 bg-[#001f3f] text-white rounded-2xl font-black shadow-xl">Enroll Member</button>
+              <div className="flex-1 p-16">
+                 <span className={`px-4 py-1 rounded-full text-[10px] font-black tracking-widest ${selectedMember.status === 'ACTIVE' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>{selectedMember.status}</span>
+                 <h2 className="text-6xl font-black text-slate-900 mt-6 mb-12 tracking-tighter leading-none">{selectedMember.firstName}<br/>{selectedMember.lastName}</h2>
+                 <div className="grid grid-cols-2 gap-10">
+                    <div><p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Primary Location</p><p className="text-lg font-bold">{selectedMember.center} Center</p></div>
+                    <div><p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Billing Method</p><p className="text-lg font-bold">Standard Billing</p></div>
+                    <div><p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Engagement</p><p className="text-lg font-bold text-[#1080ad]">{selectedMember.visits} Total Visits</p></div>
+                    <div><p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Renewal Date</p><p className="text-lg font-bold">{selectedMember.nextPayment}</p></div>
+                 </div>
+                 <div className="mt-12 flex gap-4">
+                    <button className="flex-1 bg-[#003d6b] text-white py-4 rounded-xl font-bold shadow-xl shadow-blue-900/20">Manual Sign-In</button>
+                    <button className="px-6 py-4 border-2 rounded-xl text-slate-300 hover:text-blue-500 hover:border-blue-500 transition-all"><Mail size={20}/></button>
+                 </div>
               </div>
            </div>
-        </div>
-      )}
-
-      {/* MODAL: MEMBER DETAIL */}
-      {selectedMember && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-[#001f3f]/90 backdrop-blur-xl" onClick={() => setSelectedMember(null)}></div>
-          <div className="bg-white rounded-[4rem] w-full max-w-5xl overflow-hidden shadow-2xl z-10 flex flex-col md:flex-row relative">
-            <button onClick={() => setSelectedMember(null)} className="absolute top-10 right-10 p-3 bg-slate-100 rounded-full hover:bg-red-500 hover:text-white transition-all"><X size={24}/></button>
-            <div className="md:w-1/3 bg-slate-50 p-16 flex flex-col items-center justify-center border-r">
-               <div className="bg-white p-8 rounded-[3rem] shadow-2xl mb-10 border-2 border-white">
-                  <QRCode data={selectedMember.id} size={220} />
-               </div>
-               <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em] mb-2">Member ID</p>
-               <p className="text-3xl font-black text-[#001f3f] tracking-tighter">#{selectedMember.id}</p>
-            </div>
-            <div className="flex-1 p-20">
-               <span className={`px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest ${selectedMember.status === 'active' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>{selectedMember.status}</span>
-               <h2 className="text-7xl font-black text-slate-900 mt-6 mb-12 leading-none tracking-tighter">{selectedMember.firstName}<br/>{selectedMember.lastName}</h2>
-               <div className="grid grid-cols-2 gap-y-12 gap-x-16">
-                  <div><p className="text-[10px] font-black text-slate-300 uppercase mb-2 tracking-widest">Wellness Center</p><p className="text-xl font-bold text-slate-800">{selectedMember.center}</p></div>
-                  <div><p className="text-[10px] font-black text-slate-300 uppercase mb-2 tracking-widest">Billing Plan</p><p className="text-xl font-bold text-slate-800">{selectedMember.billing}</p></div>
-                  <div><p className="text-[10px] font-black text-slate-300 uppercase mb-2 tracking-widest">History</p><p className="text-xl font-bold text-blue-600">{selectedMember.visits} Check-ins</p></div>
-                  <div><p className="text-[10px] font-black text-slate-300 uppercase mb-2 tracking-widest">Renew Date</p><p className="text-xl font-bold text-slate-800">{selectedMember.nextPayment || 'N/A'}</p></div>
-               </div>
-               <div className="mt-16 flex gap-6">
-                  <button onClick={() => { setVisits(prev => [{name: selectedMember.fullName, center: selectedMember.center, time: new Date().toISOString(), type: selectedMember.type}, ...prev]); alert('Manual check-in recorded.'); setSelectedMember(null); }} className="flex-1 bg-[#001f3f] text-white py-6 rounded-3xl font-black shadow-2xl hover:bg-blue-900 transition-all active:scale-95 text-lg">Record Entry</button>
-                  <button className="px-8 py-6 border-2 rounded-3xl text-slate-300 hover:text-blue-500 hover:border-blue-500 transition-all"><Mail size={28}/></button>
-               </div>
-            </div>
-          </div>
         </div>
       )}
     </div>
