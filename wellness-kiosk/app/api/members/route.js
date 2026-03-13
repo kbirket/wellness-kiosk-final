@@ -1,16 +1,15 @@
 import { NextResponse } from 'next/server';
 
 export async function GET() {
-  // These MUST match the names you typed into the Vercel "Environment Variables" section
   const baseId = process.env.AIRTABLE_BASE_ID;
   const token = process.env.AIRTABLE_PAT;
-  const tableId = 'tblEXRQUp2wzs5jhz';
+  const tableId = 'tblEXRQUp2wzs5jhz'; // Your exact Table ID
 
-  // Defensive check: If Vercel didn't load the keys, we'll know immediately
+  // Safety check to ensure Vercel is actually passing the keys
   if (!baseId || !token) {
     return NextResponse.json({ 
-      error: 'Environment Variables are missing in Vercel!',
-      check: { hasBase: !!baseId, hasToken: !!token }
+      error: "Missing Environment Variables",
+      details: "Check Vercel Settings -> Environment Variables" 
     }, { status: 500 });
   }
 
@@ -18,28 +17,30 @@ export async function GET() {
     const response = await fetch(
       `https://api.airtable.com/v0/${baseId}/${tableId}`,
       {
+        method: 'GET',
         headers: {
-          Authorization: `Bearer ${token}`,
+          'Authorization': `Bearer ${token.trim()}`,
           'Content-Type': 'application/json',
         },
-        cache: 'no-store',
+        // This ensures Vercel doesn't show you "old" data
+        cache: 'no-store'
       }
     );
 
+    const data = await response.json();
+
     if (!response.ok) {
-      const errorText = await response.text();
       return NextResponse.json({
-        error: `Airtable Error: ${response.status}`,
-        details: errorText,
+        error: `Airtable responded with ${response.status}`,
+        details: data
       }, { status: response.status });
     }
 
-    const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
-    return NextResponse.json({
-      error: 'Bridge connection failed',
-      details: error.message,
+    return NextResponse.json({ 
+      error: "Bridge Connection Failed", 
+      details: error.message 
     }, { status: 500 });
   }
 }
