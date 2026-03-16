@@ -1,21 +1,33 @@
 import { NextResponse } from 'next/server';
 
-// These two lines tell Vercel to NEVER cache this data!
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-
-export async function GET() {
+export async function POST(request) {
   const baseId = process.env.AIRTABLE_BASE_ID;
   const token = process.env.AIRTABLE_PAT;
-  const tableName = 'Members'; // Your exact tab name
+  const tableName = 'Visits'; 
 
   try {
+    const body = await request.json();
+    
     const response = await fetch(`https://api.airtable.com/v0/${baseId}/${tableName}`, {
+      method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
       },
-      // Extra cache-busting instruction
-      cache: 'no-store'
+      body: JSON.stringify({
+        records: [
+          {
+            fields: {
+              "Check-in Time": body.time,
+              "Center": body.center,
+              "Check-in Method": body.method,
+              "Members": [body.airtableId] 
+            }
+          }
+        ],
+        // THIS IS THE MAGIC BULLET:
+        typecast: true 
+      })
     });
 
     const data = await response.json();
