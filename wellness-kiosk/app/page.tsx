@@ -53,6 +53,9 @@ export default function WellnessHub() {
   const [editMode, setEditMode] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [kioskMessage, setKioskMessage] = useState({text: '', type: ''});
+  
+  // NEW: State to control the smart search typing
+  const [kioskInput, setKioskInput] = useState('');
 
   const membersRef = useRef(members);
   useEffect(() => { membersRef.current = members; }, [members]);
@@ -131,6 +134,14 @@ export default function WellnessHub() {
   const filteredMembers = scopedMembers.filter(m => `${m.firstName} ${m.lastName} ${m.id}`.toLowerCase().includes(searchQuery.toLowerCase()));
   const filteredVisits = visits.filter(v => viewingCenter === 'both' || (v.center && v.center.toLowerCase().includes(viewingCenter)));
   
+  // NEW: Smart Search filtering logic (Only shows if they type 2 or more letters)
+  const kioskMatches = kioskInput.length >= 2 
+    ? members.filter(m => 
+        (m.firstName + ' ' + m.lastName).toLowerCase().includes(kioskInput.toLowerCase()) || 
+        m.id.toLowerCase().includes(kioskInput.toLowerCase())
+      ).slice(0, 5) // Limit to top 5 so the screen doesn't get overcrowded
+    : [];
+
   const heatmapData = Array(15).fill(0);
   filteredVisits.forEach(v => {
     const hour = new Date(v.time).getHours();
@@ -146,7 +157,6 @@ export default function WellnessHub() {
     today: filteredVisits.length
   };
 
-  // --- THE FIX: We put the math back OUTSIDE the download button so the UI can see it! ---
   const reportStats = {
     single: scopedMembers.filter(m => m.type?.includes('SINGLE') || m.type?.includes('MONTHLY') || m.type?.includes('ANNUAL')).length,
     family: scopedMembers.filter(m => m.type?.includes('FAMILY') && !m.type?.includes('SENIOR') && !m.type?.includes('STUDENT')).length,
@@ -330,7 +340,7 @@ Paid-Daily Visitors:,${reportStats.dayPass}
                 <ShieldCheck size={56} className="text-[#f59e0b] group-hover:scale-110 transition-transform" />
                 <span className="text-xl font-bold">Director Portal</span>
              </button>
-             <button onClick={() => {setView('kiosk'); setViewingCenter('both');}} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group">
+             <button onClick={() => {setView('kiosk'); setViewingCenter('both'); setKioskInput('');}} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group">
                 <Smartphone size={56} className="text-[#1080ad] group-hover:scale-110 transition-transform" />
                 <span className="text-xl font-bold">Public Kiosk</span>
              </button>
@@ -345,7 +355,7 @@ Paid-Daily Visitors:,${reportStats.dayPass}
   }
 
   // ============================================================
-  // VIEW: LOCKED-DOWN KIOSK MODE
+  // VIEW: LOCKED-DOWN KIOSK MODE (WITH SMART SEARCH)
   // ============================================================
   if (view === 'kiosk') {
     return (
@@ -361,7 +371,7 @@ Paid-Daily Visitors:,${reportStats.dayPass}
 
          <div className="bg-white rounded-[3rem] shadow-2xl p-12 w-full max-w-2xl border-t-8 border-[#1080ad] text-center relative z-0">
             <h2 className="text-5xl font-black text-[#001f3f] mb-4 tracking-tight">Check-In</h2>
-            <p className="text-slate-500 mb-10 text-lg font-medium">Scan your QR code or enter your Member ID.</p>
+            <p className="text-slate-500 mb-10 text-lg font-medium">Scan your QR code or type your name.</p>
             
             <div className="w-full max-w-md mx-auto mb-10 border-4 border-slate-100 bg-white relative flex flex-col items-center justify-center p-4 rounded-3xl min-h-[300px]">
                {!scannerActive ? (
@@ -379,19 +389,54 @@ Paid-Daily Visitors:,${reportStats.dayPass}
                )}
             </div>
 
-            <p className="text-sm font-bold text-slate-400 mb-4 tracking-widest uppercase">Or enter ID manually</p>
-            <div className="flex gap-4 max-w-md mx-auto">
-               <input className="flex-1 p-5 border-2 rounded-2xl outline-none focus:border-[#1080ad] font-mono text-2xl text-center bg-slate-50" placeholder="e.g. WC-001" id="kiosk_in_standalone" onKeyDown={(e) => {
-                 if (e.key === 'Enter') {
-                   processCheckIn(document.getElementById('kiosk_in_standalone').value, "Manual ID Entry");
-                   document.getElementById('kiosk_in_standalone').value = '';
-                 }
-               }}/>
-               <button onClick={() => {
-                 processCheckIn(document.getElementById('kiosk_in_standalone').value, "Manual ID Entry");
-                 document.getElementById('kiosk_in_standalone').value = '';
-               }} className="bg-[#001f3f] text-white px-10 rounded-2xl font-bold text-xl hover:bg-blue-900 transition-colors shadow-lg">Go</button>
+            <p className="text-sm font-bold text-slate-400 mb-4 tracking-widest uppercase">Or enter Name or ID</p>
+            
+            {/* THE SMART SEARCH KIOSK WIDGET */}
+            <div className="relative w-full max-w-md mx-auto">
+              <div className="flex gap-4">
+                 <input 
+                   className="flex-1 p-5 border-2 rounded-2xl outline-none focus:border-[#1080ad] font-sans text-xl text-center bg-slate-50" 
+                   placeholder="e.g. Smith" 
+                   value={kioskInput}
+                   onChange={(e) => setKioskInput(e.target.value)}
+                   onKeyDown={(e) => {
+                     if (e.key === 'Enter') {
+                       processCheckIn(kioskInput, "Manual ID Entry");
+                       setKioskInput('');
+                     }
+                   }}
+                 />
+                 <button onClick={() => {
+                   processCheckIn(kioskInput, "Manual ID Entry");
+                   setKioskInput('');
+                 }} className="bg-[#001f3f] text-white px-10 rounded-2xl font-bold text-xl hover:bg-blue-900 transition-colors shadow-lg">Go</button>
+              </div>
+
+              {/* DROPDOWN FOR SMART SEARCH */}
+              {kioskMatches.length > 0 && (
+                <div className="absolute bottom-[110%] left-0 w-full mb-2 bg-white border-2 border-[#1080ad] rounded-2xl shadow-2xl z-50 overflow-hidden text-left flex flex-col-reverse">
+                  {kioskMatches.map(m => (
+                    <button 
+                      key={m.id} 
+                      onClick={() => {
+                        processCheckIn(m.id, "Name Search Entry");
+                        setKioskInput('');
+                      }}
+                      className="w-full p-5 border-b border-slate-100 hover:bg-blue-50 transition-colors flex justify-between items-center group"
+                    >
+                       <div>
+                         <p className="font-bold text-[#001f3f] text-xl">{m.firstName} {m.lastName}</p>
+                         <p className="text-xs text-slate-400 font-mono tracking-widest">{m.id}</p>
+                       </div>
+                       <div className="bg-[#1080ad] text-white px-4 py-2 rounded-xl text-sm font-bold shadow-md group-hover:scale-105 transition-transform">
+                         Tap to Check In
+                       </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
+
          </div>
       </div>
     );
@@ -625,7 +670,7 @@ Paid-Daily Visitors:,${reportStats.dayPass}
             { id: 'notif', label: 'Notifications', icon: <Bell size={18} /> },
             { id: 'reports', label: 'Reports', icon: <FileText size={18} /> },
           ].map(item => (
-            <button key={item.id} onClick={() => setActiveTab(item.id)} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all ${activeTab === item.id ? 'bg-[#1080ad] text-white font-bold' : 'text-white/60 hover:bg-white/5'}`}>
+            <button key={item.id} onClick={() => { setActiveTab(item.id); setKioskInput(''); }} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all ${activeTab === item.id ? 'bg-[#1080ad] text-white font-bold' : 'text-white/60 hover:bg-white/5'}`}>
               {item.icon} {item.label}
               {item.id === 'notif' && stats.overdue > 0 && <span className="ml-auto w-5 h-5 rounded-full bg-red-500 text-[10px] flex items-center justify-center font-bold tracking-tight">{stats.overdue}</span>}
             </button>
@@ -822,7 +867,7 @@ Paid-Daily Visitors:,${reportStats.dayPass}
           </div>
         )}
 
-        {/* VIEW: STAFF BADGE IN */}
+        {/* VIEW: STAFF BADGE IN (WITH SMART SEARCH) */}
         {activeTab === 'badge' && (
           <div className="space-y-6">
              <div className="mb-8">
@@ -832,18 +877,52 @@ Paid-Daily Visitors:,${reportStats.dayPass}
              <div className="flex gap-8">
                 <div className="bg-white p-12 rounded-3xl shadow-sm border border-slate-200 flex-1 text-center">
                    
-                   <p className="text-sm font-bold text-slate-400 mb-4 tracking-tight">Enter member ID manually (or use USB scanner):</p>
-                   <div className="flex gap-4 max-w-sm mx-auto mb-10">
-                      <input className="flex-1 p-4 border rounded-xl outline-none font-mono text-xl text-center bg-slate-100" placeholder="e.g. WC-001" id="kiosk_in_staff" onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          processCheckIn(document.getElementById('kiosk_in_staff').value, "Staff Scan/Entry");
-                          document.getElementById('kiosk_in_staff').value = '';
-                        }
-                      }}/>
-                      <button onClick={() => {
-                        processCheckIn(document.getElementById('kiosk_in_staff').value, "Staff Scan/Entry");
-                        document.getElementById('kiosk_in_staff').value = '';
-                      }} className="bg-[#001f3f] text-white px-8 rounded-xl font-bold hover:bg-blue-900 transition-colors">Check In</button>
+                   <p className="text-sm font-bold text-slate-400 mb-4 tracking-tight">Enter Name or ID (or use USB scanner):</p>
+                   
+                   {/* STAFF SMART SEARCH WIDGET */}
+                   <div className="relative w-full max-w-sm mx-auto mb-10">
+                      <div className="flex gap-4">
+                         <input 
+                           className="flex-1 p-4 border rounded-xl outline-none font-sans text-xl text-center bg-slate-100 focus:border-[#1080ad] focus:bg-white transition-colors" 
+                           placeholder="e.g. Smith" 
+                           id="kiosk_in_staff" 
+                           value={kioskInput}
+                           onChange={(e) => setKioskInput(e.target.value)}
+                           onKeyDown={(e) => {
+                             if (e.key === 'Enter') {
+                               processCheckIn(kioskInput, "Staff Scan/Entry");
+                               setKioskInput('');
+                             }
+                           }}
+                         />
+                         <button onClick={() => {
+                           processCheckIn(kioskInput, "Staff Scan/Entry");
+                           setKioskInput('');
+                         }} className="bg-[#001f3f] text-white px-8 rounded-xl font-bold hover:bg-blue-900 transition-colors shadow-sm">Check In</button>
+                      </div>
+
+                      {kioskMatches.length > 0 && (
+                        <div className="absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 overflow-hidden text-left">
+                          {kioskMatches.map(m => (
+                            <button 
+                              key={m.id} 
+                              onClick={() => {
+                                processCheckIn(m.id, "Name Search Entry");
+                                setKioskInput('');
+                              }}
+                              className="w-full p-4 border-b border-slate-100 last:border-0 hover:bg-blue-50 transition-colors flex justify-between items-center group"
+                            >
+                               <div>
+                                 <p className="font-bold text-[#001f3f] text-lg">{m.firstName} {m.lastName}</p>
+                                 <p className="text-[10px] text-slate-400 uppercase tracking-widest">{m.phone || 'No Phone'}</p>
+                               </div>
+                               <div className="bg-[#1080ad] text-white px-3 py-1 rounded-lg text-xs font-bold shadow-sm group-hover:scale-105 transition-transform">
+                                 Select
+                               </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                    </div>
                    
                    {kioskMessage.text && (
@@ -873,7 +952,7 @@ Paid-Daily Visitors:,${reportStats.dayPass}
         )}
       </main>
 
-      {/* --- MEMBER DETAIL MODAL WITH UPGRADED DATA --- */}
+      {/* --- MEMBER DETAIL MODAL --- */}
       {selectedMember && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#001f3f]/90 backdrop-blur-md">
            <div className="bg-white rounded-[2rem] w-full max-w-4xl flex overflow-hidden shadow-2xl relative">
