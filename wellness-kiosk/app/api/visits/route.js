@@ -23,8 +23,7 @@ export async function POST(request) {
               "Check-in Time": body.time,
               "Center": body.center,
               "Check-in Method": body.method,
-              // Firing at BOTH columns to guarantee a hit!
-              "Member": [body.airtableId],
+              // Only sending to the correct 'Members' column!
               "Members": [body.airtableId] 
             }
           }
@@ -35,7 +34,6 @@ export async function POST(request) {
 
     const data = await response.json();
     
-    // If Airtable throws an error, catch it and send it to the screen!
     if (data.error) {
       const errorMessage = data.error.type || data.error.message || JSON.stringify(data.error);
       return NextResponse.json({ success: false, error: errorMessage }, { status: 400 });
