@@ -6,26 +6,14 @@ import {
   Users, Search, QrCode, CreditCard, X, CheckCircle, 
   AlertCircle, TrendingUp, Calendar, MapPin, Mail, LogOut, 
   ShieldCheck, Phone, Activity, ChevronRight, LayoutDashboard,
-  Filter, Download, Bell, FileText, Plus, Smartphone, Clock, Camera, UserCircle
+  Filter, Download, Bell, FileText, Plus, Smartphone, Clock, Camera, UserCircle, Lock
 } from 'lucide-react';
 
-// ============================================================
-// REAL QR Code Generator
-// ============================================================
 const QRCode = ({ data, size = 160, darkColor = '#001f3f' }) => {
   const hexColor = darkColor.replace('#', '');
   const safeData = encodeURIComponent(data || "WC-000");
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${safeData}&color=${hexColor}&bgcolor=ffffff`;
-  
-  return (
-    <img 
-      src={qrUrl} 
-      alt={`QR Code for ${data}`} 
-      width={size} 
-      height={size} 
-      style={{ width: size, height: size, display: 'block' }} 
-    />
-  );
+  return <img src={qrUrl} alt="QR Code" style={{ width: size, height: size, display: 'block' }} />;
 };
 
 const LOGO_URL = 'https://pattersonhc.org/sites/default/files/wellness_white.png';
@@ -52,8 +40,12 @@ export default function WellnessHub() {
   const [scannerActive, setScannerActive] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [kioskMessage, setKioskMessage] = useState({text: '', type: ''});
+  
+  // Kiosk specific states
+  const [kioskMessage, setKioskMessage] = useState({text: '', type: '', subtext: ''});
   const [kioskInput, setKioskInput] = useState('');
+  const [pinModal, setPinModal] = useState(null); // Holds member data while they type PIN
+  const [pinInput, setPinInput] = useState('');
 
   const membersRef = useRef(members);
   useEffect(() => { membersRef.current = members; }, [members]);
@@ -63,13 +55,9 @@ export default function WellnessHub() {
   useEffect(() => {
     setIsMounted(true);
     setCurrentDateString(new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }));
-    
     const savedUser = localStorage.getItem('wellnessUser');
     const savedCenter = localStorage.getItem('wellnessCenter');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-      setView('dashboard');
-    }
+    if (savedUser) { setUser(JSON.parse(savedUser)); setView('dashboard'); }
     if (savedCenter) setViewingCenter(savedCenter);
   }, []);
 
@@ -78,21 +66,15 @@ export default function WellnessHub() {
     const p = document.getElementById('p_in').value.trim();
     const found = DIRECTORS.find(d => d.username === u && d.password === p);
     if(found) { 
-      setUser(found); 
-      setViewingCenter(found.center); 
+      setUser(found); setViewingCenter(found.center); 
       localStorage.setItem('wellnessUser', JSON.stringify(found));
       localStorage.setItem('wellnessCenter', found.center);
       setView('dashboard'); 
-    } else { 
-      alert('Incorrect username or password. Please try again.'); 
-    }
+    } else { alert('Incorrect credentials.'); }
   };
 
   const handleLogout = () => {
-    setUser(null);
-    localStorage.removeItem('wellnessUser');
-    localStorage.removeItem('wellnessCenter');
-    setView('landing');
+    setUser(null); localStorage.removeItem('wellnessUser'); localStorage.removeItem('wellnessCenter'); setView('landing');
   };
 
   useEffect(() => {
@@ -102,11 +84,7 @@ export default function WellnessHub() {
       .then(data => {
         if (data.records) {
           const mapped = data.records.map(r => {
-            let planText = 'UNKNOWN PLAN';
-            if (r.fields['Plan Name']) {
-              planText = Array.isArray(r.fields['Plan Name']) ? r.fields['Plan Name'][0] : r.fields['Plan Name'];
-            }
-
+            let planText = r.fields['Plan Name'] ? (Array.isArray(r.fields['Plan Name']) ? r.fields['Plan Name'][0] : r.fields['Plan Name']) : 'UNKNOWN PLAN';
             return {
               airtableId: r.id, 
               id: r.fields['Member ID'] || r.id,
@@ -114,12 +92,13 @@ export default function WellnessHub() {
               lastName: r.fields['Last Name'] || '',
               email: r.fields['Email'] || '',
               phone: r.fields['Phone'] || '',
+              password: String(r.fields['Password'] || '').trim(), // NEW MMDD PIN
               status: (r.fields['Membership Status'] || 'ACTIVE').toUpperCase(),
-              // Added .trim() to ensure there are no hidden spaces from Airtable messing up the math!
               type: String(planText).toUpperCase().trim(),
               center: r.fields['Home Center'] || 'Anthony',
               visits: Number(r.fields['Total Visits'] || 0),
-              nextPayment: r.fields['Next Payment Due'] || 'Mar 31, 2026',
+              nextPayment: r.fields['Next Payment Due'] || null, // Cleaned up for Stoplight math
+              sponsor: !!r.fields['Corporate Sponsor'],
             };
           });
           setMembers(mapped);
@@ -133,10 +112,7 @@ export default function WellnessHub() {
   const filteredVisits = visits.filter(v => viewingCenter === 'both' || (v.center && v.center.toLowerCase().includes(viewingCenter)));
   
   const kioskMatches = kioskInput.length >= 2 
-    ? members.filter(m => 
-        (m.firstName + ' ' + m.lastName).toLowerCase().includes(kioskInput.toLowerCase()) || 
-        m.id.toLowerCase().includes(kioskInput.toLowerCase())
-      ).slice(0, 5)
+    ? members.filter(m => (m.firstName + ' ' + m.lastName).toLowerCase().includes(kioskInput.toLowerCase()) || m.id.toLowerCase().includes(kioskInput.toLowerCase())).slice(0, 5)
     : [];
 
   const heatmapData = Array(15).fill(0);
@@ -154,7 +130,6 @@ export default function WellnessHub() {
     today: filteredVisits.length
   };
 
-  // --- THE NEW PERFECT MATH: Maps exactly 1-to-1 with your Airtable Pricing Tiers ---
   const reportStats = {
     single: scopedMembers.filter(m => m.type === 'SINGLE').length,
     family: scopedMembers.filter(m => m.type === 'FAMILY').length,
@@ -166,33 +141,45 @@ export default function WellnessHub() {
     dayPass: scopedMembers.filter(m => m.type.includes('DAY PASS')).length,
     staff: scopedMembers.filter(m => m.type.includes('HD6') || m.type.includes('HCHF')).length,
   };
+  
+  const corpOnly = scopedMembers.filter(m => m.sponsor || m.type?.includes('CORPORATE'));
+  const corpStats = {
+    single: corpOnly.filter(m => m.type?.includes('SINGLE') || m.type?.includes('MONTHLY') || m.type?.includes('ANNUAL')).length,
+    family: corpOnly.filter(m => m.type?.includes('FAMILY') && !m.type?.includes('SENIOR') && !m.type?.includes('STUDENT')).length,
+    student: corpOnly.filter(m => m.type?.includes('STUDENT')).length,
+    senior: corpOnly.filter(m => m.type?.includes('SENIOR') && !m.type?.includes('FAMILY')).length,
+    famStudent: corpOnly.filter(m => m.type?.includes('FAMILY') && m.type?.includes('STUDENT')).length,
+    famSenior: corpOnly.filter(m => m.type?.includes('FAMILY') && m.type?.includes('SENIOR')).length,
+  };
 
   const familyMembers = activeMember 
-    ? members.filter(m => 
-        m.id !== activeMember.id && 
-        ((m.email && m.email.toLowerCase() === activeMember.email.toLowerCase()) || 
-         (m.phone && m.phone === activeMember.phone))
-      )
+    ? members.filter(m => m.id !== activeMember.id && ((m.email && m.email.toLowerCase() === activeMember.email.toLowerCase()) || (m.phone && m.phone === activeMember.phone)))
     : [];
 
   const handleUpdateProfile = async () => {
     setIsUpdating(true);
     const newEmail = document.getElementById('edit_email').value.trim();
     const newPhone = document.getElementById('edit_phone').value.trim();
-    
     setActiveMember({...activeMember, email: newEmail, phone: newPhone});
     setEditMode(false);
-
     try {
-      await fetch('/api/update-member', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ airtableId: activeMember.airtableId, email: newEmail, phone: newPhone })
-      });
-    } catch (err) {
-      alert("App updated locally.");
-    }
+      await fetch('/api/update-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: activeMember.airtableId, email: newEmail, phone: newPhone }) });
+    } catch (err) { alert("App updated locally."); }
     setIsUpdating(false);
+  };
+
+  // --- NEW: STOPLIGHT MATH LOGIC ---
+  const getStoplight = (member) => {
+    if (!member.nextPayment) return 'green'; // No due date = good to go (Staff, etc.)
+    const due = new Date(member.nextPayment);
+    const today = new Date();
+    // Calculate difference in days
+    const diffTime = today - due;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+    
+    if (diffDays <= 0) return 'green'; // Not due yet
+    if (diffDays > 0 && diffDays <= 14) return 'yellow'; // Grace period
+    return 'red'; // Blocked
   };
 
   const processCheckIn = async (memberId, method = "Manual Entry") => {
@@ -200,19 +187,29 @@ export default function WellnessHub() {
     const m = membersRef.current.find(m => m.id === id); 
     
     if(m) {
+      // EVALUATE STOPLIGHT
+      const light = getStoplight(m);
+      
+      if (light === 'red') {
+         setKioskMessage({ text: `Account Locked`, type: 'error', subtext: 'Please see the front desk to update payment.' });
+         setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4500);
+         return false; // Blocks the check-in!
+      }
+
       const currentCenter = centerRef.current;
       const scanCenter = currentCenter === 'both' ? m.center : currentCenter.charAt(0).toUpperCase() + currentCenter.slice(1);
       const currentTime = new Date().toISOString();
       
       setVisits(prev => [{name: m.firstName + ' ' + m.lastName, center: scanCenter, time: currentTime, type: m.type}, ...prev]);
-      
       setMembers(prev => prev.map(member => member.id === id ? { ...member, visits: member.visits + 1 } : member));
-      if (activeMember && activeMember.id === id) {
-        setActiveMember(prev => ({...prev, visits: prev.visits + 1}));
-      }
+      if (activeMember && activeMember.id === id) setActiveMember(prev => ({...prev, visits: prev.visits + 1}));
 
-      setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'success' });
-      setTimeout(() => setKioskMessage({ text: '', type: '' }), 3500); 
+      if (light === 'yellow') {
+         setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'warning', subtext: 'Friendly reminder: Your account is past due.' });
+      } else {
+         setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'success', subtext: '' });
+      }
+      setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 3500); 
 
       try {
         await fetch('/api/visits', {
@@ -220,51 +217,40 @@ export default function WellnessHub() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ airtableId: m.airtableId, center: scanCenter, time: currentTime, method: method })
         });
-      } catch (err) {
-        console.error("Failed to save visit", err);
-      }
+      } catch (err) { console.error("Failed to save visit", err); }
       return true;
+
     } else {
       setKioskMessage({ text: `ID not found. Please see front desk.`, type: 'error' });
-      setTimeout(() => setKioskMessage({ text: '', type: '' }), 3500);
+      setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 3500);
       return false;
     }
   };
 
   useEffect(() => {
     let scanner = null;
-    if ((activeTab === 'badge' || view === 'kiosk') && scannerActive) {
+    if (view === 'secret_scanner' && scannerActive) {
       scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 280, height: 280} }, false);
       scanner.render((decodedText) => {
         processCheckIn(decodedText, "Camera Scan");
-        if (view !== 'kiosk') {
-          scanner.clear(); 
-          setScannerActive(false);
-        }
       }, () => {});
     }
     return () => { if(scanner) scanner.clear().catch(e => console.error(e)); };
-  }, [activeTab, view, scannerActive]); 
+  }, [view, scannerActive]); 
 
   const handleExportCSV = () => {
     if (filteredMembers.length === 0) return;
     const headers = ["Member ID", "First Name", "Last Name", "Email", "Phone", "Membership Type", "Home Center", "Status", "Total Visits", "Next Payment"];
-    const csvRows = [
-      headers.join(','),
-      ...filteredMembers.map(m => `"${m.id}","${m.firstName}","${m.lastName}","${m.email}","${m.phone}","${m.type}","${m.center}","${m.status}","${m.visits}","${m.nextPayment}"`)
-    ].join('\n');
+    const csvRows = [headers.join(','), ...filteredMembers.map(m => `"${m.id}","${m.firstName}","${m.lastName}","${m.email}","${m.phone}","${m.type}","${m.center}","${m.status}","${m.visits}","${m.nextPayment}"`)].join('\n');
     const blob = new Blob([csvRows], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url;
-    const centerLabel = viewingCenter === 'both' ? 'All_Centers' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1);
-    a.download = `Wellness_Members_${centerLabel}_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `Wellness_Members_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click(); window.URL.revokeObjectURL(url);
   };
 
   const handleMonthlySummary = () => {
     const centerName = viewingCenter === 'both' ? 'System-Wide' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1);
-    
-    // Updated Excel Export to match your exact pricing structure
     const csvContent = `
 ${centerName} Wellness Center ${currentDateString} Summary
 
@@ -311,13 +297,13 @@ Total Members:,${stats.total}
   if (!isMounted) return <div className="min-h-screen bg-[#001f3f]" />;
 
   // ============================================================
-  // VIEW: LANDING PAGE
+  // VIEW: LANDING PAGE (WITH SECRET SCANNER LOCK)
   // ============================================================
   if (view === 'landing') {
     return (
-      <div className="min-h-screen bg-[#001f3f] flex items-center justify-center font-sans p-6">
-        <div className="text-center max-w-5xl w-full">
-          <img src={LOGO_URL} alt="Logo" className="h-20 mx-auto mb-16 opacity-90" />
+      <div className="min-h-screen bg-[#001f3f] flex items-center justify-center font-sans p-6 relative">
+        <div className="text-center max-w-5xl w-full relative z-10">
+          <img src={LOGO_URL} alt="Logo" className="h-40 mx-auto mb-16 opacity-100 drop-shadow-2xl" />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
              <button onClick={() => setView('login')} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group">
                 <ShieldCheck size={56} className="text-[#f59e0b] group-hover:scale-110 transition-transform" />
@@ -333,51 +319,72 @@ Total Members:,${stats.total}
              </button>
           </div>
         </div>
+        {/* SECRET SCANNER BUTTON */}
+        <button onClick={() => {setView('secret_scanner'); setViewingCenter('both');}} className="absolute bottom-6 right-6 opacity-10 hover:opacity-50 transition-opacity p-4">
+           <Lock size={20} className="text-white"/>
+        </button>
       </div>
     );
   }
 
   // ============================================================
-  // VIEW: LOCKED-DOWN KIOSK MODE
+  // VIEW: LOCKED-DOWN KIOSK MODE (NO CAMERA, PIN ADDED)
   // ============================================================
   if (view === 'kiosk') {
     return (
       <div className="min-h-screen bg-[#f0f2f5] flex flex-col items-center justify-center p-6 font-sans relative overflow-hidden">
-         <button onClick={() => {setView('landing'); setScannerActive(false);}} className="absolute top-6 left-6 text-slate-400 hover:text-[#001f3f] flex items-center gap-2 font-bold z-10"><LogOut size={20}/> Staff Exit</button>
+         <button onClick={() => {setView('landing');}} className="absolute top-6 left-6 text-slate-400 hover:text-[#001f3f] flex items-center gap-2 font-bold z-10"><LogOut size={20}/> Staff Exit</button>
          
+         {/* STOPLIGHT FULL SCREEN MESSAGES */}
          {kioskMessage.text && (
-           <div className={`absolute inset-0 z-50 flex flex-col items-center justify-center transition-all duration-300 ${kioskMessage.type === 'success' ? 'bg-[#16a34a]' : 'bg-red-600'}`}>
+           <div className={`absolute inset-0 z-50 flex flex-col items-center justify-center transition-all duration-300 
+             ${kioskMessage.type === 'success' ? 'bg-[#16a34a]' : kioskMessage.type === 'warning' ? 'bg-[#eab308]' : 'bg-red-600'}`}>
               {kioskMessage.type === 'success' ? <CheckCircle size={120} className="text-white mb-8 animate-bounce" /> : <AlertCircle size={120} className="text-white mb-8 animate-bounce" />}
               <h1 className="text-6xl md:text-8xl font-black text-white tracking-tighter text-center px-4 shadow-sm">{kioskMessage.text}</h1>
+              {kioskMessage.subtext && <p className="text-2xl text-white/90 mt-6 font-bold tracking-tight">{kioskMessage.subtext}</p>}
+           </div>
+         )}
+
+         {/* MMDD PIN MODAL */}
+         {pinModal && (
+           <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-[#001f3f]/90 backdrop-blur-sm p-4">
+              <div className="bg-white p-12 rounded-[3rem] text-center max-w-sm w-full relative shadow-2xl">
+                 <button onClick={() => {setPinModal(null); setPinInput('');}} className="absolute top-6 right-6 text-slate-300 hover:text-red-500"><X size={24}/></button>
+                 <Lock size={48} className="text-[#1080ad] mx-auto mb-6" />
+                 <h3 className="text-3xl font-black text-[#001f3f] mb-2 tracking-tight">Security PIN</h3>
+                 <p className="text-slate-500 font-medium mb-8">Enter your 4-digit birth month and day (MMDD)</p>
+                 <input 
+                   type="password" 
+                   maxLength={4}
+                   value={pinInput}
+                   onChange={e => setPinInput(e.target.value)}
+                   onKeyDown={(e) => {
+                     if (e.key === 'Enter') document.getElementById('btn_submit_pin').click();
+                   }}
+                   className="w-full p-6 text-center text-4xl tracking-[0.5em] border-2 rounded-2xl mb-8 outline-none focus:border-[#1080ad] bg-slate-50"
+                   autoFocus
+                 />
+                 <button id="btn_submit_pin" onClick={() => {
+                    if (!pinModal.password || pinInput === pinModal.password) {
+                        processCheckIn(pinModal.id, "Kiosk Search & PIN");
+                        setPinModal(null);
+                        setPinInput('');
+                    } else {
+                        alert("Incorrect PIN. Please try again or see the front desk.");
+                    }
+                 }} className="w-full bg-[#1080ad] text-white p-5 rounded-2xl font-bold text-xl shadow-lg hover:bg-blue-800 transition-colors">Verify</button>
+              </div>
            </div>
          )}
 
          <div className="bg-white rounded-[3rem] shadow-2xl p-12 w-full max-w-2xl border-t-8 border-[#1080ad] text-center relative z-0">
             <h2 className="text-5xl font-black text-[#001f3f] mb-4 tracking-tight">Check-In</h2>
-            <p className="text-slate-500 mb-10 text-lg font-medium">Scan your QR code or type your name.</p>
+            <p className="text-slate-500 mb-12 text-lg font-medium">Type your last name or scan your physical badge.</p>
             
-            <div className="w-full max-w-md mx-auto mb-10 border-4 border-slate-100 bg-white relative flex flex-col items-center justify-center p-4 rounded-3xl min-h-[300px]">
-               {!scannerActive ? (
-                 <>
-                   <Camera size={64} className="mb-6 text-slate-300" />
-                   <button onClick={() => setScannerActive(true)} className="bg-[#1080ad] text-white px-8 py-4 rounded-xl font-bold text-lg flex items-center gap-2 shadow-lg hover:bg-blue-700 transition-colors">
-                     Turn On Scanner
-                   </button>
-                   <p className="text-xs text-slate-400 mt-4">(Ensure browser camera is allowed)</p>
-                 </>
-               ) : (
-                 <div className="w-full h-full relative">
-                   <div id="reader" className="w-full h-full bg-black"></div>
-                 </div>
-               )}
-            </div>
-
-            <p className="text-sm font-bold text-slate-400 mb-4 tracking-widest uppercase">Or enter Name or ID</p>
-            
-            <div className="relative w-full max-w-md mx-auto">
+            <div className="relative w-full max-w-md mx-auto mb-10">
               <div className="flex gap-4">
                  <input 
-                   className="flex-1 p-5 border-2 rounded-2xl outline-none focus:border-[#1080ad] font-sans text-xl text-center bg-slate-50" 
+                   className="flex-1 p-6 border-2 rounded-2xl outline-none focus:border-[#1080ad] font-sans text-2xl text-center bg-slate-50" 
                    placeholder="e.g. Smith" 
                    value={kioskInput}
                    onChange={(e) => setKioskInput(e.target.value)}
@@ -395,12 +402,12 @@ Total Members:,${stats.total}
               </div>
 
               {kioskMatches.length > 0 && (
-                <div className="absolute bottom-[110%] left-0 w-full mb-2 bg-white border-2 border-[#1080ad] rounded-2xl shadow-2xl z-50 overflow-hidden text-left flex flex-col-reverse">
+                <div className="absolute bottom-[115%] left-0 w-full mb-2 bg-white border-2 border-[#1080ad] rounded-2xl shadow-2xl z-30 overflow-hidden text-left flex flex-col-reverse">
                   {kioskMatches.map(m => (
                     <button 
                       key={m.id} 
                       onClick={() => {
-                        processCheckIn(m.id, "Name Search Entry");
+                        setPinModal(m); // Triggers PIN modal instead of direct check-in!
                         setKioskInput('');
                       }}
                       className="w-full p-5 border-b border-slate-100 hover:bg-blue-50 transition-colors flex justify-between items-center group"
@@ -417,7 +424,36 @@ Total Members:,${stats.total}
                 </div>
               )}
             </div>
+            <img src={LOGO_URL} alt="Logo" className="h-10 mx-auto opacity-30 invert grayscale" />
+         </div>
+      </div>
+    );
+  }
 
+  // ============================================================
+  // VIEW: SECRET SCANNER PAGE
+  // ============================================================
+  if (view === 'secret_scanner') {
+    return (
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 font-sans relative">
+         <button onClick={() => {setView('landing'); setScannerActive(false);}} className="absolute top-6 left-6 text-white/50 hover:text-white flex items-center gap-2 font-bold z-10"><LogOut size={20}/> Exit Scanner</button>
+         
+         {kioskMessage.text && (
+           <div className={`absolute inset-0 z-50 flex flex-col items-center justify-center transition-all duration-300 
+             ${kioskMessage.type === 'success' ? 'bg-[#16a34a]' : kioskMessage.type === 'warning' ? 'bg-[#eab308]' : 'bg-red-600'}`}>
+              <h1 className="text-6xl md:text-8xl font-black text-white tracking-tighter text-center px-4">{kioskMessage.text}</h1>
+              {kioskMessage.subtext && <p className="text-2xl text-white/90 mt-6 font-bold tracking-tight">{kioskMessage.subtext}</p>}
+           </div>
+         )}
+
+         <div className="w-full max-w-lg mx-auto bg-slate-900 border-4 border-slate-800 rounded-3xl overflow-hidden min-h-[400px] flex flex-col items-center justify-center">
+            {!scannerActive ? (
+              <button onClick={() => setScannerActive(true)} className="bg-[#1080ad] text-white px-8 py-4 rounded-xl font-bold text-lg flex items-center gap-2">
+                Turn On Camera
+              </button>
+            ) : (
+              <div id="reader" className="w-full h-full"></div>
+            )}
          </div>
       </div>
     );
@@ -430,36 +466,21 @@ Total Members:,${stats.total}
     return (
       <div className="min-h-screen bg-[#f0f2f5] flex items-center justify-center p-4 font-sans">
         <div className="bg-white rounded-[3rem] shadow-2xl p-10 w-full max-w-md border-t-8 border-[#16a34a]">
-          <div className="flex justify-center mb-6">
-            <UserCircle size={64} className="text-[#16a34a]" />
-          </div>
+          <div className="flex justify-center mb-6"><UserCircle size={64} className="text-[#16a34a]" /></div>
           <h2 className="text-3xl font-black text-center text-[#001f3f] mb-2 tracking-tight">Member Access</h2>
           <p className="text-slate-500 mb-8 text-center font-medium">Log in to view your digital badge.</p>
           
           <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-2">Email Address</label>
-              <input type="email" placeholder="you@email.com" id="m_email" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-[#16a34a] text-lg transition-colors" />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-2">Member ID</label>
-              <input type="text" placeholder="e.g. WC-001" id="m_id" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-[#16a34a] text-lg uppercase transition-colors" onKeyDown={(e) => {
-                if (e.key === 'Enter') document.getElementById('btn_member_login').click();
-              }}/>
-            </div>
+            <div><label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-2">Email Address</label><input type="email" placeholder="you@email.com" id="m_email" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-[#16a34a] text-lg transition-colors" /></div>
+            <div><label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-2">Member ID</label><input type="text" placeholder="e.g. WC-001" id="m_id" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-[#16a34a] text-lg uppercase transition-colors" onKeyDown={(e) => { if (e.key === 'Enter') document.getElementById('btn_member_login').click(); }}/></div>
           </div>
 
           <button id="btn_member_login" onClick={() => {
             const email = document.getElementById('m_email').value.toLowerCase().trim();
             const id = document.getElementById('m_id').value.toUpperCase().trim();
             const foundMember = members.find(m => m.id === id && m.email.toLowerCase() === email);
-            
-            if(foundMember) { 
-              setActiveMember(foundMember); 
-              setView('member_portal'); 
-            } else { 
-              alert('We could not find an active account with that Email and Member ID combination.'); 
-            }
+            if(foundMember) { setActiveMember(foundMember); setView('member_portal'); } 
+            else { alert('Member not found.'); }
           }} className="w-full bg-[#16a34a] text-white p-5 rounded-2xl font-bold text-lg shadow-lg shadow-green-600/20 hover:bg-green-700 transition-all mt-8">Access My Badge</button>
           
           <button onClick={() => setView('landing')} className="w-full mt-6 text-slate-400 font-bold hover:text-slate-600 transition-colors">Return to Home</button>
@@ -476,8 +497,8 @@ Total Members:,${stats.total}
       <div className="min-h-screen bg-[#f0f2f5] font-sans pb-20 md:pb-0">
         <nav className="bg-[#001f3f] text-white p-4 shadow-md flex justify-between items-center sticky top-0 z-10">
           <div className="flex items-center gap-3">
-             <div className="w-8 h-8 rounded-full bg-[#16a34a] flex items-center justify-center font-bold text-[#001f3f]">{activeMember.firstName.charAt(0)}</div>
-             <span className="font-bold tracking-tight">Wellness Portal</span>
+             <img src={LOGO_URL} alt="Logo" className="h-6" /> {/* LOGO ADDED */}
+             <span className="font-bold tracking-tight border-l border-white/20 pl-3">Wellness Portal</span>
           </div>
           <button onClick={() => { setActiveMember(null); setView('landing'); }} className="text-white/60 hover:text-white flex items-center gap-2 text-sm font-medium">
              <LogOut size={16}/> Sign Out
@@ -497,92 +518,18 @@ Total Members:,${stats.total}
                  <QRCode data={activeMember.id} size={220} />
               </div>
               <p className="text-2xl font-black text-[#001f3f] tracking-widest">{activeMember.id}</p>
-              <span className={`mt-4 px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase ${activeMember.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                 {activeMember.status} MEMBER
+              <span className={`mt-4 px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase ${getStoplight(activeMember) === 'green' ? 'bg-green-100 text-green-700' : getStoplight(activeMember) === 'yellow' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+                 {getStoplight(activeMember) === 'green' ? 'ACTIVE MEMBER' : getStoplight(activeMember) === 'yellow' ? 'PAYMENT DUE' : 'ACCOUNT LOCKED'}
               </span>
            </div>
 
            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
-              <h3 className="font-bold text-[#001f3f] mb-4 flex items-center gap-2"><Activity size={18} className="text-[#f59e0b]"/> Lifetime Visits</h3>
-              <div className="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                 <span className="text-sm font-bold text-slate-500">Total Check-ins</span>
-                 <span className="text-3xl font-black text-[#1080ad]">{activeMember.visits}</span>
-              </div>
-           </div>
-
-           {familyMembers.length > 0 && (
-             <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
-               <h3 className="font-bold text-[#001f3f] mb-4 flex items-center gap-2"><Users size={18} className="text-[#16a34a]"/> Linked Family Accounts</h3>
-               <div className="space-y-3">
-                 {familyMembers.map(fm => (
-                   <button key={fm.id} onClick={() => setActiveMember(fm)} className="w-full flex items-center justify-between bg-slate-50 p-4 rounded-2xl hover:bg-slate-100 transition-colors border border-slate-100">
-                     <div className="flex items-center gap-3">
-                       <div className="w-8 h-8 rounded-full bg-[#1080ad] text-white flex items-center justify-center font-bold text-xs">{fm.firstName.charAt(0)}</div>
-                       <div className="text-left">
-                         <p className="font-bold text-slate-800 text-sm leading-tight">{fm.firstName} {fm.lastName}</p>
-                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{fm.id}</p>
-                       </div>
-                     </div>
-                     <ChevronRight size={16} className="text-slate-400" />
-                   </button>
-                 ))}
-               </div>
-             </div>
-           )}
-
-           <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
-              <h3 className="font-bold text-[#001f3f] mb-4 flex items-center gap-2"><CreditCard size={18} className="text-[#1080ad]"/> Account Status</h3>
+              <h3 className="font-bold text-[#001f3f] mb-4 flex items-center gap-2"><CreditCard size={18} className="text-[#1080ad]"/> Account Info</h3>
               <div className="space-y-4">
-                 <div className="flex justify-between items-center border-b border-slate-50 pb-4">
-                    <span className="text-sm font-bold text-slate-400 uppercase tracking-tight">Plan Type</span>
-                    <span className="font-bold text-slate-800">{activeMember.type}</span>
-                 </div>
-                 <div className="flex justify-between items-center border-b border-slate-50 pb-4">
-                    <span className="text-sm font-bold text-slate-400 uppercase tracking-tight">Home Center</span>
-                    <span className="font-bold text-slate-800">{activeMember.center}</span>
-                 </div>
-                 <div className="flex justify-between items-center pb-2">
-                    <span className="text-sm font-bold text-slate-400 uppercase tracking-tight">Next Payment</span>
-                    <span className={`font-bold ${activeMember.status === 'OVERDUE' ? 'text-red-500' : 'text-slate-800'}`}>
-                      {activeMember.nextPayment || 'N/A'}
-                    </span>
-                 </div>
+                 <div className="flex justify-between items-center border-b border-slate-50 pb-4"><span className="text-sm font-bold text-slate-400 uppercase tracking-tight">Plan Type</span><span className="font-bold text-slate-800">{activeMember.type}</span></div>
+                 <div className="flex justify-between items-center border-b border-slate-50 pb-4"><span className="text-sm font-bold text-slate-400 uppercase tracking-tight">Home Center</span><span className="font-bold text-slate-800">{activeMember.center}</span></div>
+                 <div className="flex justify-between items-center pb-2"><span className="text-sm font-bold text-slate-400 uppercase tracking-tight">Next Payment</span><span className={`font-bold ${getStoplight(activeMember) !== 'green' ? 'text-red-500' : 'text-slate-800'}`}>{activeMember.nextPayment || 'N/A'}</span></div>
               </div>
-           </div>
-
-           <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-[#001f3f] flex items-center gap-2"><UserCircle size={18} className="text-[#f59e0b]"/> Contact Info</h3>
-                <button onClick={() => setEditMode(!editMode)} className="text-xs font-bold text-[#1080ad] bg-blue-50 px-3 py-1 rounded-lg">
-                  {editMode ? 'Cancel' : 'Edit'}
-                </button>
-              </div>
-              {!editMode ? (
-                <div className="space-y-4">
-                   <div className="flex justify-between items-center border-b border-slate-50 pb-4">
-                      <span className="text-sm font-bold text-slate-400 uppercase tracking-tight">Email</span>
-                      <span className="font-bold text-slate-800 truncate pl-4">{activeMember.email || 'N/A'}</span>
-                   </div>
-                   <div className="flex justify-between items-center pb-2">
-                      <span className="text-sm font-bold text-slate-400 uppercase tracking-tight">Phone</span>
-                      <span className="font-bold text-slate-800">{activeMember.phone || 'N/A'}</span>
-                   </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                   <div>
-                     <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Email</label>
-                     <input id="edit_email" defaultValue={activeMember.email} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]" />
-                   </div>
-                   <div>
-                     <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Phone</label>
-                     <input id="edit_phone" defaultValue={activeMember.phone} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]" />
-                   </div>
-                   <button onClick={handleUpdateProfile} disabled={isUpdating} className="w-full bg-[#001f3f] text-white py-3 rounded-xl font-bold text-sm hover:bg-blue-900 transition-colors flex justify-center">
-                     {isUpdating ? 'Saving...' : 'Save Changes'}
-                   </button>
-                </div>
-              )}
            </div>
         </main>
       </div>
@@ -613,7 +560,10 @@ Total Members:,${stats.total}
   return (
     <div className="flex min-h-screen bg-[#f0f2f5] font-sans text-slate-800">
       <aside className="w-64 bg-[#001f3f] text-white flex flex-col min-h-screen">
-        <div className="p-6 border-b border-white/10"><h1 className="text-xl font-bold tracking-tight">Wellness Centers</h1></div>
+        <div className="p-8 border-b border-white/10 flex justify-center">
+           {/* LOGO ADDED TO SIDEBAR */}
+           <img src={LOGO_URL} alt="Logo" className="h-10 opacity-90 drop-shadow-md" />
+        </div>
         
         <div className="p-6">
           <div className="flex items-center gap-3 mb-4">
@@ -628,32 +578,16 @@ Total Members:,${stats.total}
           </button>
         </div>
 
-        <div className="px-4 mb-8">
-          <p className="px-2 text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3">Viewing</p>
-          <div className="space-y-1">
-            {[ { k: 'both', c: '#ffffff' }, { k: 'harper', c: '#f59e0b' }, { k: 'anthony', c: '#1080ad' } ].map(item => (
-              <button key={item.k} onClick={() => {
-                  setViewingCenter(item.k);
-                  localStorage.setItem('wellnessCenter', item.k);
-              }} className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all ${viewingCenter === item.k ? 'bg-white/20 font-bold' : 'text-white/60 hover:bg-white/5'}`}>
-                <span className="w-1.5 h-6 rounded-full" style={{ backgroundColor: item.c }} />
-                {item.k === 'both' ? 'Both Centers' : `${item.k.charAt(0).toUpperCase() + item.k.slice(1)}`}
-              </button>
-            ))}
-          </div>
-        </div>
-
         <nav className="flex-1 px-4 space-y-1">
           {[
             { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
             { id: 'members', label: 'Members', icon: <Users size={18} /> },
-            { id: 'badge', label: 'Staff Check-In', icon: <QrCode size={18} /> },
+            { id: 'badge', label: 'Staff Check-In', icon: <QrCode size={18} /> }, // Camera removed from here!
             { id: 'notif', label: 'Notifications', icon: <Bell size={18} /> },
             { id: 'reports', label: 'Reports', icon: <FileText size={18} /> },
           ].map(item => (
             <button key={item.id} onClick={() => { setActiveTab(item.id); setKioskInput(''); }} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all ${activeTab === item.id ? 'bg-[#1080ad] text-white font-bold' : 'text-white/60 hover:bg-white/5'}`}>
               {item.icon} {item.label}
-              {item.id === 'notif' && stats.overdue > 0 && <span className="ml-auto w-5 h-5 rounded-full bg-red-500 text-[10px] flex items-center justify-center font-bold tracking-tight">{stats.overdue}</span>}
             </button>
           ))}
         </nav>
@@ -665,7 +599,6 @@ Total Members:,${stats.total}
            <p className="text-sm text-slate-400 font-medium">{viewingCenter === 'both' ? 'All Centers' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1) + ' Center'} · {currentDateString}</p>
         </div>
 
-        {/* VIEW: DASHBOARD */}
         {activeTab === 'dashboard' && (
           <div className="space-y-8">
             <div className="grid grid-cols-5 gap-6">
@@ -673,25 +606,6 @@ Total Members:,${stats.total}
                  <ProStatCard key={i} {...s} />
                ))}
             </div>
-
-            <ProListCard title="Peak Hours Activity Heatmap">
-               <div className="flex items-end justify-between h-48 mt-8 gap-2">
-                 {heatmapData.map((count, i) => {
-                   const heightPercent = count === 0 ? 5 : (count / maxVisits) * 100;
-                   const hourLabel = (i + 6) > 12 ? `${(i + 6) - 12}P` : `${i + 6}A`;
-                   return (
-                     <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
-                       <div className="w-full bg-blue-100 rounded-t-md relative flex items-end justify-center group-hover:bg-blue-200 transition-colors" style={{ height: '100%' }}>
-                         <div className="w-full bg-[#1080ad] rounded-t-md transition-all duration-500 relative" style={{ height: `${heightPercent}%` }}>
-                           <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold text-[#001f3f] opacity-0 group-hover:opacity-100 transition-opacity">{count}</span>
-                         </div>
-                       </div>
-                       <span className="text-[10px] font-bold text-slate-400">{hourLabel}</span>
-                     </div>
-                   );
-                 })}
-               </div>
-            </ProListCard>
 
             <div className="grid grid-cols-2 gap-8">
                <ProListCard title="Today's Check-ins">
@@ -719,17 +633,13 @@ Total Members:,${stats.total}
           </div>
         )}
 
-        {/* VIEW: MEMBERS */}
         {activeTab === 'members' && (
           <div className="space-y-6">
              <div className="flex justify-between items-center mb-8">
-                <div><h2 className="text-3xl font-bold text-[#001f3f] tracking-tight">Members</h2><p className="text-slate-400 font-medium">{filteredMembers.length} members</p></div>
-                <div className="flex gap-3">
-                   <button onClick={handleExportCSV} className="bg-white border border-slate-200 text-[#001f3f] px-6 py-2 rounded-xl font-bold text-sm shadow-sm flex items-center gap-2 hover:bg-slate-50 transition-all">
-                      <Download size={16} /> Export Raw Data CSV
-                   </button>
-                   <button className="bg-[#001f3f] text-white px-6 py-2 rounded-xl font-bold text-sm shadow-xl shadow-blue-900/10 flex items-center gap-2"><Plus size={16} /> Add Member</button>
-                </div>
+                <div><h2 className="text-3xl font-bold text-[#001f3f] tracking-tight">Members</h2></div>
+                <button onClick={handleExportCSV} className="bg-white border border-slate-200 text-[#001f3f] px-6 py-2 rounded-xl font-bold text-sm shadow-sm flex items-center gap-2 hover:bg-slate-50 transition-all">
+                  <Download size={16} /> Export CSV
+                </button>
              </div>
              
              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex gap-4 items-center">
@@ -743,21 +653,26 @@ Total Members:,${stats.total}
                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                  <table className="w-full text-left border-collapse">
                    <thead className="bg-slate-50 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b">
-                     <tr><th className="px-8 py-4 w-64">Member</th><th className="px-8 py-4">ID</th><th className="px-8 py-4 w-40">Type</th><th className="px-8 py-4 w-48">Center</th><th className="px-8 py-4 w-32">Status</th><th className="px-8 py-4 w-32">Next Payment</th><th className="px-8 py-4 w-24 text-right">Visits</th><th className="px-8 py-4 w-24">Actions</th></tr>
+                     <tr><th className="px-8 py-4 w-64">Member</th><th className="px-8 py-4">ID</th><th className="px-8 py-4 w-40">Type</th><th className="px-8 py-4 w-32">Status</th><th className="px-8 py-4 w-32">Next Payment</th><th className="px-8 py-4 w-24">Actions</th></tr>
                    </thead>
                    <tbody className="text-sm">
-                     {filteredMembers.map(m => (
+                     {filteredMembers.map(m => {
+                       const light = getStoplight(m);
+                       return (
                        <tr key={m.id} className="border-b hover:bg-slate-50/80 cursor-pointer" onClick={() => setSelectedMember(m)}>
                          <td className="px-8 py-5"><p className="font-bold text-slate-800">{m.firstName} {m.lastName}</p><p className="text-[11px] text-slate-400">{m.email}</p></td>
                          <td className="px-8 py-5 font-mono text-slate-400">{m.id}</td>
                          <td className="px-8 py-5"><span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black tracking-tight">{m.type}</span></td>
-                         <td className="px-8 py-5 text-slate-600 font-medium">{m.center}</td>
-                         <td className="px-8 py-5"><span className={`px-3 py-1 rounded-full text-[10px] font-black ${m.status === 'ACTIVE' ? 'bg-green-100 text-green-600' : m.status === 'OVERDUE' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>{m.status}</span></td>
-                         <td className="px-8 py-5 text-slate-600">{m.nextPayment}</td>
-                         <td className="px-8 py-5 font-bold text-lg text-right">{m.visits}</td>
+                         <td className="px-8 py-5">
+                            {/* Stoplight logic rendered in Staff Members tab */}
+                            <span className={`px-3 py-1 rounded-full text-[10px] font-black ${light === 'green' ? 'bg-green-100 text-green-600' : light === 'yellow' ? 'bg-yellow-100 text-yellow-600' : 'bg-red-100 text-red-600'}`}>
+                               {light === 'green' ? 'ACTIVE' : light === 'yellow' ? 'GRACE PERIOD' : 'LOCKED'}
+                            </span>
+                         </td>
+                         <td className="px-8 py-5 text-slate-600">{m.nextPayment || 'N/A'}</td>
                          <td className="px-8 py-5"><button className="p-2 bg-[#1080ad] text-white rounded-lg shadow-md"><QrCode size={16}/></button></td>
                        </tr>
-                     ))}
+                     )})}
                    </tbody>
                  </table>
                </div>
@@ -765,19 +680,16 @@ Total Members:,${stats.total}
           </div>
         )}
 
-        {/* VIEW: REPORTS */}
         {activeTab === 'reports' && (
           <div className="space-y-6">
              <div className="flex justify-between items-center mb-8">
-                <div><h2 className="text-3xl font-bold text-[#001f3f] tracking-tight">Monthly Summary Report</h2><p className="text-slate-400 font-medium">Automated stats breakdown based on current Airtable records.</p></div>
+                <div><h2 className="text-3xl font-bold text-[#001f3f] tracking-tight">Monthly Summary Report</h2></div>
                 <button onClick={handleMonthlySummary} className="bg-[#1080ad] text-white px-6 py-3 rounded-xl font-bold text-sm shadow-xl flex items-center gap-2 hover:bg-blue-600 transition-all">
-                  <Download size={16} /> Download Excel Summary
+                  <Download size={16} /> Download Excel
                 </button>
              </div>
              
              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-               
-               {/* NEW: STANDARD MEMBERSHIPS TIER */}
                <ProListCard title="Standard Memberships">
                  <table className="w-full text-sm">
                    <tbody>
@@ -791,7 +703,6 @@ Total Members:,${stats.total}
                </ProListCard>
 
                <div className="space-y-8">
-                 {/* NEW: CORPORATE AND STAFF TIER */}
                  <ProListCard title="Corporate & Staff">
                    <table className="w-full text-sm">
                      <tbody>
@@ -815,47 +726,17 @@ Total Members:,${stats.total}
           </div>
         )}
 
-        {/* VIEW: NOTIFICATIONS */}
-        {activeTab === 'notif' && (
-          <div className="space-y-6">
-             <div className="flex justify-between items-center mb-8">
-                <div><h2 className="text-3xl font-bold text-[#001f3f] tracking-tight">Notifications</h2><p className="text-slate-400 font-medium">Payment reminders via email & SMS</p></div>
-                <button className="bg-[#dd6d22] text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-orange-900/20 flex items-center gap-2"><Bell size={20} /> Send All Due</button>
-             </div>
-             <ProListCard title="Due for Reminder">
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mt-4">
-                  <table className="w-full text-left border-collapse">
-                    <thead className="bg-slate-50 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b">
-                      <tr><th className="px-8 py-4 w-64">Member</th><th className="px-8 py-4 w-40">Type</th><th className="px-8 py-4 w-32">Status</th><th className="px-8 py-4 w-32">Due</th><th className="px-8 py-4 w-24">Actions</th></tr>
-                    </thead>
-                    <tbody className="text-sm">
-                      {scopedMembers.filter(m => m.status !== 'ACTIVE').map(m => (
-                        <tr key={m.id} className="border-b">
-                          <td className="px-8 py-5"><p className="font-bold text-slate-800">{m.firstName} {m.lastName}</p><p className="text-[11px] text-slate-400">{m.email}</p></td>
-                          <td className="px-8 py-5"><span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black">{m.type}</span></td>
-                          <td className="px-8 py-5"><span className={`px-3 py-1 rounded-full text-[10px] font-black ${m.status === 'OVERDUE' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>{m.status}</span></td>
-                          <td className="px-8 py-5 text-slate-600 font-medium">{m.nextPayment}</td>
-                          <td className="px-8 py-5 flex gap-2"><button className="p-2 bg-[#1080ad] text-white rounded-lg shadow-md"><Mail size={16}/></button><button className="p-2 bg-[#dd6d22] text-white rounded-lg shadow-md"><Phone size={16}/></button></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-             </ProListCard>
-          </div>
-        )}
-
-        {/* VIEW: STAFF BADGE IN */}
+        {/* VIEW: STAFF BADGE IN (NO CAMERA) */}
         {activeTab === 'badge' && (
           <div className="space-y-6">
              <div className="mb-8">
                 <h2 className="text-3xl font-bold text-[#001f3f] tracking-tight mb-1">Staff Check-In</h2>
-                <p className="text-slate-400 font-medium">Manually log a check-in for a member who forgot their badge.</p>
+                <p className="text-slate-400 font-medium">Log a check-in manually or via external barcode scanner.</p>
              </div>
              <div className="flex gap-8">
                 <div className="bg-white p-12 rounded-3xl shadow-sm border border-slate-200 flex-1 text-center">
                    
-                   <p className="text-sm font-bold text-slate-400 mb-4 tracking-tight">Enter Name or ID (or use USB scanner):</p>
+                   <p className="text-sm font-bold text-slate-400 mb-4 tracking-tight">Enter Name or ID (or plug in external scanner):</p>
                    
                    <div className="relative w-full max-w-sm mx-auto mb-10">
                       <div className="flex gap-4">
@@ -884,7 +765,7 @@ Total Members:,${stats.total}
                             <button 
                               key={m.id} 
                               onClick={() => {
-                                processCheckIn(m.id, "Name Search Entry");
+                                processCheckIn(m.id, "Staff Override Entry");
                                 setKioskInput('');
                               }}
                               className="w-full p-4 border-b border-slate-100 last:border-0 hover:bg-blue-50 transition-colors flex justify-between items-center group"
@@ -903,26 +784,11 @@ Total Members:,${stats.total}
                    </div>
                    
                    {kioskMessage.text && (
-                     <div className={`mt-8 p-4 rounded-xl text-center font-bold text-lg ${kioskMessage.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                     <div className={`mt-8 p-4 rounded-xl text-center font-bold text-lg ${kioskMessage.type === 'success' ? 'bg-green-100 text-green-700' : kioskMessage.type === 'warning' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
                         {kioskMessage.text}
                      </div>
                    )}
 
-                </div>
-                <div className="w-[440px] space-y-8">
-                   <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
-                      <p className="text-sm font-bold text-[#001f3f] mb-6 tracking-tight">Recent Check-ins</p>
-                      <div className="space-y-4">
-                         {filteredVisits.length === 0 ? (
-                           <p className="text-slate-300 italic font-medium text-center py-10">Waiting for scan...</p>
-                         ) : filteredVisits.slice(0, 8).map((v, i) => (
-                           <div key={i} className="flex justify-between items-center text-sm border-b pb-4 last:border-0 border-slate-100">
-                              <div><p className="font-bold text-slate-800">{v.name}</p><p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{v.center}</p></div>
-                              <span className="text-xs text-slate-500 font-medium">{new Date(v.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
-                           </div>
-                         ))}
-                      </div>
-                   </div>
                 </div>
              </div>
           </div>
@@ -942,37 +808,29 @@ Total Members:,${stats.total}
                  <p className="text-xl font-bold text-[#001f3f]">#{selectedMember.id}</p>
               </div>
               <div className="flex-1 p-16">
-                 <span className={`px-4 py-1 rounded-full text-[10px] font-black tracking-widest ${selectedMember.status === 'ACTIVE' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>{selectedMember.status}</span>
+                 {/* MODAL STOPLIGHT */}
+                 <span className={`px-4 py-1 rounded-full text-[10px] font-black tracking-widest ${getStoplight(selectedMember) === 'green' ? 'bg-green-100 text-green-600' : getStoplight(selectedMember) === 'yellow' ? 'bg-yellow-100 text-yellow-600' : 'bg-red-100 text-red-600'}`}>
+                    {getStoplight(selectedMember) === 'green' ? 'ACTIVE' : getStoplight(selectedMember) === 'yellow' ? 'GRACE PERIOD' : 'ACCOUNT LOCKED'}
+                 </span>
                  <h2 className="text-6xl font-black text-slate-900 mt-6 mb-12 tracking-tighter leading-none">{selectedMember.firstName}<br/>{selectedMember.lastName}</h2>
                  
                  <div className="grid grid-cols-2 gap-8 gap-x-12">
                     <div>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Primary Location</p>
-                      <p className="text-lg font-bold text-slate-800">{selectedMember.center}</p>
-                    </div>
-                    <div>
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Membership Type</p>
-                      <p className="text-lg font-bold text-slate-800">
-                        {selectedMember.type} {selectedMember.sponsor ? <span className="text-[#1080ad] text-sm block">Corporate Sponsored</span> : ''}
-                      </p>
+                      <p className="text-lg font-bold text-slate-800">{selectedMember.type}</p>
                     </div>
                     <div>
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Contact Info</p>
                       <p className="text-sm font-bold text-slate-800 truncate">{selectedMember.email || 'No Email'}<br/>{selectedMember.phone || 'No Phone'}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Engagement</p>
-                      <p className="text-lg font-bold text-[#1080ad]">{selectedMember.visits} Total Visits</p>
-                    </div>
-                    <div className="col-span-2">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Renewal Date</p>
-                      <p className="text-lg font-bold text-slate-800">{selectedMember.nextPayment}</p>
+                      <p className={`text-lg font-bold ${getStoplight(selectedMember) !== 'green' ? 'text-red-500' : 'text-slate-800'}`}>{selectedMember.nextPayment || 'N/A'}</p>
                     </div>
                  </div>
 
                  <div className="mt-14 flex gap-4">
-                    <button onClick={() => { processCheckIn(selectedMember.id, "Director Override"); setSelectedMember(null); }} className="flex-1 bg-[#001f3f] text-white py-4 rounded-xl font-bold shadow-xl shadow-blue-900/20 active:scale-95 transition-all text-sm">Manual Check-In</button>
-                    <button className="px-6 py-4 border-2 rounded-xl text-slate-300 hover:text-blue-500 hover:border-blue-500 transition-all"><Mail size={20}/></button>
+                    <button onClick={() => { processCheckIn(selectedMember.id, "Director Override"); setSelectedMember(null); }} className="flex-1 bg-[#001f3f] text-white py-4 rounded-xl font-bold shadow-xl shadow-blue-900/20 active:scale-95 transition-all text-sm">Force Manual Check-In</button>
                  </div>
               </div>
            </div>
