@@ -41,10 +41,9 @@ export default function WellnessHub() {
   const [editMode, setEditMode] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   
-  // Kiosk specific states
   const [kioskMessage, setKioskMessage] = useState({text: '', type: '', subtext: ''});
   const [kioskInput, setKioskInput] = useState('');
-  const [pinModal, setPinModal] = useState(null); // Holds member data while they type PIN
+  const [pinModal, setPinModal] = useState(null); 
   const [pinInput, setPinInput] = useState('');
 
   const membersRef = useRef(members);
@@ -92,12 +91,12 @@ export default function WellnessHub() {
               lastName: r.fields['Last Name'] || '',
               email: r.fields['Email'] || '',
               phone: r.fields['Phone'] || '',
-              password: String(r.fields['Password'] || '').trim(), // NEW MMDD PIN
+              password: String(r.fields['Password'] || '').trim(), 
               status: (r.fields['Membership Status'] || 'ACTIVE').toUpperCase(),
               type: String(planText).toUpperCase().trim(),
               center: r.fields['Home Center'] || 'Anthony',
               visits: Number(r.fields['Total Visits'] || 0),
-              nextPayment: r.fields['Next Payment Due'] || null, // Cleaned up for Stoplight math
+              nextPayment: r.fields['Next Payment Due'] || null,
               sponsor: !!r.fields['Corporate Sponsor'],
             };
           });
@@ -168,18 +167,15 @@ export default function WellnessHub() {
     setIsUpdating(false);
   };
 
-  // --- NEW: STOPLIGHT MATH LOGIC ---
   const getStoplight = (member) => {
-    if (!member.nextPayment) return 'green'; // No due date = good to go (Staff, etc.)
+    if (!member.nextPayment) return 'green'; 
     const due = new Date(member.nextPayment);
     const today = new Date();
-    // Calculate difference in days
     const diffTime = today - due;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-    
-    if (diffDays <= 0) return 'green'; // Not due yet
-    if (diffDays > 0 && diffDays <= 14) return 'yellow'; // Grace period
-    return 'red'; // Blocked
+    if (diffDays <= 0) return 'green'; 
+    if (diffDays > 0 && diffDays <= 14) return 'yellow'; 
+    return 'red'; 
   };
 
   const processCheckIn = async (memberId, method = "Manual Entry") => {
@@ -187,39 +183,55 @@ export default function WellnessHub() {
     const m = membersRef.current.find(m => m.id === id); 
     
     if(m) {
-      // EVALUATE STOPLIGHT
       const light = getStoplight(m);
-      
       if (light === 'red') {
          setKioskMessage({ text: `Account Locked`, type: 'error', subtext: 'Please see the front desk to update payment.' });
          setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4500);
-         return false; // Blocks the check-in!
+         return false; 
       }
 
       const currentCenter = centerRef.current;
       const scanCenter = currentCenter === 'both' ? m.center : currentCenter.charAt(0).toUpperCase() + currentCenter.slice(1);
       const currentTime = new Date().toISOString();
-      
-      setVisits(prev => [{name: m.firstName + ' ' + m.lastName, center: scanCenter, time: currentTime, type: m.type}, ...prev]);
-      setMembers(prev => prev.map(member => member.id === id ? { ...member, visits: member.visits + 1 } : member));
-      if (activeMember && activeMember.id === id) setActiveMember(prev => ({...prev, visits: prev.visits + 1}));
-
-      if (light === 'yellow') {
-         setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'warning', subtext: 'Friendly reminder: Your account is past due.' });
-      } else {
-         setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'success', subtext: '' });
-      }
-      setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 3500); 
 
       try {
-        await fetch('/api/visits', {
+        // WE WAIT FOR THE DATABASE TO RESPOND NOW!
+        setKioskMessage({ text: `Syncing...`, type: 'warning', subtext: 'Connecting to database...' });
+
+        const res = await fetch('/api/visits', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ airtableId: m.airtableId, center: scanCenter, time: currentTime, method: method })
         });
-      } catch (err) { console.error("Failed to save visit", err); }
-      return true;
+        
+        const result = await res.json();
+        
+        // IF AIRTABLE REJECTS IT, WE PRINT THE ERROR MASSIVELY ON SCREEN!
+        if (!result.success) {
+           console.error("Airtable rejected the save:", result.error);
+           setKioskMessage({ text: `Airtable Error!`, type: 'error', subtext: `Error: ${result.error}` });
+           setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 8000);
+           return false;
+        }
 
+        // Only tick the local counts up IF the database succeeds!
+        setVisits(prev => [{name: m.firstName + ' ' + m.lastName, center: scanCenter, time: currentTime, type: m.type}, ...prev]);
+        setMembers(prev => prev.map(member => member.id === id ? { ...member, visits: member.visits + 1 } : member));
+        if (activeMember && activeMember.id === id) setActiveMember(prev => ({...prev, visits: prev.visits + 1}));
+
+        if (light === 'yellow') {
+           setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'warning', subtext: 'Friendly reminder: Your account is past due.' });
+        } else {
+           setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'success', subtext: '' });
+        }
+        setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 3500); 
+        return true;
+
+      } catch (err) { 
+        setKioskMessage({ text: `Network Error`, type: 'error', subtext: err.message });
+        setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 5000);
+        return false;
+      }
     } else {
       setKioskMessage({ text: `ID not found. Please see front desk.`, type: 'error' });
       setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 3500);
@@ -297,7 +309,7 @@ Total Members:,${stats.total}
   if (!isMounted) return <div className="min-h-screen bg-[#001f3f]" />;
 
   // ============================================================
-  // VIEW: LANDING PAGE (WITH SECRET SCANNER LOCK)
+  // VIEW: LANDING PAGE
   // ============================================================
   if (view === 'landing') {
     return (
@@ -319,7 +331,6 @@ Total Members:,${stats.total}
              </button>
           </div>
         </div>
-        {/* SECRET SCANNER BUTTON */}
         <button onClick={() => {setView('secret_scanner'); setViewingCenter('both');}} className="absolute bottom-6 right-6 opacity-10 hover:opacity-50 transition-opacity p-4">
            <Lock size={20} className="text-white"/>
         </button>
@@ -328,14 +339,13 @@ Total Members:,${stats.total}
   }
 
   // ============================================================
-  // VIEW: LOCKED-DOWN KIOSK MODE (NO CAMERA, PIN ADDED)
+  // VIEW: LOCKED-DOWN KIOSK MODE
   // ============================================================
   if (view === 'kiosk') {
     return (
       <div className="min-h-screen bg-[#f0f2f5] flex flex-col items-center justify-center p-6 font-sans relative overflow-hidden">
          <button onClick={() => {setView('landing');}} className="absolute top-6 left-6 text-slate-400 hover:text-[#001f3f] flex items-center gap-2 font-bold z-10"><LogOut size={20}/> Staff Exit</button>
          
-         {/* STOPLIGHT FULL SCREEN MESSAGES */}
          {kioskMessage.text && (
            <div className={`absolute inset-0 z-50 flex flex-col items-center justify-center transition-all duration-300 
              ${kioskMessage.type === 'success' ? 'bg-[#16a34a]' : kioskMessage.type === 'warning' ? 'bg-[#eab308]' : 'bg-red-600'}`}>
@@ -345,7 +355,6 @@ Total Members:,${stats.total}
            </div>
          )}
 
-         {/* MMDD PIN MODAL */}
          {pinModal && (
            <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-[#001f3f]/90 backdrop-blur-sm p-4">
               <div className="bg-white p-12 rounded-[3rem] text-center max-w-sm w-full relative shadow-2xl">
@@ -407,7 +416,7 @@ Total Members:,${stats.total}
                     <button 
                       key={m.id} 
                       onClick={() => {
-                        setPinModal(m); // Triggers PIN modal instead of direct check-in!
+                        setPinModal(m); 
                         setKioskInput('');
                       }}
                       className="w-full p-5 border-b border-slate-100 hover:bg-blue-50 transition-colors flex justify-between items-center group"
@@ -497,7 +506,7 @@ Total Members:,${stats.total}
       <div className="min-h-screen bg-[#f0f2f5] font-sans pb-20 md:pb-0">
         <nav className="bg-[#001f3f] text-white p-4 shadow-md flex justify-between items-center sticky top-0 z-10">
           <div className="flex items-center gap-3">
-             <img src={LOGO_URL} alt="Logo" className="h-6" /> {/* LOGO ADDED */}
+             <img src={LOGO_URL} alt="Logo" className="h-6" /> 
              <span className="font-bold tracking-tight border-l border-white/20 pl-3">Wellness Portal</span>
           </div>
           <button onClick={() => { setActiveMember(null); setView('landing'); }} className="text-white/60 hover:text-white flex items-center gap-2 text-sm font-medium">
@@ -522,6 +531,34 @@ Total Members:,${stats.total}
                  {getStoplight(activeMember) === 'green' ? 'ACTIVE MEMBER' : getStoplight(activeMember) === 'yellow' ? 'PAYMENT DUE' : 'ACCOUNT LOCKED'}
               </span>
            </div>
+
+           <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
+              <h3 className="font-bold text-[#001f3f] mb-4 flex items-center gap-2"><Activity size={18} className="text-[#f59e0b]"/> Lifetime Visits</h3>
+              <div className="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                 <span className="text-sm font-bold text-slate-500">Total Check-ins</span>
+                 <span className="text-3xl font-black text-[#1080ad]">{activeMember.visits}</span>
+              </div>
+           </div>
+
+           {familyMembers.length > 0 && (
+             <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
+               <h3 className="font-bold text-[#001f3f] mb-4 flex items-center gap-2"><Users size={18} className="text-[#16a34a]"/> Linked Family Accounts</h3>
+               <div className="space-y-3">
+                 {familyMembers.map(fm => (
+                   <button key={fm.id} onClick={() => setActiveMember(fm)} className="w-full flex items-center justify-between bg-slate-50 p-4 rounded-2xl hover:bg-slate-100 transition-colors border border-slate-100">
+                     <div className="flex items-center gap-3">
+                       <div className="w-8 h-8 rounded-full bg-[#1080ad] text-white flex items-center justify-center font-bold text-xs">{fm.firstName.charAt(0)}</div>
+                       <div className="text-left">
+                         <p className="font-bold text-slate-800 text-sm leading-tight">{fm.firstName} {fm.lastName}</p>
+                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{fm.id}</p>
+                       </div>
+                     </div>
+                     <ChevronRight size={16} className="text-slate-400" />
+                   </button>
+                 ))}
+               </div>
+             </div>
+           )}
 
            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
               <h3 className="font-bold text-[#001f3f] mb-4 flex items-center gap-2"><CreditCard size={18} className="text-[#1080ad]"/> Account Info</h3>
@@ -561,7 +598,6 @@ Total Members:,${stats.total}
     <div className="flex min-h-screen bg-[#f0f2f5] font-sans text-slate-800">
       <aside className="w-64 bg-[#001f3f] text-white flex flex-col min-h-screen">
         <div className="p-8 border-b border-white/10 flex justify-center">
-           {/* LOGO ADDED TO SIDEBAR */}
            <img src={LOGO_URL} alt="Logo" className="h-10 opacity-90 drop-shadow-md" />
         </div>
         
@@ -578,16 +614,32 @@ Total Members:,${stats.total}
           </button>
         </div>
 
+        <div className="px-4 mb-8">
+          <p className="px-2 text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3">Viewing</p>
+          <div className="space-y-1">
+            {[ { k: 'both', c: '#ffffff' }, { k: 'harper', c: '#f59e0b' }, { k: 'anthony', c: '#1080ad' } ].map(item => (
+              <button key={item.k} onClick={() => {
+                  setViewingCenter(item.k);
+                  localStorage.setItem('wellnessCenter', item.k);
+              }} className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all ${viewingCenter === item.k ? 'bg-white/20 font-bold' : 'text-white/60 hover:bg-white/5'}`}>
+                <span className="w-1.5 h-6 rounded-full" style={{ backgroundColor: item.c }} />
+                {item.k === 'both' ? 'Both Centers' : `${item.k.charAt(0).toUpperCase() + item.k.slice(1)}`}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <nav className="flex-1 px-4 space-y-1">
           {[
             { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
             { id: 'members', label: 'Members', icon: <Users size={18} /> },
-            { id: 'badge', label: 'Staff Check-In', icon: <QrCode size={18} /> }, // Camera removed from here!
+            { id: 'badge', label: 'Staff Check-In', icon: <QrCode size={18} /> },
             { id: 'notif', label: 'Notifications', icon: <Bell size={18} /> },
             { id: 'reports', label: 'Reports', icon: <FileText size={18} /> },
           ].map(item => (
             <button key={item.id} onClick={() => { setActiveTab(item.id); setKioskInput(''); }} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all ${activeTab === item.id ? 'bg-[#1080ad] text-white font-bold' : 'text-white/60 hover:bg-white/5'}`}>
               {item.icon} {item.label}
+              {item.id === 'notif' && stats.overdue > 0 && <span className="ml-auto w-5 h-5 rounded-full bg-red-500 text-[10px] flex items-center justify-center font-bold tracking-tight">{stats.overdue}</span>}
             </button>
           ))}
         </nav>
@@ -664,7 +716,6 @@ Total Members:,${stats.total}
                          <td className="px-8 py-5 font-mono text-slate-400">{m.id}</td>
                          <td className="px-8 py-5"><span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black tracking-tight">{m.type}</span></td>
                          <td className="px-8 py-5">
-                            {/* Stoplight logic rendered in Staff Members tab */}
                             <span className={`px-3 py-1 rounded-full text-[10px] font-black ${light === 'green' ? 'bg-green-100 text-green-600' : light === 'yellow' ? 'bg-yellow-100 text-yellow-600' : 'bg-red-100 text-red-600'}`}>
                                {light === 'green' ? 'ACTIVE' : light === 'yellow' ? 'GRACE PERIOD' : 'LOCKED'}
                             </span>
@@ -726,7 +777,7 @@ Total Members:,${stats.total}
           </div>
         )}
 
-        {/* VIEW: STAFF BADGE IN (NO CAMERA) */}
+        {/* VIEW: STAFF BADGE IN */}
         {activeTab === 'badge' && (
           <div className="space-y-6">
              <div className="mb-8">
@@ -786,6 +837,7 @@ Total Members:,${stats.total}
                    {kioskMessage.text && (
                      <div className={`mt-8 p-4 rounded-xl text-center font-bold text-lg ${kioskMessage.type === 'success' ? 'bg-green-100 text-green-700' : kioskMessage.type === 'warning' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
                         {kioskMessage.text}
+                        {kioskMessage.subtext && <p className="text-sm mt-1">{kioskMessage.subtext}</p>}
                      </div>
                    )}
 
@@ -808,7 +860,6 @@ Total Members:,${stats.total}
                  <p className="text-xl font-bold text-[#001f3f]">#{selectedMember.id}</p>
               </div>
               <div className="flex-1 p-16">
-                 {/* MODAL STOPLIGHT */}
                  <span className={`px-4 py-1 rounded-full text-[10px] font-black tracking-widest ${getStoplight(selectedMember) === 'green' ? 'bg-green-100 text-green-600' : getStoplight(selectedMember) === 'yellow' ? 'bg-yellow-100 text-yellow-600' : 'bg-red-100 text-red-600'}`}>
                     {getStoplight(selectedMember) === 'green' ? 'ACTIVE' : getStoplight(selectedMember) === 'yellow' ? 'GRACE PERIOD' : 'ACCOUNT LOCKED'}
                  </span>
