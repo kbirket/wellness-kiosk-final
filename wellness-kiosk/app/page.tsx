@@ -4,9 +4,9 @@ import { useState, useEffect, useRef } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { 
   Users, Search, QrCode, CreditCard, X, CheckCircle, 
-  AlertCircle, LogOut, ShieldCheck, Phone, Activity, 
-  LayoutDashboard, Download, Bell, FileText, Plus, 
-  Smartphone, Clock, Camera, UserCircle, Mail
+  AlertCircle, TrendingUp, Calendar, MapPin, Mail, LogOut, 
+  ShieldCheck, Phone, Activity, ChevronRight, LayoutDashboard,
+  Filter, Download, Bell, FileText, Plus, Smartphone, Clock, Camera, UserCircle
 } from 'lucide-react';
 
 // ============================================================
@@ -50,9 +50,6 @@ const QRCode = ({ data, size = 160, darkColor = '#001f3f' }) => {
 // Constants & Security Data
 // ============================================================
 const LOGO_URL = 'https://pattersonhc.org/sites/default/files/wellness_white.png';
-const CENTERS = ['Harper', 'Anthony'];
-const centerColors = { Harper: '#f59e0b', Anthony: '#1080ad' };
-
 const DIRECTORS = [
   { username: 'admin', password: 'admin2026', name: 'System Admin', center: 'both' },
   { username: 'harper', password: 'harper2026', name: 'Harper Director', center: 'harper' },
@@ -63,7 +60,8 @@ const Icons = {
   dashboard: <LayoutDashboard size={18} />,
   members: <Users size={18} />,
   badge: <QrCode size={18} />,
-  notif: <Bell size={18} />
+  notif: <Bell size={18} />,
+  reports: <FileText size={18} />
 };
 
 // ============================================================
@@ -83,6 +81,7 @@ export default function WellnessHub() {
   const [loading, setLoading] = useState(false);
   const [scannerActive, setScannerActive] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   // --- Persistent Login Memory ---
   useEffect(() => {
@@ -129,9 +128,8 @@ export default function WellnessHub() {
             id: r.fields['Member ID'] || r.id,
             firstName: r.fields['First Name'] || 'Unknown',
             lastName: r.fields['Last Name'] || '',
-            fullName: r.fields['Full Name'] || 'Unknown Member',
             email: r.fields['Email'] || '',
-            phone: r.fields['Phone'] || '(555) 000-0000',
+            phone: r.fields['Phone'] || '',
             status: (r.fields['Membership Status'] || 'ACTIVE').toUpperCase(),
             type: (r.fields['Membership Type']?.[0] || 'SINGLE').toUpperCase(),
             center: r.fields['Home Center'] || 'Anthony',
@@ -147,7 +145,6 @@ export default function WellnessHub() {
 
   const scopedMembers = members.filter(m => viewingCenter === 'both' || (m.center && m.center.toLowerCase().includes(viewingCenter)));
   const filteredMembers = scopedMembers.filter(m => `${m.firstName} ${m.lastName} ${m.id}`.toLowerCase().includes(searchQuery.toLowerCase()));
-
   const filteredVisits = visits.filter(v => viewingCenter === 'both' || (v.center && v.center.toLowerCase().includes(viewingCenter)));
   
   const heatmapData = Array(15).fill(0);
@@ -163,6 +160,41 @@ export default function WellnessHub() {
     overdue: scopedMembers.filter(m => m.status === 'OVERDUE').length,
     expiring: scopedMembers.filter(m => m.status === 'EXPIRING').length,
     today: filteredVisits.length
+  };
+
+  // --- FEATURE 2: FIND FAMILY MEMBERS (Shared Email or Phone) ---
+  const familyMembers = activeMember 
+    ? members.filter(m => 
+        m.id !== activeMember.id && 
+        ((m.email && m.email.toLowerCase() === activeMember.email.toLowerCase()) || 
+         (m.phone && m.phone === activeMember.phone))
+      )
+    : [];
+
+  // --- FEATURE 1: UPDATE PROFILE FUNCTION ---
+  const handleUpdateProfile = async () => {
+    setIsUpdating(true);
+    const newEmail = document.getElementById('edit_email').value.trim();
+    const newPhone = document.getElementById('edit_phone').value.trim();
+    
+    // Update UI Optimistically
+    setActiveMember({...activeMember, email: newEmail, phone: newPhone});
+    setEditMode(false);
+
+    try {
+      await fetch('/api/update-member', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          airtableId: activeMember.airtableId,
+          email: newEmail,
+          phone: newPhone
+        })
+      });
+    } catch (err) {
+      alert("There was an issue saving to the database, but your app is updated locally.");
+    }
+    setIsUpdating(false);
   };
 
   // --- CORE FEATURE: CHECK-IN & SAVE TO AIRTABLE ---
@@ -195,10 +227,10 @@ export default function WellnessHub() {
     if (activeTab === 'badge' && scannerActive) {
       const scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 250, height: 250} }, false);
       scanner.render((decodedText) => {
-        processCheckIn(decodedText, "iPad Camera Scan");
+        processCheckIn(decodedText, "iPad/Laptop Camera Scan");
         scanner.clear(); 
         setScannerActive(false);
-      }, (error) => {});
+      }, () => {});
       return () => { scanner.clear().catch(e => console.error(e)); };
     }
   }, [activeTab, scannerActive, members, viewingCenter]);
@@ -309,7 +341,7 @@ Paid-Daily Visitors:,${reportStats.dayPass}
              </button>
              <button onClick={() => {setView('dashboard'); setActiveTab('badge'); setViewingCenter('both');}} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group">
                 <Smartphone size={56} className="text-[#1080ad] group-hover:scale-110 transition-transform" />
-                <span className="text-xl font-bold">iPad Badge-In</span>
+                <span className="text-xl font-bold">Check-In Kiosk</span>
              </button>
              <button onClick={() => setView('member_login')} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group border-b-4 border-b-[#16a34a]">
                 <UserCircle size={56} className="text-[#16a34a] group-hover:scale-110 transition-transform" />
@@ -400,6 +432,27 @@ Paid-Daily Visitors:,${reportStats.dayPass}
               </span>
            </div>
 
+           {/* --- FEATURE 2: FAMILY ACCOUNT SWITCHING --- */}
+           {familyMembers.length > 0 && (
+             <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
+               <h3 className="font-bold text-[#001f3f] mb-4 flex items-center gap-2"><Users size={18} className="text-[#16a34a]"/> Linked Family Accounts</h3>
+               <div className="space-y-3">
+                 {familyMembers.map(fm => (
+                   <button key={fm.id} onClick={() => setActiveMember(fm)} className="w-full flex items-center justify-between bg-slate-50 p-4 rounded-2xl hover:bg-slate-100 transition-colors border border-slate-100">
+                     <div className="flex items-center gap-3">
+                       <div className="w-8 h-8 rounded-full bg-[#1080ad] text-white flex items-center justify-center font-bold text-xs">{fm.firstName.charAt(0)}</div>
+                       <div className="text-left">
+                         <p className="font-bold text-slate-800 text-sm leading-tight">{fm.firstName} {fm.lastName}</p>
+                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{fm.id}</p>
+                       </div>
+                     </div>
+                     <ChevronRight size={16} className="text-slate-400" />
+                   </button>
+                 ))}
+               </div>
+             </div>
+           )}
+
            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
               <h3 className="font-bold text-[#001f3f] mb-4 flex items-center gap-2"><CreditCard size={18} className="text-[#1080ad]"/> Account Status</h3>
               <div className="space-y-4">
@@ -431,27 +484,26 @@ Paid-Daily Visitors:,${reportStats.dayPass}
                 <div className="space-y-4">
                    <div className="flex justify-between items-center border-b border-slate-50 pb-4">
                       <span className="text-sm font-bold text-slate-400 uppercase tracking-tight">Email</span>
-                      <span className="font-bold text-slate-800 truncate pl-4">{activeMember.email}</span>
+                      <span className="font-bold text-slate-800 truncate pl-4">{activeMember.email || 'N/A'}</span>
                    </div>
                    <div className="flex justify-between items-center pb-2">
                       <span className="text-sm font-bold text-slate-400 uppercase tracking-tight">Phone</span>
-                      <span className="font-bold text-slate-800">{activeMember.phone || 'Add Phone Number'}</span>
+                      <span className="font-bold text-slate-800">{activeMember.phone || 'N/A'}</span>
                    </div>
                 </div>
               ) : (
                 <div className="space-y-4">
                    <div>
                      <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Email</label>
-                     <input defaultValue={activeMember.email} className="w-full p-3 bg-slate-50 border rounded-xl text-sm" />
+                     <input id="edit_email" defaultValue={activeMember.email} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]" />
                    </div>
                    <div>
                      <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Phone</label>
-                     <input defaultValue={activeMember.phone} className="w-full p-3 bg-slate-50 border rounded-xl text-sm" />
+                     <input id="edit_phone" defaultValue={activeMember.phone} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]" />
                    </div>
-                   <button onClick={() => {
-                     alert("Contact info update request sent.");
-                     setEditMode(false);
-                   }} className="w-full bg-[#001f3f] text-white py-3 rounded-xl font-bold text-sm">Save Changes</button>
+                   <button onClick={handleUpdateProfile} disabled={isUpdating} className="w-full bg-[#001f3f] text-white py-3 rounded-xl font-bold text-sm hover:bg-blue-900 transition-colors flex justify-center">
+                     {isUpdating ? 'Saving...' : 'Save Changes'}
+                   </button>
                 </div>
               )}
            </div>
@@ -467,7 +519,7 @@ Paid-Daily Visitors:,${reportStats.dayPass}
     return (
       <div className="min-h-screen bg-[#001f3f] flex items-center justify-center p-4 font-sans">
         <div className="bg-white rounded-[3rem] shadow-2xl p-12 w-full max-w-md">
-          <h2 className="text-4xl font-black text-slate-900 mb-2 tracking-tight">Login</h2>
+          <h2 className="text-4xl font-black text-slate-900 mb-2 tracking-tight">Director Login</h2>
           <p className="text-slate-400 mb-10 font-medium tracking-tight">Enter director credentials to proceed.</p>
           <input type="text" placeholder="Username" id="u_in" className="w-full p-5 bg-slate-100 rounded-2xl mb-4 outline-none border-2 border-transparent focus:border-blue-500/20 text-lg" onKeyDown={(e) => e.key === 'Enter' && handleLogin()} />
           <input type="password" placeholder="Password" id="p_in" className="w-full p-5 bg-slate-100 rounded-2xl mb-8 outline-none border-2 border-transparent focus:border-blue-500/20 text-lg" onKeyDown={(e) => e.key === 'Enter' && handleLogin()} />
@@ -521,7 +573,7 @@ Paid-Daily Visitors:,${reportStats.dayPass}
             { id: 'members', label: 'Members', icon: Icons.members },
             { id: 'badge', label: 'Badge In', icon: Icons.badge },
             { id: 'notif', label: 'Notifications', icon: Icons.notif },
-            { id: 'reports', label: 'Reports', icon: <FileText size={18} /> },
+            { id: 'reports', label: 'Reports', icon: Icons.reports },
           ].map(item => (
             <button key={item.id} onClick={() => setActiveTab(item.id)} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all ${activeTab === item.id ? 'bg-[#1080ad] text-white font-bold' : 'text-white/60 hover:bg-white/5'}`}>
               {item.icon} {item.label}
@@ -625,7 +677,7 @@ Paid-Daily Visitors:,${reportStats.dayPass}
                          <td className="px-8 py-5"><p className="font-bold text-slate-800">{m.firstName} {m.lastName}</p><p className="text-[11px] text-slate-400">{m.email}</p></td>
                          <td className="px-8 py-5 font-mono text-slate-400">{m.id}</td>
                          <td className="px-8 py-5"><span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black tracking-tight">{m.type}</span></td>
-                         <td className="px-8 py-5 text-slate-600 font-medium">{m.center}</td>
+                         <td className="px-8 py-5 text-slate-600 font-medium">{m.center} Center</td>
                          <td className="px-8 py-5"><span className={`px-3 py-1 rounded-full text-[10px] font-black ${m.status === 'ACTIVE' ? 'bg-green-100 text-green-600' : m.status === 'OVERDUE' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>{m.status}</span></td>
                          <td className="px-8 py-5 text-slate-600">{m.nextPayment}</td>
                          <td className="px-8 py-5 font-bold text-lg text-right">{m.visits}</td>
@@ -722,7 +774,7 @@ Paid-Daily Visitors:,${reportStats.dayPass}
           </div>
         )}
 
-        {/* VIEW: BADGE IN (With Working Camera Integration) */}
+        {/* VIEW: BADGE IN (With Camera Integration) */}
         {activeTab === 'badge' && (
           <div className="space-y-6">
              <div className="mb-8">
