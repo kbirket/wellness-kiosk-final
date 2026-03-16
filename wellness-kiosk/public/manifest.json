@@ -1,1 +1,16 @@
-
+{
+  "name": "Wellness Hub",
+  "short_name": "Wellness",
+  "description": "Patterson Health Centers Wellness Hub",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#001f3f",
+  "theme_color": "#001f3f",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ]
+}
