@@ -100,20 +100,28 @@ export default function WellnessHub() {
       .then(res => res.json())
       .then(data => {
         if (data.records) {
-          const mapped = data.records.map(r => ({
-            airtableId: r.id, 
-            id: r.fields['Member ID'] || r.id,
-            firstName: r.fields['First Name'] || 'Unknown',
-            lastName: r.fields['Last Name'] || '',
-            email: r.fields['Email'] || '',
-            phone: r.fields['Phone'] || '',
-            status: (r.fields['Membership Status'] || 'ACTIVE').toUpperCase(),
-            type: String(r.fields['Membership Type'] || 'SINGLE').toUpperCase(),
-            center: r.fields['Home Center'] || 'Anthony',
-            visits: Number(r.fields['Total Visits'] || 0),
-            nextPayment: r.fields['Next Payment Due'] || 'Mar 31, 2026',
-            sponsor: !!r.fields['Corporate Sponsor'],
-          }));
+          const mapped = data.records.map(r => {
+            // FIX: Gracefully extract the text from the new "Plan Name" Lookup field
+            let planText = 'UNKNOWN PLAN';
+            if (r.fields['Plan Name']) {
+              planText = Array.isArray(r.fields['Plan Name']) ? r.fields['Plan Name'][0] : r.fields['Plan Name'];
+            }
+
+            return {
+              airtableId: r.id, 
+              id: r.fields['Member ID'] || r.id,
+              firstName: r.fields['First Name'] || 'Unknown',
+              lastName: r.fields['Last Name'] || '',
+              email: r.fields['Email'] || '',
+              phone: r.fields['Phone'] || '',
+              status: (r.fields['Membership Status'] || 'ACTIVE').toUpperCase(),
+              type: String(planText).toUpperCase(),
+              center: r.fields['Home Center'] || 'Anthony',
+              visits: Number(r.fields['Total Visits'] || 0),
+              nextPayment: r.fields['Next Payment Due'] || 'Mar 31, 2026',
+              sponsor: !!r.fields['Corporate Sponsor'],
+            };
+          });
           setMembers(mapped);
         }
         setLoading(false);
@@ -865,7 +873,7 @@ Paid-Daily Visitors:,${exportStats.dayPass}
         )}
       </main>
 
-      {/* --- MEMBER DETAIL MODAL WITH UPGRADED DATA --- */}
+      {/* --- MEMBER DETAIL MODAL --- */}
       {selectedMember && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#001f3f]/90 backdrop-blur-md">
            <div className="bg-white rounded-[2rem] w-full max-w-4xl flex overflow-hidden shadow-2xl relative">
@@ -881,11 +889,10 @@ Paid-Daily Visitors:,${exportStats.dayPass}
                  <span className={`px-4 py-1 rounded-full text-[10px] font-black tracking-widest ${selectedMember.status === 'ACTIVE' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>{selectedMember.status}</span>
                  <h2 className="text-6xl font-black text-slate-900 mt-6 mb-12 tracking-tighter leading-none">{selectedMember.firstName}<br/>{selectedMember.lastName}</h2>
                  
-                 {/* THE NEW MEMBER PROFILE DATA DISPLAY */}
                  <div className="grid grid-cols-2 gap-8 gap-x-12">
                     <div>
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Primary Location</p>
-                      <p className="text-lg font-bold text-slate-800">{selectedMember.center} Center</p>
+                      <p className="text-lg font-bold text-slate-800">{selectedMember.center}</p>
                     </div>
                     <div>
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Membership Type</p>
