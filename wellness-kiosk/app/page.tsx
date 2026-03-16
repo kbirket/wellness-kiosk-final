@@ -28,9 +28,6 @@ const QRCode = ({ data, size = 160, darkColor = '#001f3f' }) => {
   );
 };
 
-// ============================================================
-// Constants & Security Data
-// ============================================================
 const LOGO_URL = 'https://pattersonhc.org/sites/default/files/wellness_white.png';
 const DIRECTORS = [
   { username: 'admin', password: 'admin2026', name: 'System Admin', center: 'both' },
@@ -38,9 +35,6 @@ const DIRECTORS = [
   { username: 'anthony', password: 'anthony2026', name: 'Anthony Director', center: 'anthony' }
 ];
 
-// ============================================================
-// MAIN APP
-// ============================================================
 export default function WellnessHub() {
   const [view, setView] = useState('landing'); 
   const [user, setUser] = useState(null);
@@ -58,13 +52,11 @@ export default function WellnessHub() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [kioskMessage, setKioskMessage] = useState({text: '', type: ''});
 
-  // Critical Refs for Camera Scanner
   const membersRef = useRef(members);
   useEffect(() => { membersRef.current = members; }, [members]);
   const centerRef = useRef(viewingCenter);
   useEffect(() => { centerRef.current = viewingCenter; }, [viewingCenter]);
 
-  // --- Persistent Login Memory ---
   useEffect(() => {
     const savedUser = localStorage.getItem('wellnessUser');
     const savedCenter = localStorage.getItem('wellnessCenter');
@@ -97,7 +89,6 @@ export default function WellnessHub() {
     setView('landing');
   };
 
-  // Sync with Airtable
   useEffect(() => {
     setLoading(true);
     fetch('/api/members')
@@ -171,7 +162,6 @@ export default function WellnessHub() {
     setIsUpdating(false);
   };
 
-  // --- CORE FEATURE: CHECK-IN & SAVE TO AIRTABLE ---
   const processCheckIn = async (memberId, method = "Manual Entry") => {
     const id = memberId.toUpperCase().trim();
     const m = membersRef.current.find(m => m.id === id); 
@@ -183,8 +173,9 @@ export default function WellnessHub() {
       
       setVisits(prev => [{name: m.firstName + ' ' + m.lastName, center: scanCenter, time: currentTime, type: m.type}, ...prev]);
       
+      // FULL SCREEN MESSAGE TRIGGER
       setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'success' });
-      setTimeout(() => setKioskMessage({ text: '', type: '' }), 4000);
+      setTimeout(() => setKioskMessage({ text: '', type: '' }), 3500); // Disappears after 3.5 seconds
 
       try {
         await fetch('/api/visits', {
@@ -197,17 +188,15 @@ export default function WellnessHub() {
       }
       return true;
     } else {
-      setKioskMessage({ text: `ID ${id} not found. Please see front desk.`, type: 'error' });
-      setTimeout(() => setKioskMessage({ text: '', type: '' }), 4000);
+      setKioskMessage({ text: `ID not found. Please see front desk.`, type: 'error' });
+      setTimeout(() => setKioskMessage({ text: '', type: '' }), 3500);
       return false;
     }
   };
 
-  // --- CORE FEATURE: CAMERA SCANNER HOOK ---
   useEffect(() => {
     let scanner = null;
     if ((activeTab === 'badge' || view === 'kiosk') && scannerActive) {
-      // Made the qrbox slightly larger to help laptop cameras catch the edges
       scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 280, height: 280} }, false);
       scanner.render((decodedText) => {
         processCheckIn(decodedText, "Camera Scan");
@@ -310,9 +299,6 @@ Paid-Daily Visitors:,${exportStats.dayPass}
     </div>
   );
 
-  // ============================================================
-  // VIEW: LANDING PAGE
-  // ============================================================
   if (view === 'landing') {
     return (
       <div className="min-h-screen bg-[#001f3f] flex items-center justify-center font-sans p-6">
@@ -337,15 +323,20 @@ Paid-Daily Visitors:,${exportStats.dayPass}
     );
   }
 
-  // ============================================================
-  // VIEW: LOCKED-DOWN KIOSK MODE
-  // ============================================================
   if (view === 'kiosk') {
     return (
-      <div className="min-h-screen bg-[#f0f2f5] flex flex-col items-center justify-center p-6 font-sans relative">
-         <button onClick={() => {setView('landing'); setScannerActive(false);}} className="absolute top-6 left-6 text-slate-400 hover:text-[#001f3f] flex items-center gap-2 font-bold"><LogOut size={20}/> Staff Exit</button>
+      <div className="min-h-screen bg-[#f0f2f5] flex flex-col items-center justify-center p-6 font-sans relative overflow-hidden">
+         <button onClick={() => {setView('landing'); setScannerActive(false);}} className="absolute top-6 left-6 text-slate-400 hover:text-[#001f3f] flex items-center gap-2 font-bold z-10"><LogOut size={20}/> Staff Exit</button>
          
-         <div className="bg-white rounded-[3rem] shadow-2xl p-12 w-full max-w-2xl border-t-8 border-[#1080ad] text-center">
+         {/* THE MASSIVE FULL-SCREEN WELCOME OVERLAY */}
+         {kioskMessage.text && (
+           <div className={`absolute inset-0 z-50 flex flex-col items-center justify-center transition-all duration-300 ${kioskMessage.type === 'success' ? 'bg-[#16a34a]' : 'bg-red-600'}`}>
+              {kioskMessage.type === 'success' ? <CheckCircle size={120} className="text-white mb-8 animate-bounce" /> : <AlertCircle size={120} className="text-white mb-8 animate-bounce" />}
+              <h1 className="text-6xl md:text-8xl font-black text-white tracking-tighter text-center px-4 shadow-sm">{kioskMessage.text}</h1>
+           </div>
+         )}
+
+         <div className="bg-white rounded-[3rem] shadow-2xl p-12 w-full max-w-2xl border-t-8 border-[#1080ad] text-center relative z-0">
             <h2 className="text-5xl font-black text-[#001f3f] mb-4 tracking-tight">Check-In</h2>
             <p className="text-slate-500 mb-10 text-lg font-medium">Scan your QR code or enter your Member ID.</p>
             
@@ -354,9 +345,9 @@ Paid-Daily Visitors:,${exportStats.dayPass}
                  <>
                    <Camera size={64} className="mb-6 text-slate-300" />
                    <button onClick={() => setScannerActive(true)} className="bg-[#1080ad] text-white px-8 py-4 rounded-xl font-bold text-lg flex items-center gap-2 shadow-lg hover:bg-blue-700 transition-colors">
-                     Turn On Camera
+                     Turn On Scanner
                    </button>
-                   <p className="text-xs text-slate-400 mt-4">(If prompted, click "Allow" in your browser)</p>
+                   <p className="text-xs text-slate-400 mt-4">(Ensure browser camera is allowed)</p>
                  </>
                ) : (
                  <div className="w-full h-full relative">
@@ -378,20 +369,11 @@ Paid-Daily Visitors:,${exportStats.dayPass}
                  document.getElementById('kiosk_in_standalone').value = '';
                }} className="bg-[#001f3f] text-white px-10 rounded-2xl font-bold text-xl hover:bg-blue-900 transition-colors shadow-lg">Go</button>
             </div>
-
-            {kioskMessage.text && (
-               <div className={`mt-8 p-6 rounded-2xl text-xl font-bold ${kioskMessage.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                  {kioskMessage.text}
-               </div>
-            )}
          </div>
       </div>
     );
   }
 
-  // ============================================================
-  // VIEW: MEMBER LOGIN
-  // ============================================================
   if (view === 'member_login') {
     return (
       <div className="min-h-screen bg-[#f0f2f5] flex items-center justify-center p-4 font-sans">
@@ -434,9 +416,6 @@ Paid-Daily Visitors:,${exportStats.dayPass}
     );
   }
 
-  // ============================================================
-  // VIEW: MEMBER PORTAL DASHBOARD
-  // ============================================================
   if (view === 'member_portal' && activeMember) {
     return (
       <div className="min-h-screen bg-[#f0f2f5] font-sans pb-20 md:pb-0">
@@ -459,7 +438,7 @@ Paid-Daily Visitors:,${exportStats.dayPass}
            <div className="bg-white rounded-3xl shadow-lg border border-slate-100 p-8 flex flex-col items-center justify-center relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-2 bg-[#1080ad]"></div>
               <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Scan to Check-In</h2>
-              <div className="bg-white p-4 rounded-2xl shadow-inner border border-slate-100 mb-6">
+              <div className="bg-white p-4 rounded-2xl shadow-inner border border-slate-100 mb-6 flex items-center justify-center">
                  <QRCode data={activeMember.id} size={220} />
               </div>
               <p className="text-2xl font-black text-[#001f3f] tracking-widest">{activeMember.id}</p>
@@ -547,9 +526,6 @@ Paid-Daily Visitors:,${exportStats.dayPass}
     );
   }
 
-  // ============================================================
-  // VIEW: DIRECTOR LOGIN
-  // ============================================================
   if (view === 'login') {
     return (
       <div className="min-h-screen bg-[#001f3f] flex items-center justify-center p-4 font-sans">
@@ -565,9 +541,6 @@ Paid-Daily Visitors:,${exportStats.dayPass}
     );
   }
 
-  // ============================================================
-  // VIEW: DIRECTOR DASHBOARD
-  // ============================================================
   return (
     <div className="flex min-h-screen bg-[#f0f2f5] font-sans text-slate-800">
       <aside className="w-64 bg-[#001f3f] text-white flex flex-col min-h-screen">
@@ -621,7 +594,6 @@ Paid-Daily Visitors:,${exportStats.dayPass}
            <p className="text-sm text-slate-400 font-medium">{viewingCenter === 'both' ? 'All Centers' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1) + ' Center'} · {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</p>
         </div>
 
-        {/* VIEW: DASHBOARD */}
         {activeTab === 'dashboard' && (
           <div className="space-y-8">
             <div className="grid grid-cols-5 gap-6">
@@ -675,7 +647,6 @@ Paid-Daily Visitors:,${exportStats.dayPass}
           </div>
         )}
 
-        {/* VIEW: MEMBERS */}
         {activeTab === 'members' && (
           <div className="space-y-6">
              <div className="flex justify-between items-center mb-8">
@@ -707,7 +678,7 @@ Paid-Daily Visitors:,${exportStats.dayPass}
                          <td className="px-8 py-5"><p className="font-bold text-slate-800">{m.firstName} {m.lastName}</p><p className="text-[11px] text-slate-400">{m.email}</p></td>
                          <td className="px-8 py-5 font-mono text-slate-400">{m.id}</td>
                          <td className="px-8 py-5"><span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black tracking-tight">{m.type}</span></td>
-                         <td className="px-8 py-5 text-slate-600 font-medium">{m.center}</td>
+                         <td className="px-8 py-5 text-slate-600 font-medium">{m.center} Center</td>
                          <td className="px-8 py-5"><span className={`px-3 py-1 rounded-full text-[10px] font-black ${m.status === 'ACTIVE' ? 'bg-green-100 text-green-600' : m.status === 'OVERDUE' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>{m.status}</span></td>
                          <td className="px-8 py-5 text-slate-600">{m.nextPayment}</td>
                          <td className="px-8 py-5 font-bold text-lg text-right">{m.visits}</td>
@@ -721,7 +692,6 @@ Paid-Daily Visitors:,${exportStats.dayPass}
           </div>
         )}
 
-        {/* VIEW: REPORTS */}
         {activeTab === 'reports' && (
           <div className="space-y-6">
              <div className="flex justify-between items-center mb-8">
@@ -784,21 +754,20 @@ Paid-Daily Visitors:,${exportStats.dayPass}
              <div className="flex gap-8">
                 <div className="bg-white p-12 rounded-3xl shadow-sm border border-slate-200 flex-1 text-center">
                    
-                   <p className="text-sm font-bold text-slate-400 mb-4 tracking-tight">Enter member ID manually:</p>
+                   <p className="text-sm font-bold text-slate-400 mb-4 tracking-tight">Enter member ID manually (or use USB scanner):</p>
                    <div className="flex gap-4 max-w-sm mx-auto mb-10">
                       <input className="flex-1 p-4 border rounded-xl outline-none font-mono text-xl text-center bg-slate-100" placeholder="e.g. WC-001" id="kiosk_in_staff" onKeyDown={(e) => {
                         if (e.key === 'Enter') {
-                          processCheckIn(document.getElementById('kiosk_in_staff').value, "Manual ID Entry");
+                          processCheckIn(document.getElementById('kiosk_in_staff').value, "Staff Scan/Entry");
                           document.getElementById('kiosk_in_staff').value = '';
                         }
                       }}/>
                       <button onClick={() => {
-                        processCheckIn(document.getElementById('kiosk_in_staff').value, "Manual ID Entry");
+                        processCheckIn(document.getElementById('kiosk_in_staff').value, "Staff Scan/Entry");
                         document.getElementById('kiosk_in_staff').value = '';
                       }} className="bg-[#001f3f] text-white px-8 rounded-xl font-bold hover:bg-blue-900 transition-colors">Check In</button>
                    </div>
                    
-                   {/* THE MISSING SUCCESS MESSAGE IS NOW HERE */}
                    {kioskMessage.text && (
                      <div className={`mt-8 p-4 rounded-xl text-center font-bold text-lg ${kioskMessage.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                         {kioskMessage.text}
@@ -832,7 +801,9 @@ Paid-Daily Visitors:,${exportStats.dayPass}
            <div className="bg-white rounded-[2rem] w-full max-w-4xl flex overflow-hidden shadow-2xl relative">
               <button onClick={() => setSelectedMember(null)} className="absolute top-6 right-6 text-slate-300 hover:text-red-500 transition-all"><X size={24}/></button>
               <div className="w-1/3 bg-slate-50 p-12 flex flex-col items-center justify-center border-r border-slate-100">
-                 <div className="bg-white p-6 rounded-2xl shadow-xl mb-8 border border-slate-100"><QRCode data={selectedMember.id} size={180} /></div>
+                 <div className="bg-white p-6 rounded-2xl shadow-xl mb-8 border border-slate-100">
+                    <QRCode data={selectedMember.id} size={180} />
+                 </div>
                  <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Member Identity</p>
                  <p className="text-xl font-bold text-[#001f3f]">#{selectedMember.id}</p>
               </div>
