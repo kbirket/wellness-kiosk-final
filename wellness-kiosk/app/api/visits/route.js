@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 
-// Force Vercel to never cache this route so it always fires immediately
 export const dynamic = 'force-dynamic';
 
 export async function POST(request) {
@@ -24,21 +23,22 @@ export async function POST(request) {
               "Check-in Time": body.time,
               "Center": body.center,
               "Check-in Method": body.method,
+              // Firing at BOTH columns to guarantee a hit!
+              "Member": [body.airtableId],
               "Members": [body.airtableId] 
             }
           }
         ],
-        // This magic bullet forces Airtable to accept the data even if dropdown options are new!
         typecast: true 
       })
     });
 
     const data = await response.json();
     
-    // If Airtable somehow still rejects it, this will tell Vercel exactly why!
+    // If Airtable throws an error, catch it and send it to the screen!
     if (data.error) {
-      console.error("Airtable Error:", data.error);
-      return NextResponse.json({ success: false, error: data.error }, { status: 400 });
+      const errorMessage = data.error.type || data.error.message || JSON.stringify(data.error);
+      return NextResponse.json({ success: false, error: errorMessage }, { status: 400 });
     }
 
     return NextResponse.json({ success: true, data: data });
