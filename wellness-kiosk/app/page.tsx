@@ -272,7 +272,6 @@ export default function WellnessHub() {
   const handleMonthlySummary = () => {
     const centerName = viewingCenter === 'both' ? 'System-Wide' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1);
     
-    // FIX: The Excel logic has also been updated to separate Corporate from Base Stats!
     const csvContent = `
 ${centerName} Wellness Center ${currentDateString} Summary
 
@@ -549,6 +548,7 @@ Paid-Daily Visitors:,${reportStats.dayPass}
               <h3 className="font-bold text-[#001f3f] mb-4 flex items-center gap-2"><CreditCard size={18} className="text-[#1080ad]"/> Account Status</h3>
               <div className="space-y-4">
                  <div className="flex justify-between items-center border-b border-slate-50 pb-4">
+                     {/* THE FIX FOR THE MEMBER PORTAL DISPLAY AS WELL */}
                     <span className="text-sm font-bold text-slate-400 uppercase tracking-tight">Plan Type</span>
                     <span className="font-bold text-slate-800">{activeMember.type}</span>
                  </div>
@@ -684,7 +684,8 @@ Paid-Daily Visitors:,${reportStats.dayPass}
         {activeTab === 'dashboard' && (
           <div className="space-y-8">
             <div className="grid grid-cols-5 gap-6">
-               {[ { l: 'Total Members', v: stats.total, c: '#001f3f' }, { l: 'Active', v: stats.active, c: '#16a34a' }, { l: 'Overdue', v: stats.overdue, c: '#dc2626' }, { l: 'Expiring', v: stats.expiring, c: '#f59e0b' }, { l: 'Check-ins Today', v: stats.today, c: '#1080ad' } ].map((s, i) => (
+               {/* FIX: Mapped correctly with `label`, `value`, `color` so the boxes show up! */}
+               {[ { label: 'Total Members', value: stats.total, color: '#001f3f' }, { label: 'Active', value: stats.active, color: '#16a34a' }, { label: 'Overdue', value: stats.overdue, color: '#dc2626' }, { label: 'Expiring', value: stats.expiring, color: '#f59e0b' }, { label: 'Check-ins Today', value: stats.today, color: '#1080ad' } ].map((s, i) => (
                  <ProStatCard key={i} {...s} />
                ))}
             </div>
@@ -793,7 +794,6 @@ Paid-Daily Visitors:,${reportStats.dayPass}
              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                <ProListCard title="Membership Stats">
                  <table className="w-full text-sm">
-                   {/* FIX: Removed Corporate from this table so the base numbers add up to Total Members! */}
                    <tbody>
                      <tr className="border-b"><td className="py-3 font-medium text-slate-600">Single Memberships:</td><td className="py-3 font-bold text-right">{reportStats.single}</td></tr>
                      <tr className="border-b"><td className="py-3 font-medium text-slate-600">Family Memberships:</td><td className="py-3 font-bold text-right">{reportStats.family}</td></tr>
@@ -809,7 +809,6 @@ Paid-Daily Visitors:,${reportStats.dayPass}
                <div className="space-y-8">
                  <ProListCard title="Corporate Breakdown">
                    <table className="w-full text-sm">
-                     {/* FIX: Moved Total Corporate here to avoid double-counting confusion */}
                      <tbody>
                        <tr className="border-b"><td className="py-2 font-medium text-slate-600">Single Memberships:</td><td className="py-2 font-bold text-right">{corpStats.single}</td></tr>
                        <tr className="border-b"><td className="py-2 font-medium text-slate-600">Family Memberships:</td><td className="py-2 font-bold text-right">{corpStats.family}</td></tr>
