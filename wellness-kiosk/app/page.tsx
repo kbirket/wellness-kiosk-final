@@ -52,7 +52,7 @@ const LOGO_URL = 'https://pattersonhc.org/sites/default/files/wellness_white.png
 const CENTERS = ['Harper', 'Anthony'];
 const centerColors = { Harper: '#f59e0b', Anthony: '#1080ad' };
 
-// SECURE LOGIN CREDENTIALS
+// CREDENTIALS 
 const DIRECTORS = [
   { username: 'admin', password: 'admin2026', name: 'System Admin', center: 'both' },
   { username: 'harper', password: 'harper2026', name: 'Harper Director', center: 'harper' },
@@ -168,7 +168,7 @@ export default function WellnessHub() {
             const found = DIRECTORS.find(d => d.username === u && d.password === p);
             if(found) { 
               setUser(found); 
-              setViewingCenter(found.center); // Locks their view to their center
+              setViewingCenter(found.center); // Sets their default view
               setView('dashboard'); 
             } else { 
               alert('Incorrect username or password. Please try again.'); 
@@ -200,20 +200,18 @@ export default function WellnessHub() {
           </button>
         </div>
 
-        {/* Center Selector (Only visible to Admin) */}
-        {user?.center === 'both' && (
-          <div className="px-4 mb-8">
-            <p className="px-2 text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3">Viewing</p>
-            <div className="space-y-1">
-              {[ { k: 'both', c: '#ffffff' }, { k: 'harper', c: '#f59e0b' }, { k: 'anthony', c: '#1080ad' } ].map(item => (
-                <button key={item.k} onClick={() => setViewingCenter(item.k)} className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all ${viewingCenter === item.k ? 'bg-white/20 font-bold' : 'text-white/60 hover:bg-white/5'}`}>
-                  <span className="w-1.5 h-6 rounded-full" style={{ backgroundColor: item.c }} />
-                  {item.k === 'both' ? 'Both Centers' : `${item.k.charAt(0).toUpperCase() + item.k.slice(1)} Center`}
-                </button>
-              ))}
-            </div>
+        {/* Center Selector (Now visible to everyone) */}
+        <div className="px-4 mb-8">
+          <p className="px-2 text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3">Viewing</p>
+          <div className="space-y-1">
+            {[ { k: 'both', c: '#ffffff' }, { k: 'harper', c: '#f59e0b' }, { k: 'anthony', c: '#1080ad' } ].map(item => (
+              <button key={item.k} onClick={() => setViewingCenter(item.k)} className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all ${viewingCenter === item.k ? 'bg-white/20 font-bold' : 'text-white/60 hover:bg-white/5'}`}>
+                <span className="w-1.5 h-6 rounded-full" style={{ backgroundColor: item.c }} />
+                {item.k === 'both' ? 'Both Centers' : `${item.k.charAt(0).toUpperCase() + item.k.slice(1)} Center`}
+              </button>
+            ))}
           </div>
-        )}
+        </div>
 
         {/* Navigation */}
         <nav className="flex-1 px-4 space-y-1">
@@ -238,6 +236,7 @@ export default function WellnessHub() {
            <p className="text-sm text-slate-400 font-medium">{viewingCenter === 'both' ? 'All Centers' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1) + ' Center'} · {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</p>
         </div>
 
+        {/* VIEW: DASHBOARD */}
         {activeTab === 'dashboard' && (
           <div className="space-y-8">
             <div className="grid grid-cols-5 gap-6">
@@ -271,6 +270,7 @@ export default function WellnessHub() {
           </div>
         )}
 
+        {/* VIEW: MEMBERS */}
         {activeTab === 'members' && (
           <div className="space-y-6">
              <div className="flex justify-between items-center mb-8">
