@@ -37,8 +37,6 @@ export default function WellnessHub() {
   const [viewingCenter, setViewingCenter] = useState('both');
   const [selectedMember, setSelectedMember] = useState(null);
   const [loading, setLoading] = useState(false);
-  
-  // NEW: State to hold the Airtable error if members fail to load!
   const [apiError, setApiError] = useState('');
   
   const [scannerActive, setScannerActive] = useState(false);
@@ -85,7 +83,6 @@ export default function WellnessHub() {
     fetch('/api/members')
       .then(res => res.json())
       .then(data => {
-        // CATCHING THE ERROR RIGHT HERE!
         if (data.error) {
            const errMsg = data.error.message || data.error.type || JSON.stringify(data.error);
            setApiError(errMsg);
@@ -113,7 +110,7 @@ export default function WellnessHub() {
             };
           });
           setMembers(mapped);
-          setApiError(''); // Clear error if successful
+          setApiError(''); 
         }
         setLoading(false);
       }).catch(err => {
@@ -201,7 +198,8 @@ export default function WellnessHub() {
     if(m) {
       const light = getStoplight(m);
       if (light === 'red') {
-         setKioskMessage({ text: `Account Locked`, type: 'error', subtext: 'Please see the front desk to update payment.' });
+         // DISCREET RED MESSAGE
+         setKioskMessage({ text: `Please see front desk.`, type: 'error', subtext: 'We need to quickly update your account.' });
          setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4500);
          return false; 
       }
@@ -211,8 +209,6 @@ export default function WellnessHub() {
       const currentTime = new Date().toISOString();
 
       try {
-        setKioskMessage({ text: `Syncing...`, type: 'warning', subtext: 'Connecting to database...' });
-
         const res = await fetch('/api/visits', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -223,8 +219,8 @@ export default function WellnessHub() {
         
         if (!result.success) {
            console.error("Airtable rejected the save:", result.error);
-           setKioskMessage({ text: `Airtable Error!`, type: 'error', subtext: `Error: ${result.error}` });
-           setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 8000);
+           setKioskMessage({ text: `System Error`, type: 'error', subtext: `Please see the front desk.` });
+           setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4000);
            return false;
         }
 
@@ -233,7 +229,8 @@ export default function WellnessHub() {
         if (activeMember && activeMember.id === id) setActiveMember(prev => ({...prev, visits: prev.visits + 1}));
 
         if (light === 'yellow') {
-           setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'warning', subtext: 'Friendly reminder: Your account is past due.' });
+           // DISCREET YELLOW MESSAGE
+           setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'warning', subtext: 'Please see the front desk at your convenience.' });
         } else {
            setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'success', subtext: '' });
         }
@@ -241,12 +238,12 @@ export default function WellnessHub() {
         return true;
 
       } catch (err) { 
-        setKioskMessage({ text: `Network Error`, type: 'error', subtext: err.message });
-        setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 5000);
+        setKioskMessage({ text: `Network Error`, type: 'error', subtext: 'Please try again.' });
+        setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4000);
         return false;
       }
     } else {
-      setKioskMessage({ text: `ID not found.`, type: 'error', subtext: 'Cannot check in until Members list fully loads!' });
+      setKioskMessage({ text: `ID not found.`, type: 'error', subtext: 'Please see front desk.' });
       setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 3500);
       return false;
     }
@@ -359,12 +356,18 @@ Total Members:,${stats.total}
       <div className="min-h-screen bg-[#f0f2f5] flex flex-col items-center justify-center p-6 font-sans relative overflow-hidden">
          <button onClick={() => {setView('landing');}} className="absolute top-6 left-6 text-slate-400 hover:text-[#001f3f] flex items-center gap-2 font-bold z-10"><LogOut size={20}/> Staff Exit</button>
          
+         {/* THE NEW DISCREET KIOSK MESSAGE CARD */}
          {kioskMessage.text && (
-           <div className={`absolute inset-0 z-50 flex flex-col items-center justify-center transition-all duration-300 
-             ${kioskMessage.type === 'success' ? 'bg-[#16a34a]' : kioskMessage.type === 'warning' ? 'bg-[#eab308]' : 'bg-red-600'}`}>
-              {kioskMessage.type === 'success' ? <CheckCircle size={120} className="text-white mb-8 animate-bounce" /> : <AlertCircle size={120} className="text-white mb-8 animate-bounce" />}
-              <h1 className="text-6xl md:text-8xl font-black text-white tracking-tighter text-center px-4 shadow-sm">{kioskMessage.text}</h1>
-              {kioskMessage.subtext && <p className="text-2xl text-white/90 mt-6 font-bold tracking-tight">{kioskMessage.subtext}</p>}
+           <div className="absolute inset-0 z-50 flex items-center justify-center bg-[#001f3f]/40 backdrop-blur-sm p-4 transition-all duration-300">
+              <div className={`bg-white rounded-3xl shadow-2xl p-10 w-full max-w-md text-center border-t-8 ${kioskMessage.type === 'success' ? 'border-[#16a34a]' : kioskMessage.type === 'warning' ? 'border-[#eab308]' : 'border-red-600'}`}>
+                 {kioskMessage.type === 'success' ? (
+                    <CheckCircle size={72} className="text-[#16a34a] mx-auto mb-6" />
+                 ) : (
+                    <AlertCircle size={72} className={`mx-auto mb-6 ${kioskMessage.type === 'warning' ? 'text-[#eab308]' : 'text-red-600'}`} />
+                 )}
+                 <h1 className="text-3xl font-black text-[#001f3f] tracking-tight mb-2">{kioskMessage.text}</h1>
+                 {kioskMessage.subtext && <p className="text-slate-500 font-medium text-lg">{kioskMessage.subtext}</p>}
+              </div>
            </div>
          )}
 
@@ -460,11 +463,18 @@ Total Members:,${stats.total}
       <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 font-sans relative">
          <button onClick={() => {setView('landing'); setScannerActive(false);}} className="absolute top-6 left-6 text-white/50 hover:text-white flex items-center gap-2 font-bold z-10"><LogOut size={20}/> Exit Scanner</button>
          
+         {/* THE NEW DISCREET MESSAGE CARD FOR SCANNER TOO */}
          {kioskMessage.text && (
-           <div className={`absolute inset-0 z-50 flex flex-col items-center justify-center transition-all duration-300 
-             ${kioskMessage.type === 'success' ? 'bg-[#16a34a]' : kioskMessage.type === 'warning' ? 'bg-[#eab308]' : 'bg-red-600'}`}>
-              <h1 className="text-6xl md:text-8xl font-black text-white tracking-tighter text-center px-4">{kioskMessage.text}</h1>
-              {kioskMessage.subtext && <p className="text-2xl text-white/90 mt-6 font-bold tracking-tight">{kioskMessage.subtext}</p>}
+           <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 transition-all duration-300">
+              <div className={`bg-white rounded-3xl shadow-2xl p-10 w-full max-w-md text-center border-t-8 ${kioskMessage.type === 'success' ? 'border-[#16a34a]' : kioskMessage.type === 'warning' ? 'border-[#eab308]' : 'border-red-600'}`}>
+                 {kioskMessage.type === 'success' ? (
+                    <CheckCircle size={72} className="text-[#16a34a] mx-auto mb-6" />
+                 ) : (
+                    <AlertCircle size={72} className={`mx-auto mb-6 ${kioskMessage.type === 'warning' ? 'text-[#eab308]' : 'text-red-600'}`} />
+                 )}
+                 <h1 className="text-3xl font-black text-[#001f3f] tracking-tight mb-2">{kioskMessage.text}</h1>
+                 {kioskMessage.subtext && <p className="text-slate-500 font-medium text-lg">{kioskMessage.subtext}</p>}
+              </div>
            </div>
          )}
 
@@ -581,6 +591,41 @@ Total Members:,${stats.total}
                  <div className="flex justify-between items-center pb-2"><span className="text-sm font-bold text-slate-400 uppercase tracking-tight">Next Payment</span><span className={`font-bold ${getStoplight(activeMember) !== 'green' ? 'text-red-500' : 'text-slate-800'}`}>{activeMember.nextPayment || 'N/A'}</span></div>
               </div>
            </div>
+
+           <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-bold text-[#001f3f] flex items-center gap-2"><UserCircle size={18} className="text-[#f59e0b]"/> Contact Info</h3>
+                <button onClick={() => setEditMode(!editMode)} className="text-xs font-bold text-[#1080ad] bg-blue-50 px-3 py-1 rounded-lg">
+                  {editMode ? 'Cancel' : 'Edit'}
+                </button>
+              </div>
+              {!editMode ? (
+                <div className="space-y-4">
+                   <div className="flex justify-between items-center border-b border-slate-50 pb-4">
+                      <span className="text-sm font-bold text-slate-400 uppercase tracking-tight">Email</span>
+                      <span className="font-bold text-slate-800 truncate pl-4">{activeMember.email || 'N/A'}</span>
+                   </div>
+                   <div className="flex justify-between items-center pb-2">
+                      <span className="text-sm font-bold text-slate-400 uppercase tracking-tight">Phone</span>
+                      <span className="font-bold text-slate-800">{activeMember.phone || 'N/A'}</span>
+                   </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                   <div>
+                     <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Email</label>
+                     <input id="edit_email" defaultValue={activeMember.email} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]" />
+                   </div>
+                   <div>
+                     <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Phone</label>
+                     <input id="edit_phone" defaultValue={activeMember.phone} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]" />
+                   </div>
+                   <button onClick={handleUpdateProfile} disabled={isUpdating} className="w-full bg-[#001f3f] text-white py-3 rounded-xl font-bold text-sm hover:bg-blue-900 transition-colors flex justify-center">
+                     {isUpdating ? 'Saving...' : 'Save Changes'}
+                   </button>
+                </div>
+              )}
+           </div>
         </main>
       </div>
     );
@@ -664,7 +709,6 @@ Total Members:,${stats.total}
            <p className="text-sm text-slate-400 font-medium">{viewingCenter === 'both' ? 'All Centers' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1) + ' Center'} · {currentDateString}</p>
         </div>
 
-        {/* VIEW: DASHBOARD */}
         {activeTab === 'dashboard' && (
           <div className="space-y-8">
             <div className="grid grid-cols-5 gap-6">
@@ -699,7 +743,6 @@ Total Members:,${stats.total}
           </div>
         )}
 
-        {/* VIEW: MEMBERS */}
         {activeTab === 'members' && (
           <div className="space-y-6">
              <div className="flex justify-between items-center mb-8">
@@ -719,7 +762,6 @@ Total Members:,${stats.total}
              {loading ? (
                <div className="text-center py-20 text-slate-300 font-medium italic">Syncing Airtable...</div> 
              ) : apiError ? (
-               // THE NEW MEMBERS TATTLETALE!
                <div className="bg-red-50 border-2 border-red-200 text-red-700 p-10 rounded-2xl text-center shadow-sm">
                   <AlertCircle size={48} className="mx-auto mb-4 text-red-500" />
                   <h3 className="text-2xl font-black mb-2">Airtable Refused Connection</h3>
@@ -755,7 +797,6 @@ Total Members:,${stats.total}
           </div>
         )}
 
-        {/* VIEW: REPORTS */}
         {activeTab === 'reports' && (
           <div className="space-y-6">
              <div className="flex justify-between items-center mb-8">
