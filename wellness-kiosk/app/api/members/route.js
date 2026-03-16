@@ -1,33 +1,21 @@
 import { NextResponse } from 'next/server';
 
-export async function POST(request) {
+export const dynamic = 'force-dynamic';
+
+export async function GET() {
   const baseId = process.env.AIRTABLE_BASE_ID;
   const token = process.env.AIRTABLE_PAT;
-  const tableName = 'Visits'; 
+  
+  // This safely checks your Vercel settings for your EXACT table name
+  // so Airtable doesn't get confused and return an empty list!
+  const tableName = process.env.AIRTABLE_TABLE_NAME || 'Members'; 
 
   try {
-    const body = await request.json();
-    
     const response = await fetch(`https://api.airtable.com/v0/${baseId}/${tableName}`, {
-      method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        records: [
-          {
-            fields: {
-              "Check-in Time": body.time,
-              "Center": body.center,
-              "Check-in Method": body.method,
-              "Members": [body.airtableId] 
-            }
-          }
-        ],
-        // THIS IS THE MAGIC BULLET:
-        typecast: true 
-      })
+      cache: 'no-store'
     });
 
     const data = await response.json();
