@@ -59,7 +59,7 @@ export default function WellnessHub() {
   const centerRef = useRef(viewingCenter);
   useEffect(() => { centerRef.current = viewingCenter; }, [viewingCenter]);
 
-  // FIX: Anti-Hydration Crash logic
+  // FIX: Anti-Hydration Crash logic for Date rendering
   useEffect(() => {
     setIsMounted(true);
     setCurrentDateString(new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }));
@@ -109,7 +109,6 @@ export default function WellnessHub() {
             email: r.fields['Email'] || '',
             phone: r.fields['Phone'] || '',
             status: (r.fields['Membership Status'] || 'ACTIVE').toUpperCase(),
-            // FIX: Bulletproof parsing for Airtable Multi-Select arrays so the reports tab never crashes
             type: String(r.fields['Membership Type'] || 'SINGLE').toUpperCase(),
             center: r.fields['Home Center'] || 'Anthony',
             visits: Number(r.fields['Total Visits'] || 0),
@@ -178,10 +177,8 @@ export default function WellnessHub() {
       const scanCenter = currentCenter === 'both' ? m.center : currentCenter.charAt(0).toUpperCase() + currentCenter.slice(1);
       const currentTime = new Date().toISOString();
       
-      // Update UI Logs
       setVisits(prev => [{name: m.firstName + ' ' + m.lastName, center: scanCenter, time: currentTime, type: m.type}, ...prev]);
       
-      // FIX: Instantly tick up the visit count in the local UI
       setMembers(prev => prev.map(member => member.id === id ? { ...member, visits: member.visits + 1 } : member));
       if (activeMember && activeMember.id === id) {
         setActiveMember(prev => ({...prev, visits: prev.visits + 1}));
@@ -237,55 +234,55 @@ export default function WellnessHub() {
     a.click(); window.URL.revokeObjectURL(url);
   };
 
+  // FIX: These calculations are now safely outside the download button so the screen can see them!
+  const reportStats = {
+    single: scopedMembers.filter(m => m.type?.includes('SINGLE') || m.type?.includes('MONTHLY') || m.type?.includes('ANNUAL')).length,
+    family: scopedMembers.filter(m => m.type?.includes('FAMILY') && !m.type?.includes('SENIOR') && !m.type?.includes('STUDENT')).length,
+    student: scopedMembers.filter(m => m.type?.includes('STUDENT')).length,
+    senior: scopedMembers.filter(m => m.type?.includes('SENIOR') && !m.type?.includes('FAMILY')).length,
+    famStudent: scopedMembers.filter(m => m.type?.includes('FAMILY') && m.type?.includes('STUDENT')).length,
+    famSenior: scopedMembers.filter(m => m.type?.includes('FAMILY') && m.type?.includes('SENIOR')).length,
+    corporate: scopedMembers.filter(m => m.sponsor || m.type?.includes('CORPORATE')).length,
+    dayPass: scopedMembers.filter(m => m.type?.includes('PASS') || m.type?.includes('PUNCH')).length,
+  };
+  
+  const corpOnly = scopedMembers.filter(m => m.sponsor || m.type?.includes('CORPORATE'));
+  const corpStats = {
+    single: corpOnly.filter(m => m.type?.includes('SINGLE') || m.type?.includes('MONTHLY') || m.type?.includes('ANNUAL')).length,
+    family: corpOnly.filter(m => m.type?.includes('FAMILY') && !m.type?.includes('SENIOR') && !m.type?.includes('STUDENT')).length,
+    student: corpOnly.filter(m => m.type?.includes('STUDENT')).length,
+    senior: corpOnly.filter(m => m.type?.includes('SENIOR') && !m.type?.includes('FAMILY')).length,
+    famStudent: corpOnly.filter(m => m.type?.includes('FAMILY') && m.type?.includes('STUDENT')).length,
+    famSenior: corpOnly.filter(m => m.type?.includes('FAMILY') && m.type?.includes('SENIOR')).length,
+  };
+
   const handleMonthlySummary = () => {
     const centerName = viewingCenter === 'both' ? 'System-Wide' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1);
-    
-    const exportStats = {
-      single: scopedMembers.filter(m => m.type.includes('SINGLE') || m.type.includes('MONTHLY') || m.type.includes('ANNUAL')).length,
-      family: scopedMembers.filter(m => m.type.includes('FAMILY') && !m.type.includes('SENIOR') && !m.type.includes('STUDENT')).length,
-      student: scopedMembers.filter(m => m.type.includes('STUDENT')).length,
-      senior: scopedMembers.filter(m => m.type.includes('SENIOR') && !m.type.includes('FAMILY')).length,
-      famStudent: scopedMembers.filter(m => m.type.includes('FAMILY') && m.type.includes('STUDENT')).length,
-      famSenior: scopedMembers.filter(m => m.type.includes('FAMILY') && m.type.includes('SENIOR')).length,
-      corporate: scopedMembers.filter(m => m.sponsor || m.type.includes('CORPORATE')).length,
-      dayPass: scopedMembers.filter(m => m.type.includes('PASS') || m.type.includes('PUNCH')).length,
-    };
-    
-    const corpOnly = scopedMembers.filter(m => m.sponsor || m.type.includes('CORPORATE'));
-    const cStats = {
-      single: corpOnly.filter(m => m.type.includes('SINGLE') || m.type.includes('MONTHLY') || m.type.includes('ANNUAL')).length,
-      family: corpOnly.filter(m => m.type.includes('FAMILY') && !m.type.includes('SENIOR') && !m.type.includes('STUDENT')).length,
-      student: corpOnly.filter(m => m.type.includes('STUDENT')).length,
-      senior: corpOnly.filter(m => m.type.includes('SENIOR') && !m.type.includes('FAMILY')).length,
-      famStudent: corpOnly.filter(m => m.type.includes('FAMILY') && m.type.includes('STUDENT')).length,
-      famSenior: corpOnly.filter(m => m.type.includes('FAMILY') && m.type.includes('SENIOR')).length,
-    };
-
     const csvContent = `
 ${centerName} Wellness Center ${currentDateString} Summary
 
 STATS
-Single Memberships:,${exportStats.single}
-Family Memberships:,${exportStats.family}
-Student Memberships:,${exportStats.student}
-Senior Memberships:,${exportStats.senior}
-Family/Student Memberships:,${exportStats.famStudent}
-Family/Senior Memberships:,${exportStats.famSenior}
-Corporate:,${exportStats.corporate}
+Single Memberships:,${reportStats.single}
+Family Memberships:,${reportStats.family}
+Student Memberships:,${reportStats.student}
+Senior Memberships:,${reportStats.senior}
+Family/Student Memberships:,${reportStats.famStudent}
+Family/Senior Memberships:,${reportStats.famSenior}
+Corporate:,${reportStats.corporate}
 Total Members:,${stats.total}
 
 CORPORATE BREAKDOWN
-Single Memberships:,${cStats.single}
-Family Memberships:,${cStats.family}
-Student Memberships:,${cStats.student}
-Senior Memberships:,${cStats.senior}
-Family/Student Memberships:,${cStats.famStudent}
-Family/Senior Memberships:,${cStats.famSenior}
+Single Memberships:,${corpStats.single}
+Family Memberships:,${corpStats.family}
+Student Memberships:,${corpStats.student}
+Senior Memberships:,${corpStats.senior}
+Family/Student Memberships:,${corpStats.famStudent}
+Family/Senior Memberships:,${corpStats.famSenior}
 
 OTHER INFORMATION
 New Members (Est):,0
 Gift Cards Purchased:,0
-Paid-Daily Visitors:,${exportStats.dayPass}
+Paid-Daily Visitors:,${reportStats.dayPass}
 `;
     const blob = new Blob([csvContent.trim()], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -311,7 +308,7 @@ Paid-Daily Visitors:,${exportStats.dayPass}
     </div>
   );
 
-  // Ensures we don't render until client is fully hydrated
+  // Guarantee hydration to prevent client-side exception
   if (!isMounted) return <div className="min-h-screen bg-[#001f3f]" />;
 
   // ============================================================
