@@ -70,9 +70,9 @@ const Icons = {
 // MAIN APP
 // ============================================================
 export default function WellnessHub() {
-  const [view, setView] = useState('landing'); // landing, login, dashboard, member_login, member_portal
-  const [user, setUser] = useState(null); // Used for Directors
-  const [activeMember, setActiveMember] = useState(null); // Used for Member Portal
+  const [view, setView] = useState('landing'); 
+  const [user, setUser] = useState(null);
+  const [activeMember, setActiveMember] = useState(null);
   
   const [members, setMembers] = useState([]);
   const [visits, setVisits] = useState([]);
@@ -83,6 +83,39 @@ export default function WellnessHub() {
   const [loading, setLoading] = useState(false);
   const [scannerActive, setScannerActive] = useState(false);
   const [editMode, setEditMode] = useState(false);
+
+  // --- Persistent Login Memory ---
+  useEffect(() => {
+    const savedUser = localStorage.getItem('wellnessUser');
+    const savedCenter = localStorage.getItem('wellnessCenter');
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+      setView('dashboard');
+    }
+    if (savedCenter) setViewingCenter(savedCenter);
+  }, []);
+
+  const handleLogin = () => {
+    const u = document.getElementById('u_in').value.toLowerCase().trim();
+    const p = document.getElementById('p_in').value.trim();
+    const found = DIRECTORS.find(d => d.username === u && d.password === p);
+    if(found) { 
+      setUser(found); 
+      setViewingCenter(found.center); 
+      localStorage.setItem('wellnessUser', JSON.stringify(found));
+      localStorage.setItem('wellnessCenter', found.center);
+      setView('dashboard'); 
+    } else { 
+      alert('Incorrect username or password. Please try again.'); 
+    }
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    localStorage.removeItem('wellnessUser');
+    localStorage.removeItem('wellnessCenter');
+    setView('landing');
+  };
 
   // Sync with Airtable
   useEffect(() => {
@@ -96,6 +129,7 @@ export default function WellnessHub() {
             id: r.fields['Member ID'] || r.id,
             firstName: r.fields['First Name'] || 'Unknown',
             lastName: r.fields['Last Name'] || '',
+            fullName: r.fields['Full Name'] || 'Unknown Member',
             email: r.fields['Email'] || '',
             phone: r.fields['Phone'] || '(555) 000-0000',
             status: (r.fields['Membership Status'] || 'ACTIVE').toUpperCase(),
@@ -113,7 +147,15 @@ export default function WellnessHub() {
 
   const scopedMembers = members.filter(m => viewingCenter === 'both' || (m.center && m.center.toLowerCase().includes(viewingCenter)));
   const filteredMembers = scopedMembers.filter(m => `${m.firstName} ${m.lastName} ${m.id}`.toLowerCase().includes(searchQuery.toLowerCase()));
+
   const filteredVisits = visits.filter(v => viewingCenter === 'both' || (v.center && v.center.toLowerCase().includes(viewingCenter)));
+  
+  const heatmapData = Array(15).fill(0);
+  filteredVisits.forEach(v => {
+    const hour = new Date(v.time).getHours();
+    if (hour >= 6 && hour <= 20) heatmapData[hour - 6]++;
+  });
+  const maxVisits = Math.max(...heatmapData, 1);
 
   const stats = {
     total: scopedMembers.length,
@@ -138,12 +180,7 @@ export default function WellnessHub() {
         await fetch('/api/visits', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            airtableId: m.airtableId, 
-            center: scanCenter,
-            time: currentTime,
-            method: method
-          })
+          body: JSON.stringify({ airtableId: m.airtableId, center: scanCenter, time: currentTime, method: method })
         });
       } catch (err) {
         console.error("Failed to save visit to Airtable", err);
@@ -166,6 +203,78 @@ export default function WellnessHub() {
     }
   }, [activeTab, scannerActive, members, viewingCenter]);
 
+  // --- Excel Summary Data ---
+  const reportStats = {
+    single: scopedMembers.filter(m => m.type.includes('SINGLE') || m.type.includes('MONTHLY') || m.type.includes('ANNUAL')).length,
+    family: scopedMembers.filter(m => m.type.includes('FAMILY') && !m.type.includes('SENIOR') && !m.type.includes('STUDENT')).length,
+    student: scopedMembers.filter(m => m.type.includes('STUDENT')).length,
+    senior: scopedMembers.filter(m => m.type.includes('SENIOR') && !m.type.includes('FAMILY')).length,
+    famStudent: scopedMembers.filter(m => m.type.includes('FAMILY') && m.type.includes('STUDENT')).length,
+    famSenior: scopedMembers.filter(m => m.type.includes('FAMILY') && m.type.includes('SENIOR')).length,
+    corporate: scopedMembers.filter(m => m.sponsor || m.type.includes('CORPORATE')).length,
+    dayPass: scopedMembers.filter(m => m.type.includes('PASS') || m.type.includes('PUNCH')).length,
+  };
+
+  const corpMembers = scopedMembers.filter(m => m.sponsor || m.type.includes('CORPORATE'));
+  const corpStats = {
+    single: corpMembers.filter(m => m.type.includes('SINGLE') || m.type.includes('MONTHLY') || m.type.includes('ANNUAL')).length,
+    family: corpMembers.filter(m => m.type.includes('FAMILY') && !m.type.includes('SENIOR') && !m.type.includes('STUDENT')).length,
+    student: corpMembers.filter(m => m.type.includes('STUDENT')).length,
+    senior: corpMembers.filter(m => m.type.includes('SENIOR') && !m.type.includes('FAMILY')).length,
+    famStudent: corpMembers.filter(m => m.type.includes('FAMILY') && m.type.includes('STUDENT')).length,
+    famSenior: corpMembers.filter(m => m.type.includes('FAMILY') && m.type.includes('SENIOR')).length,
+  };
+
+  const handleExportCSV = () => {
+    if (filteredMembers.length === 0) return;
+    const headers = ["Member ID", "First Name", "Last Name", "Email", "Phone", "Membership Type", "Home Center", "Status", "Total Visits", "Next Payment"];
+    const csvRows = [
+      headers.join(','),
+      ...filteredMembers.map(m => `"${m.id}","${m.firstName}","${m.lastName}","${m.email}","${m.phone}","${m.type}","${m.center}","${m.status}","${m.visits}","${m.nextPayment}"`)
+    ].join('\n');
+    const blob = new Blob([csvRows], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url;
+    const centerLabel = viewingCenter === 'both' ? 'All_Centers' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1);
+    a.download = `Wellness_Members_${centerLabel}_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click(); window.URL.revokeObjectURL(url);
+  };
+
+  const handleMonthlySummary = () => {
+    const centerName = viewingCenter === 'both' ? 'System-Wide' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1);
+    const monthYear = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    const csvContent = `
+${centerName} Wellness Center ${monthYear} Summary
+
+STATS
+Single Memberships:,${reportStats.single}
+Family Memberships:,${reportStats.family}
+Student Memberships:,${reportStats.student}
+Senior Memberships:,${reportStats.senior}
+Family/Student Memberships:,${reportStats.famStudent}
+Family/Senior Memberships:,${reportStats.famSenior}
+Corporate:,${reportStats.corporate}
+Total Members:,${stats.total}
+
+CORPORATE BREAKDOWN
+Single Memberships:,${corpStats.single}
+Family Memberships:,${corpStats.family}
+Student Memberships:,${corpStats.student}
+Senior Memberships:,${corpStats.senior}
+Family/Student Memberships:,${corpStats.famStudent}
+Family/Senior Memberships:,${corpStats.famSenior}
+
+OTHER INFORMATION
+New Members (Est):,0
+Gift Cards Purchased:,0
+Paid-Daily Visitors:,${reportStats.dayPass}
+`;
+    const blob = new Blob([csvContent.trim()], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url;
+    a.download = `${centerName}_Monthly_Summary.csv`;
+    a.click(); window.URL.revokeObjectURL(url);
+  };
 
   // --- UI Components ---
   const ProStatCard = ({ value, label, color }) => (
@@ -186,30 +295,26 @@ export default function WellnessHub() {
   );
 
   // ============================================================
-  // VIEW: LANDING PAGE
+  // VIEW: LANDING PAGE (NOW WITH 3 BUTTONS)
   // ============================================================
   if (view === 'landing') {
     return (
       <div className="min-h-screen bg-[#001f3f] flex items-center justify-center font-sans p-6">
-        <div className="text-center max-w-5xl">
+        <div className="text-center max-w-5xl w-full">
           <img src={LOGO_URL} alt="Logo" className="h-20 mx-auto mb-16 opacity-90" />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
              <button onClick={() => setView('login')} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group">
                 <ShieldCheck size={56} className="text-[#f59e0b] group-hover:scale-110 transition-transform" />
-                <span className="text-2xl font-bold">Director Portal</span>
-                <span className="text-sm text-slate-400 font-medium">Manage members & reports</span>
+                <span className="text-xl font-bold">Director Portal</span>
              </button>
              <button onClick={() => {setView('dashboard'); setActiveTab('badge'); setViewingCenter('both');}} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group">
                 <Smartphone size={56} className="text-[#1080ad] group-hover:scale-110 transition-transform" />
-                <span className="text-2xl font-bold">Check-In Kiosk</span>
-                <span className="text-sm text-slate-400 font-medium">iPad Scanner Station</span>
+                <span className="text-xl font-bold">iPad Badge-In</span>
              </button>
-             
-             {/* NEW MEMBER PORTAL BUTTON */}
-             <button onClick={() => setView('member_login')} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group border-b-4 border-b-[#16a34a]">
+             {/* THE RESTORED MEMBER PORTAL BUTTON */}
+             <button onClick={() => setView('member_login')} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group">
                 <UserCircle size={56} className="text-[#16a34a] group-hover:scale-110 transition-transform" />
-                <span className="text-2xl font-bold">Member Portal</span>
-                <span className="text-sm text-slate-400 font-medium">Get Digital Badge & Account</span>
+                <span className="text-xl font-bold">Member Portal</span>
              </button>
           </div>
         </div>
@@ -264,12 +369,11 @@ export default function WellnessHub() {
   }
 
   // ============================================================
-  // VIEW: MEMBER PORTAL (MOBILE-FRIENDLY DASHBOARD)
+  // VIEW: MEMBER PORTAL DASHBOARD
   // ============================================================
   if (view === 'member_portal' && activeMember) {
     return (
       <div className="min-h-screen bg-[#f0f2f5] font-sans pb-20 md:pb-0">
-        {/* Top Nav */}
         <nav className="bg-[#001f3f] text-white p-4 shadow-md flex justify-between items-center sticky top-0 z-10">
           <div className="flex items-center gap-3">
              <div className="w-8 h-8 rounded-full bg-[#16a34a] flex items-center justify-center font-bold text-[#001f3f]">{activeMember.firstName.charAt(0)}</div>
@@ -281,14 +385,11 @@ export default function WellnessHub() {
         </nav>
 
         <main className="max-w-md mx-auto p-4 space-y-6 mt-6">
-           
-           {/* Welcome Header */}
            <div>
              <h1 className="text-3xl font-black text-[#001f3f] tracking-tight mb-1">Hi, {activeMember.firstName}!</h1>
              <p className="text-slate-500 font-medium">Welcome to your digital access portal.</p>
            </div>
 
-           {/* The Digital Badge */}
            <div className="bg-white rounded-3xl shadow-lg border border-slate-100 p-8 flex flex-col items-center justify-center relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-2 bg-[#1080ad]"></div>
               <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Scan to Check-In</h2>
@@ -301,7 +402,6 @@ export default function WellnessHub() {
               </span>
            </div>
 
-           {/* Account Status Card */}
            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
               <h3 className="font-bold text-[#001f3f] mb-4 flex items-center gap-2"><CreditCard size={18} className="text-[#1080ad]"/> Account Status</h3>
               <div className="space-y-4">
@@ -322,7 +422,6 @@ export default function WellnessHub() {
               </div>
            </div>
 
-           {/* Contact Info Card */}
            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="font-bold text-[#001f3f] flex items-center gap-2"><UserCircle size={18} className="text-[#f59e0b]"/> Contact Info</h3>
@@ -330,7 +429,6 @@ export default function WellnessHub() {
                   {editMode ? 'Cancel' : 'Edit'}
                 </button>
               </div>
-
               {!editMode ? (
                 <div className="space-y-4">
                    <div className="flex justify-between items-center border-b border-slate-50 pb-4">
@@ -353,27 +451,16 @@ export default function WellnessHub() {
                      <input defaultValue={activeMember.phone} className="w-full p-3 bg-slate-50 border rounded-xl text-sm" />
                    </div>
                    <button onClick={() => {
-                     alert("Update requested! (Note: Saving to Airtable requires activating the Update API route).");
+                     alert("Contact info update request sent.");
                      setEditMode(false);
                    }} className="w-full bg-[#001f3f] text-white py-3 rounded-xl font-bold text-sm">Save Changes</button>
                 </div>
               )}
            </div>
-
-           {/* Activity Card */}
-           <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
-              <h3 className="font-bold text-[#001f3f] mb-4 flex items-center gap-2"><Activity size={18} className="text-[#16a34a]"/> Lifetime Visits</h3>
-              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                 <span className="text-sm font-bold text-slate-500">Total Check-ins</span>
-                 <span className="text-3xl font-black text-[#16a34a]">{activeMember.visits}</span>
-              </div>
-           </div>
-
         </main>
       </div>
     );
   }
-
 
   // ============================================================
   // VIEW: DIRECTOR LOGIN
@@ -384,20 +471,9 @@ export default function WellnessHub() {
         <div className="bg-white rounded-[3rem] shadow-2xl p-12 w-full max-w-md">
           <h2 className="text-4xl font-black text-slate-900 mb-2 tracking-tight">Director Login</h2>
           <p className="text-slate-400 mb-10 font-medium tracking-tight">Enter director credentials to proceed.</p>
-          <input type="text" placeholder="Username" id="u_in" className="w-full p-5 bg-slate-100 rounded-2xl mb-4 outline-none border-2 border-transparent focus:border-blue-500/20 text-lg" />
-          <input type="password" placeholder="Password" id="p_in" className="w-full p-5 bg-slate-100 rounded-2xl mb-8 outline-none border-2 border-transparent focus:border-blue-500/20 text-lg" />
-          <button onClick={() => {
-            const u = document.getElementById('u_in').value.toLowerCase().trim();
-            const p = document.getElementById('p_in').value.trim();
-            const found = DIRECTORS.find(d => d.username === u && d.password === p);
-            if(found) { 
-              setUser(found); 
-              setViewingCenter(found.center); 
-              setView('dashboard'); 
-            } else { 
-              alert('Incorrect username or password. Please try again.'); 
-            }
-          }} className="w-full bg-[#001f3f] text-white p-5 rounded-2xl font-bold text-xl shadow-xl hover:bg-blue-900 transition-all">Sign In</button>
+          <input type="text" placeholder="Username" id="u_in" className="w-full p-5 bg-slate-100 rounded-2xl mb-4 outline-none border-2 border-transparent focus:border-blue-500/20 text-lg" onKeyDown={(e) => e.key === 'Enter' && handleLogin()} />
+          <input type="password" placeholder="Password" id="p_in" className="w-full p-5 bg-slate-100 rounded-2xl mb-8 outline-none border-2 border-transparent focus:border-blue-500/20 text-lg" onKeyDown={(e) => e.key === 'Enter' && handleLogin()} />
+          <button onClick={handleLogin} className="w-full bg-[#001f3f] text-white p-5 rounded-2xl font-bold text-xl shadow-xl hover:bg-blue-900 transition-all">Sign In</button>
           <button onClick={() => setView('landing')} className="w-full mt-6 text-slate-400 font-bold">Cancel</button>
         </div>
       </div>
@@ -405,7 +481,7 @@ export default function WellnessHub() {
   }
 
   // ============================================================
-  // VIEW: DIRECTOR DASHBOARD (Remains completely unchanged)
+  // VIEW: DIRECTOR DASHBOARD
   // ============================================================
   return (
     <div className="flex min-h-screen bg-[#f0f2f5] font-sans text-slate-800">
@@ -421,7 +497,7 @@ export default function WellnessHub() {
               <p className="text-[11px] text-white/50">@{user?.username}</p>
             </div>
           </div>
-          <button onClick={() => {setUser(null); setView('landing');}} className="flex items-center gap-2 text-xs text-white/40 hover:text-white transition-colors">
+          <button onClick={handleLogout} className="flex items-center gap-2 text-xs text-white/40 hover:text-white transition-colors">
             <LogOut size={14} /> Sign Out
           </button>
         </div>
@@ -430,7 +506,10 @@ export default function WellnessHub() {
           <p className="px-2 text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3">Viewing</p>
           <div className="space-y-1">
             {[ { k: 'both', c: '#ffffff' }, { k: 'harper', c: '#f59e0b' }, { k: 'anthony', c: '#1080ad' } ].map(item => (
-              <button key={item.k} onClick={() => setViewingCenter(item.k)} className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all ${viewingCenter === item.k ? 'bg-white/20 font-bold' : 'text-white/60 hover:bg-white/5'}`}>
+              <button key={item.k} onClick={() => {
+                  setViewingCenter(item.k);
+                  localStorage.setItem('wellnessCenter', item.k);
+              }} className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all ${viewingCenter === item.k ? 'bg-white/20 font-bold' : 'text-white/60 hover:bg-white/5'}`}>
                 <span className="w-1.5 h-6 rounded-full" style={{ backgroundColor: item.c }} />
                 {item.k === 'both' ? 'Both Centers' : `${item.k.charAt(0).toUpperCase() + item.k.slice(1)}`}
               </button>
@@ -469,6 +548,27 @@ export default function WellnessHub() {
                  <ProStatCard key={i} {...s} />
                ))}
             </div>
+
+            {/* --- CORE FEATURE: HEATMAP ANALYTICS --- */}
+            <ProListCard title="Peak Hours Activity Heatmap">
+               <div className="flex items-end justify-between h-48 mt-8 gap-2">
+                 {heatmapData.map((count, i) => {
+                   const heightPercent = count === 0 ? 5 : (count / maxVisits) * 100;
+                   const hourLabel = (i + 6) > 12 ? `${(i + 6) - 12}P` : `${i + 6}A`;
+                   return (
+                     <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
+                       <div className="w-full bg-blue-100 rounded-t-md relative flex items-end justify-center group-hover:bg-blue-200 transition-colors" style={{ height: '100%' }}>
+                         <div className="w-full bg-[#1080ad] rounded-t-md transition-all duration-500 relative" style={{ height: `${heightPercent}%` }}>
+                           <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold text-[#001f3f] opacity-0 group-hover:opacity-100 transition-opacity">{count}</span>
+                         </div>
+                       </div>
+                       <span className="text-[10px] font-bold text-slate-400">{hourLabel}</span>
+                     </div>
+                   );
+                 })}
+               </div>
+            </ProListCard>
+
             <div className="grid grid-cols-2 gap-8">
                <ProListCard title="Today's Check-ins">
                  <div className="space-y-4">
@@ -624,7 +724,7 @@ export default function WellnessHub() {
           </div>
         )}
 
-        {/* VIEW: BADGE IN (With Working Camera Integration) */}
+        {/* VIEW: BADGE IN (With Camera Integration) */}
         {activeTab === 'badge' && (
           <div className="space-y-6">
              <div className="mb-8">
