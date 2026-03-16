@@ -107,6 +107,7 @@ export default function WellnessHub() {
               visits: Number(r.fields['Total Visits'] || 0),
               nextPayment: r.fields['Next Payment Due'] || null,
               sponsor: !!r.fields['Corporate Sponsor'],
+              needsOrientation: !!r.fields['Needs Orientation'], // NEW: PULLING THE CHECKBOX!
             };
           });
           setMembers(mapped);
@@ -196,9 +197,15 @@ export default function WellnessHub() {
     const m = membersRef.current.find(m => m.id === id); 
     
     if(m) {
+      // NEW: ORIENTATION BLOCKER!
+      if (m.needsOrientation) {
+         setKioskMessage({ text: `Orientation Required`, type: 'error', subtext: 'Please see front desk to complete your orientation.' });
+         setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 5000);
+         return false; 
+      }
+
       const light = getStoplight(m);
       if (light === 'red') {
-         // DISCREET RED MESSAGE
          setKioskMessage({ text: `Please see front desk.`, type: 'error', subtext: 'We need to quickly update your account.' });
          setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4500);
          return false; 
@@ -229,7 +236,6 @@ export default function WellnessHub() {
         if (activeMember && activeMember.id === id) setActiveMember(prev => ({...prev, visits: prev.visits + 1}));
 
         if (light === 'yellow') {
-           // DISCREET YELLOW MESSAGE
            setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'warning', subtext: 'Please see the front desk at your convenience.' });
         } else {
            setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'success', subtext: '' });
@@ -356,7 +362,6 @@ Total Members:,${stats.total}
       <div className="min-h-screen bg-[#f0f2f5] flex flex-col items-center justify-center p-6 font-sans relative overflow-hidden">
          <button onClick={() => {setView('landing');}} className="absolute top-6 left-6 text-slate-400 hover:text-[#001f3f] flex items-center gap-2 font-bold z-10"><LogOut size={20}/> Staff Exit</button>
          
-         {/* THE NEW DISCREET KIOSK MESSAGE CARD */}
          {kioskMessage.text && (
            <div className="absolute inset-0 z-50 flex items-center justify-center bg-[#001f3f]/40 backdrop-blur-sm p-4 transition-all duration-300">
               <div className={`bg-white rounded-3xl shadow-2xl p-10 w-full max-w-md text-center border-t-8 ${kioskMessage.type === 'success' ? 'border-[#16a34a]' : kioskMessage.type === 'warning' ? 'border-[#eab308]' : 'border-red-600'}`}>
@@ -404,7 +409,8 @@ Total Members:,${stats.total}
 
          <div className="bg-white rounded-[3rem] shadow-2xl p-12 w-full max-w-2xl border-t-8 border-[#1080ad] text-center relative z-0">
             <h2 className="text-5xl font-black text-[#001f3f] mb-4 tracking-tight">Check-In</h2>
-            <p className="text-slate-500 mb-12 text-lg font-medium">Type your last name or scan your physical badge.</p>
+            {/* CHANGED TEXT HERE! */}
+            <p className="text-slate-500 mb-12 text-lg font-medium">Type your last name to check in.</p>
             
             <div className="relative w-full max-w-md mx-auto mb-10">
               <div className="flex gap-4">
@@ -463,7 +469,6 @@ Total Members:,${stats.total}
       <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 font-sans relative">
          <button onClick={() => {setView('landing'); setScannerActive(false);}} className="absolute top-6 left-6 text-white/50 hover:text-white flex items-center gap-2 font-bold z-10"><LogOut size={20}/> Exit Scanner</button>
          
-         {/* THE NEW DISCREET MESSAGE CARD FOR SCANNER TOO */}
          {kioskMessage.text && (
            <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 transition-all duration-300">
               <div className={`bg-white rounded-3xl shadow-2xl p-10 w-full max-w-md text-center border-t-8 ${kioskMessage.type === 'success' ? 'border-[#16a34a]' : kioskMessage.type === 'warning' ? 'border-[#eab308]' : 'border-red-600'}`}>
@@ -709,6 +714,7 @@ Total Members:,${stats.total}
            <p className="text-sm text-slate-400 font-medium">{viewingCenter === 'both' ? 'All Centers' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1) + ' Center'} · {currentDateString}</p>
         </div>
 
+        {/* VIEW: DASHBOARD */}
         {activeTab === 'dashboard' && (
           <div className="space-y-8">
             <div className="grid grid-cols-5 gap-6">
@@ -731,10 +737,17 @@ Total Members:,${stats.total}
 
                <ProListCard title="Needs Attention">
                  <div className="space-y-4">
-                   {scopedMembers.filter(m => m.status !== 'ACTIVE').slice(0, 5).map(m => (
-                     <div key={m.id} className={`flex items-center justify-between p-4 rounded-xl border ${m.status === 'OVERDUE' ? 'bg-red-50 border-red-100' : 'bg-amber-50 border-amber-100'}`}>
-                       <div><p className="font-bold">{m.firstName} {m.lastName}</p><p className="text-[11px] font-bold text-slate-400 uppercase">{m.status === 'OVERDUE' ? `Overdue since ${m.nextPayment}` : `Expiring ${m.nextPayment}`}</p></div>
-                       <span className={`px-3 py-1 rounded-full text-[10px] font-black ${m.status === 'OVERDUE' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>{m.status}</span>
+                   {scopedMembers.filter(m => m.status !== 'ACTIVE' || m.needsOrientation).slice(0, 5).map(m => (
+                     <div key={m.id} className={`flex items-center justify-between p-4 rounded-xl border ${m.status === 'OVERDUE' ? 'bg-red-50 border-red-100' : m.needsOrientation ? 'bg-blue-50 border-blue-100' : 'bg-amber-50 border-amber-100'}`}>
+                       <div>
+                         <p className="font-bold">{m.firstName} {m.lastName}</p>
+                         <p className="text-[11px] font-bold text-slate-400 uppercase">
+                           {m.needsOrientation ? 'Needs Orientation' : m.status === 'OVERDUE' ? `Overdue since ${m.nextPayment}` : `Expiring ${m.nextPayment}`}
+                         </p>
+                       </div>
+                       <span className={`px-3 py-1 rounded-full text-[10px] font-black ${m.status === 'OVERDUE' ? 'bg-red-100 text-red-600' : m.needsOrientation ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'}`}>
+                         {m.needsOrientation ? 'ORIENTATION' : m.status}
+                       </span>
                      </div>
                    ))}
                  </div>
@@ -743,6 +756,7 @@ Total Members:,${stats.total}
           </div>
         )}
 
+        {/* VIEW: MEMBERS */}
         {activeTab === 'members' && (
           <div className="space-y-6">
              <div className="flex justify-between items-center mb-8">
@@ -778,7 +792,16 @@ Total Members:,${stats.total}
                        const light = getStoplight(m);
                        return (
                        <tr key={m.id} className="border-b hover:bg-slate-50/80 cursor-pointer" onClick={() => setSelectedMember(m)}>
-                         <td className="px-8 py-5"><p className="font-bold text-slate-800">{m.firstName} {m.lastName}</p><p className="text-[11px] text-slate-400">{m.email}</p></td>
+                         <td className="px-8 py-5">
+                            <p className="font-bold text-slate-800 flex items-center gap-2">
+                               {m.firstName} {m.lastName} 
+                            </p>
+                            <p className="text-[11px] text-slate-400">
+                               {m.email}
+                               {/* NEW: ORIENTATION BADGE IN LIST */}
+                               {m.needsOrientation && <span className="ml-2 px-2 py-0.5 rounded text-[9px] font-black bg-blue-100 text-blue-700 uppercase">Needs Orientation</span>}
+                            </p>
+                         </td>
                          <td className="px-8 py-5 font-mono text-slate-400">{m.id}</td>
                          <td className="px-8 py-5"><span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black tracking-tight">{m.type}</span></td>
                          <td className="px-8 py-5">
@@ -797,6 +820,7 @@ Total Members:,${stats.total}
           </div>
         )}
 
+        {/* VIEW: REPORTS */}
         {activeTab === 'reports' && (
           <div className="space-y-6">
              <div className="flex justify-between items-center mb-8">
@@ -971,6 +995,11 @@ Total Members:,${stats.total}
                  <p className="text-xl font-bold text-[#001f3f]">#{selectedMember.id}</p>
               </div>
               <div className="flex-1 p-16">
+                 {selectedMember.needsOrientation && (
+                    <div className="mb-6 bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
+                       <p className="text-blue-800 font-bold text-sm">Action Required: This member has not completed their orientation.</p>
+                    </div>
+                 )}
                  <span className={`px-4 py-1 rounded-full text-[10px] font-black tracking-widest ${getStoplight(selectedMember) === 'green' ? 'bg-green-100 text-green-600' : getStoplight(selectedMember) === 'yellow' ? 'bg-yellow-100 text-yellow-600' : 'bg-red-100 text-red-600'}`}>
                     {getStoplight(selectedMember) === 'green' ? 'ACTIVE' : getStoplight(selectedMember) === 'yellow' ? 'GRACE PERIOD' : 'ACCOUNT LOCKED'}
                  </span>
