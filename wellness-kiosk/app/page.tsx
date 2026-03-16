@@ -10,39 +10,22 @@ import {
 } from 'lucide-react';
 
 // ============================================================
-// QR Code Generator Logic
+// REAL QR Code Generator
 // ============================================================
-const generateQRMatrix = (data) => {
-  const size = 21;
-  const matrix = Array(size).fill(null).map(() => Array(size).fill(false));
-  const addFinder = (row, col) => {
-    for (let r = 0; r < 7; r++)
-      for (let c = 0; c < 7; c++)
-        if (r === 0 || r === 6 || c === 0 || c === 6 || (r >= 2 && r <= 4 && c >= 2 && c <= 4))
-          if (row + r < size && col + c < size) matrix[row + r][col + c] = true;
-  };
-  addFinder(0, 0); addFinder(0, size - 7); addFinder(size - 7, 0);
-  let hash = 0;
-  for (let i = 0; i < (data?.length || 0); i++) hash = ((hash << 5) - hash + data.charCodeAt(i)) | 0;
-  for (let r = 0; r < size; r++)
-    for (let c = 0; c < size; c++)
-      if (!matrix[r][c]) {
-        const val = Math.abs((hash * (r * size + c + 1) * 7919) % 100);
-        if (val < 45) matrix[r][c] = true;
-      }
-  return matrix;
-};
-
 const QRCode = ({ data, size = 160, darkColor = '#001f3f' }) => {
-  const matrix = generateQRMatrix(data || "WC-000");
-  const cellSize = size / matrix.length;
+  // Removes the '#' from the hex code for the API
+  const hexColor = darkColor.replace('#', '');
+  const safeData = encodeURIComponent(data || "WC-000");
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${safeData}&color=${hexColor}&bgcolor=ffffff`;
+  
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      <rect width={size} height={size} fill="#fff" rx="4" />
-      {matrix.map((row, r) => row.map((cell, c) => cell ? (
-        <rect key={`${r}-${c}`} x={c * cellSize} y={r * cellSize} width={cellSize + 0.5} height={cellSize + 0.5} fill={darkColor} />
-      ) : null))}
-    </svg>
+    <img 
+      src={qrUrl} 
+      alt={`QR Code for ${data}`} 
+      width={size} 
+      height={size} 
+      style={{ width: size, height: size, display: 'block' }} 
+    />
   );
 };
 
@@ -222,7 +205,7 @@ export default function WellnessHub() {
     }
   };
 
-  // --- CORE FEATURE: CAMERA SCANNER HOOK (ROBUST VERSION) ---
+  // --- CORE FEATURE: CAMERA SCANNER HOOK ---
   useEffect(() => {
     let scanner = null;
     if ((activeTab === 'badge' || view === 'kiosk') && scannerActive) {
@@ -236,7 +219,7 @@ export default function WellnessHub() {
       }, () => {});
     }
     return () => { if(scanner) scanner.clear().catch(e => console.error(e)); };
-  }, [activeTab, view, scannerActive]); // Removed unstable dependencies
+  }, [activeTab, view, scannerActive]); 
 
   const handleExportCSV = () => {
     if (filteredMembers.length === 0) return;
@@ -250,6 +233,65 @@ export default function WellnessHub() {
     const a = document.createElement('a'); a.href = url;
     const centerLabel = viewingCenter === 'both' ? 'All_Centers' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1);
     a.download = `Wellness_Members_${centerLabel}_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click(); window.URL.revokeObjectURL(url);
+  };
+
+  const handleMonthlySummary = () => {
+    const centerName = viewingCenter === 'both' ? 'System-Wide' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1);
+    const monthYear = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    
+    // Recalculate stats for the export
+    const exportStats = {
+      single: scopedMembers.filter(m => m.type.includes('SINGLE') || m.type.includes('MONTHLY') || m.type.includes('ANNUAL')).length,
+      family: scopedMembers.filter(m => m.type.includes('FAMILY') && !m.type.includes('SENIOR') && !m.type.includes('STUDENT')).length,
+      student: scopedMembers.filter(m => m.type.includes('STUDENT')).length,
+      senior: scopedMembers.filter(m => m.type.includes('SENIOR') && !m.type.includes('FAMILY')).length,
+      famStudent: scopedMembers.filter(m => m.type.includes('FAMILY') && m.type.includes('STUDENT')).length,
+      famSenior: scopedMembers.filter(m => m.type.includes('FAMILY') && m.type.includes('SENIOR')).length,
+      corporate: scopedMembers.filter(m => m.sponsor || m.type.includes('CORPORATE')).length,
+      dayPass: scopedMembers.filter(m => m.type.includes('PASS') || m.type.includes('PUNCH')).length,
+    };
+    
+    const corpOnly = scopedMembers.filter(m => m.sponsor || m.type.includes('CORPORATE'));
+    const cStats = {
+      single: corpOnly.filter(m => m.type.includes('SINGLE') || m.type.includes('MONTHLY') || m.type.includes('ANNUAL')).length,
+      family: corpOnly.filter(m => m.type.includes('FAMILY') && !m.type.includes('SENIOR') && !m.type.includes('STUDENT')).length,
+      student: corpOnly.filter(m => m.type.includes('STUDENT')).length,
+      senior: corpOnly.filter(m => m.type.includes('SENIOR') && !m.type.includes('FAMILY')).length,
+      famStudent: corpOnly.filter(m => m.type.includes('FAMILY') && m.type.includes('STUDENT')).length,
+      famSenior: corpOnly.filter(m => m.type.includes('FAMILY') && m.type.includes('SENIOR')).length,
+    };
+
+    const csvContent = `
+${centerName} Wellness Center ${monthYear} Summary
+
+STATS
+Single Memberships:,${exportStats.single}
+Family Memberships:,${exportStats.family}
+Student Memberships:,${exportStats.student}
+Senior Memberships:,${exportStats.senior}
+Family/Student Memberships:,${exportStats.famStudent}
+Family/Senior Memberships:,${exportStats.famSenior}
+Corporate:,${exportStats.corporate}
+Total Members:,${stats.total}
+
+CORPORATE BREAKDOWN
+Single Memberships:,${cStats.single}
+Family Memberships:,${cStats.family}
+Student Memberships:,${cStats.student}
+Senior Memberships:,${cStats.senior}
+Family/Student Memberships:,${cStats.famStudent}
+Family/Senior Memberships:,${cStats.famSenior}
+
+OTHER INFORMATION
+New Members (Est):,0
+Gift Cards Purchased:,0
+Paid-Daily Visitors:,${exportStats.dayPass}
+`;
+    const blob = new Blob([csvContent.trim()], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url;
+    a.download = `${centerName}_Monthly_Summary.csv`;
     a.click(); window.URL.revokeObjectURL(url);
   };
 
@@ -272,7 +314,7 @@ export default function WellnessHub() {
   );
 
   // ============================================================
-  // VIEW: LANDING PAGE (WITH 3 BUTTONS)
+  // VIEW: LANDING PAGE
   // ============================================================
   if (view === 'landing') {
     return (
@@ -310,7 +352,6 @@ export default function WellnessHub() {
             <h2 className="text-5xl font-black text-[#001f3f] mb-4 tracking-tight">Check-In</h2>
             <p className="text-slate-500 mb-10 text-lg font-medium">Scan your QR code or enter your Member ID.</p>
             
-            {/* CAMERA WIDGET FIX: Removed constraints so buttons appear */}
             <div className="w-full max-w-md mx-auto mb-10 border-4 border-slate-100 bg-white relative flex flex-col items-center justify-center p-4 rounded-3xl min-h-[300px]">
                {!scannerActive ? (
                  <>
@@ -421,7 +462,8 @@ export default function WellnessHub() {
            <div className="bg-white rounded-3xl shadow-lg border border-slate-100 p-8 flex flex-col items-center justify-center relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-2 bg-[#1080ad]"></div>
               <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Scan to Check-In</h2>
-              <div className="bg-white p-4 rounded-2xl shadow-inner border border-slate-100 mb-6">
+              <div className="bg-white p-4 rounded-2xl shadow-inner border border-slate-100 mb-6 flex items-center justify-center">
+                 {/* REAL QR CODE RENDERED HERE */}
                  <QRCode data={activeMember.id} size={220} />
               </div>
               <p className="text-2xl font-black text-[#001f3f] tracking-widest">{activeMember.id}</p>
@@ -568,12 +610,10 @@ export default function WellnessHub() {
             { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
             { id: 'members', label: 'Members', icon: <Users size={18} /> },
             { id: 'badge', label: 'Staff Badge-In', icon: <QrCode size={18} /> },
-            { id: 'notif', label: 'Notifications', icon: <Bell size={18} /> },
             { id: 'reports', label: 'Reports', icon: <FileText size={18} /> },
           ].map(item => (
             <button key={item.id} onClick={() => setActiveTab(item.id)} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all ${activeTab === item.id ? 'bg-[#1080ad] text-white font-bold' : 'text-white/60 hover:bg-white/5'}`}>
               {item.icon} {item.label}
-              {item.id === 'notif' && stats.overdue > 0 && <span className="ml-auto w-5 h-5 rounded-full bg-red-500 text-[10px] flex items-center justify-center font-bold tracking-tight">{stats.overdue}</span>}
             </button>
           ))}
         </nav>
@@ -759,6 +799,9 @@ export default function WellnessHub() {
                       ) : (
                         <div className="w-full h-full relative">
                           <div id="reader" className="w-full h-full"></div>
+                          <button onClick={() => setScannerActive(false)} className="absolute top-4 right-4 bg-white p-2 rounded-full shadow-lg text-red-500 z-50 hover:bg-red-50 transition-colors">
+                            <X size={20} />
+                          </button>
                         </div>
                       )}
                    </div>
@@ -788,7 +831,9 @@ export default function WellnessHub() {
            <div className="bg-white rounded-[2rem] w-full max-w-4xl flex overflow-hidden shadow-2xl relative">
               <button onClick={() => setSelectedMember(null)} className="absolute top-6 right-6 text-slate-300 hover:text-red-500 transition-all"><X size={24}/></button>
               <div className="w-1/3 bg-slate-50 p-12 flex flex-col items-center justify-center border-r border-slate-100">
-                 <div className="bg-white p-6 rounded-2xl shadow-xl mb-8 border border-slate-100"><QRCode data={selectedMember.id} size={180} /></div>
+                 <div className="bg-white p-6 rounded-2xl shadow-xl mb-8 border border-slate-100">
+                    <QRCode data={selectedMember.id} size={180} />
+                 </div>
                  <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Member Identity</p>
                  <p className="text-xl font-bold text-[#001f3f]">#{selectedMember.id}</p>
               </div>
