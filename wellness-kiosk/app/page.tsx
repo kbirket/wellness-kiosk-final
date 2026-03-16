@@ -36,6 +36,8 @@ const DIRECTORS = [
 ];
 
 export default function WellnessHub() {
+  const [isMounted, setIsMounted] = useState(false);
+  const [currentDateString, setCurrentDateString] = useState('');
   const [view, setView] = useState('landing'); 
   const [user, setUser] = useState(null);
   const [activeMember, setActiveMember] = useState(null);
@@ -57,7 +59,11 @@ export default function WellnessHub() {
   const centerRef = useRef(viewingCenter);
   useEffect(() => { centerRef.current = viewingCenter; }, [viewingCenter]);
 
+  // FIX: Anti-Hydration Crash logic
   useEffect(() => {
+    setIsMounted(true);
+    setCurrentDateString(new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }));
+    
     const savedUser = localStorage.getItem('wellnessUser');
     const savedCenter = localStorage.getItem('wellnessCenter');
     if (savedUser) {
@@ -103,11 +109,12 @@ export default function WellnessHub() {
             email: r.fields['Email'] || '',
             phone: r.fields['Phone'] || '',
             status: (r.fields['Membership Status'] || 'ACTIVE').toUpperCase(),
-            type: (r.fields['Membership Type']?.[0] || 'SINGLE').toUpperCase(),
+            // FIX: Bulletproof parsing for Airtable Multi-Select arrays so the reports tab never crashes
+            type: String(r.fields['Membership Type'] || 'SINGLE').toUpperCase(),
             center: r.fields['Home Center'] || 'Anthony',
-            visits: r.fields['Total Visits'] || 0,
+            visits: Number(r.fields['Total Visits'] || 0),
             nextPayment: r.fields['Next Payment Due'] || 'Mar 31, 2026',
-            sponsor: r.fields['Corporate Sponsor'] || null,
+            sponsor: !!r.fields['Corporate Sponsor'],
           }));
           setMembers(mapped);
         }
@@ -171,11 +178,17 @@ export default function WellnessHub() {
       const scanCenter = currentCenter === 'both' ? m.center : currentCenter.charAt(0).toUpperCase() + currentCenter.slice(1);
       const currentTime = new Date().toISOString();
       
+      // Update UI Logs
       setVisits(prev => [{name: m.firstName + ' ' + m.lastName, center: scanCenter, time: currentTime, type: m.type}, ...prev]);
       
-      // FULL SCREEN MESSAGE TRIGGER
+      // FIX: Instantly tick up the visit count in the local UI
+      setMembers(prev => prev.map(member => member.id === id ? { ...member, visits: member.visits + 1 } : member));
+      if (activeMember && activeMember.id === id) {
+        setActiveMember(prev => ({...prev, visits: prev.visits + 1}));
+      }
+
       setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'success' });
-      setTimeout(() => setKioskMessage({ text: '', type: '' }), 3500); // Disappears after 3.5 seconds
+      setTimeout(() => setKioskMessage({ text: '', type: '' }), 3500); 
 
       try {
         await fetch('/api/visits', {
@@ -226,7 +239,6 @@ export default function WellnessHub() {
 
   const handleMonthlySummary = () => {
     const centerName = viewingCenter === 'both' ? 'System-Wide' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1);
-    const monthYear = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
     
     const exportStats = {
       single: scopedMembers.filter(m => m.type.includes('SINGLE') || m.type.includes('MONTHLY') || m.type.includes('ANNUAL')).length,
@@ -250,7 +262,7 @@ export default function WellnessHub() {
     };
 
     const csvContent = `
-${centerName} Wellness Center ${monthYear} Summary
+${centerName} Wellness Center ${currentDateString} Summary
 
 STATS
 Single Memberships:,${exportStats.single}
@@ -299,6 +311,12 @@ Paid-Daily Visitors:,${exportStats.dayPass}
     </div>
   );
 
+  // Ensures we don't render until client is fully hydrated
+  if (!isMounted) return <div className="min-h-screen bg-[#001f3f]" />;
+
+  // ============================================================
+  // VIEW: LANDING PAGE
+  // ============================================================
   if (view === 'landing') {
     return (
       <div className="min-h-screen bg-[#001f3f] flex items-center justify-center font-sans p-6">
@@ -323,12 +341,14 @@ Paid-Daily Visitors:,${exportStats.dayPass}
     );
   }
 
+  // ============================================================
+  // VIEW: LOCKED-DOWN KIOSK MODE
+  // ============================================================
   if (view === 'kiosk') {
     return (
       <div className="min-h-screen bg-[#f0f2f5] flex flex-col items-center justify-center p-6 font-sans relative overflow-hidden">
          <button onClick={() => {setView('landing'); setScannerActive(false);}} className="absolute top-6 left-6 text-slate-400 hover:text-[#001f3f] flex items-center gap-2 font-bold z-10"><LogOut size={20}/> Staff Exit</button>
          
-         {/* THE MASSIVE FULL-SCREEN WELCOME OVERLAY */}
          {kioskMessage.text && (
            <div className={`absolute inset-0 z-50 flex flex-col items-center justify-center transition-all duration-300 ${kioskMessage.type === 'success' ? 'bg-[#16a34a]' : 'bg-red-600'}`}>
               {kioskMessage.type === 'success' ? <CheckCircle size={120} className="text-white mb-8 animate-bounce" /> : <AlertCircle size={120} className="text-white mb-8 animate-bounce" />}
@@ -374,6 +394,9 @@ Paid-Daily Visitors:,${exportStats.dayPass}
     );
   }
 
+  // ============================================================
+  // VIEW: MEMBER LOGIN
+  // ============================================================
   if (view === 'member_login') {
     return (
       <div className="min-h-screen bg-[#f0f2f5] flex items-center justify-center p-4 font-sans">
@@ -416,6 +439,9 @@ Paid-Daily Visitors:,${exportStats.dayPass}
     );
   }
 
+  // ============================================================
+  // VIEW: MEMBER PORTAL DASHBOARD
+  // ============================================================
   if (view === 'member_portal' && activeMember) {
     return (
       <div className="min-h-screen bg-[#f0f2f5] font-sans pb-20 md:pb-0">
@@ -445,6 +471,14 @@ Paid-Daily Visitors:,${exportStats.dayPass}
               <span className={`mt-4 px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase ${activeMember.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                  {activeMember.status} MEMBER
               </span>
+           </div>
+
+           <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
+              <h3 className="font-bold text-[#001f3f] mb-4 flex items-center gap-2"><Activity size={18} className="text-[#f59e0b]"/> Lifetime Visits</h3>
+              <div className="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                 <span className="text-sm font-bold text-slate-500">Total Check-ins</span>
+                 <span className="text-3xl font-black text-[#1080ad]">{activeMember.visits}</span>
+              </div>
            </div>
 
            {familyMembers.length > 0 && (
@@ -526,6 +560,9 @@ Paid-Daily Visitors:,${exportStats.dayPass}
     );
   }
 
+  // ============================================================
+  // VIEW: DIRECTOR LOGIN
+  // ============================================================
   if (view === 'login') {
     return (
       <div className="min-h-screen bg-[#001f3f] flex items-center justify-center p-4 font-sans">
@@ -541,6 +578,9 @@ Paid-Daily Visitors:,${exportStats.dayPass}
     );
   }
 
+  // ============================================================
+  // VIEW: DIRECTOR DASHBOARD
+  // ============================================================
   return (
     <div className="flex min-h-screen bg-[#f0f2f5] font-sans text-slate-800">
       <aside className="w-64 bg-[#001f3f] text-white flex flex-col min-h-screen">
@@ -579,10 +619,12 @@ Paid-Daily Visitors:,${exportStats.dayPass}
             { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
             { id: 'members', label: 'Members', icon: <Users size={18} /> },
             { id: 'badge', label: 'Staff Check-In', icon: <QrCode size={18} /> },
+            { id: 'notif', label: 'Notifications', icon: <Bell size={18} /> },
             { id: 'reports', label: 'Reports', icon: <FileText size={18} /> },
           ].map(item => (
             <button key={item.id} onClick={() => setActiveTab(item.id)} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all ${activeTab === item.id ? 'bg-[#1080ad] text-white font-bold' : 'text-white/60 hover:bg-white/5'}`}>
               {item.icon} {item.label}
+              {item.id === 'notif' && stats.overdue > 0 && <span className="ml-auto w-5 h-5 rounded-full bg-red-500 text-[10px] flex items-center justify-center font-bold tracking-tight">{stats.overdue}</span>}
             </button>
           ))}
         </nav>
@@ -591,9 +633,10 @@ Paid-Daily Visitors:,${exportStats.dayPass}
       <main className="flex-1 p-10 h-screen overflow-y-auto">
         <div className="mb-10">
            <h2 className="text-3xl font-bold text-[#001f3f] capitalize tracking-tight">{activeTab}</h2>
-           <p className="text-sm text-slate-400 font-medium">{viewingCenter === 'both' ? 'All Centers' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1) + ' Center'} · {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</p>
+           <p className="text-sm text-slate-400 font-medium">{viewingCenter === 'both' ? 'All Centers' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1) + ' Center'} · {currentDateString}</p>
         </div>
 
+        {/* VIEW: DASHBOARD */}
         {activeTab === 'dashboard' && (
           <div className="space-y-8">
             <div className="grid grid-cols-5 gap-6">
@@ -647,6 +690,7 @@ Paid-Daily Visitors:,${exportStats.dayPass}
           </div>
         )}
 
+        {/* VIEW: MEMBERS */}
         {activeTab === 'members' && (
           <div className="space-y-6">
              <div className="flex justify-between items-center mb-8">
@@ -678,7 +722,7 @@ Paid-Daily Visitors:,${exportStats.dayPass}
                          <td className="px-8 py-5"><p className="font-bold text-slate-800">{m.firstName} {m.lastName}</p><p className="text-[11px] text-slate-400">{m.email}</p></td>
                          <td className="px-8 py-5 font-mono text-slate-400">{m.id}</td>
                          <td className="px-8 py-5"><span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black tracking-tight">{m.type}</span></td>
-                         <td className="px-8 py-5 text-slate-600 font-medium">{m.center} Center</td>
+                         <td className="px-8 py-5 text-slate-600 font-medium">{m.center}</td>
                          <td className="px-8 py-5"><span className={`px-3 py-1 rounded-full text-[10px] font-black ${m.status === 'ACTIVE' ? 'bg-green-100 text-green-600' : m.status === 'OVERDUE' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>{m.status}</span></td>
                          <td className="px-8 py-5 text-slate-600">{m.nextPayment}</td>
                          <td className="px-8 py-5 font-bold text-lg text-right">{m.visits}</td>
@@ -692,6 +736,7 @@ Paid-Daily Visitors:,${exportStats.dayPass}
           </div>
         )}
 
+        {/* VIEW: REPORTS */}
         {activeTab === 'reports' && (
           <div className="space-y-6">
              <div className="flex justify-between items-center mb-8">
@@ -741,6 +786,36 @@ Paid-Daily Visitors:,${exportStats.dayPass}
                  </ProListCard>
                </div>
              </div>
+          </div>
+        )}
+
+        {/* VIEW: NOTIFICATIONS */}
+        {activeTab === 'notif' && (
+          <div className="space-y-6">
+             <div className="flex justify-between items-center mb-8">
+                <div><h2 className="text-3xl font-bold text-[#001f3f] tracking-tight">Notifications</h2><p className="text-slate-400 font-medium">Payment reminders via email & SMS</p></div>
+                <button className="bg-[#dd6d22] text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-orange-900/20 flex items-center gap-2"><Bell size={20} /> Send All Due</button>
+             </div>
+             <ProListCard title="Due for Reminder">
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mt-4">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="bg-slate-50 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b">
+                      <tr><th className="px-8 py-4 w-64">Member</th><th className="px-8 py-4 w-40">Type</th><th className="px-8 py-4 w-32">Status</th><th className="px-8 py-4 w-32">Due</th><th className="px-8 py-4 w-24">Actions</th></tr>
+                    </thead>
+                    <tbody className="text-sm">
+                      {scopedMembers.filter(m => m.status !== 'ACTIVE').map(m => (
+                        <tr key={m.id} className="border-b">
+                          <td className="px-8 py-5"><p className="font-bold text-slate-800">{m.firstName} {m.lastName}</p><p className="text-[11px] text-slate-400">{m.email}</p></td>
+                          <td className="px-8 py-5"><span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black">{m.type}</span></td>
+                          <td className="px-8 py-5"><span className={`px-3 py-1 rounded-full text-[10px] font-black ${m.status === 'OVERDUE' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>{m.status}</span></td>
+                          <td className="px-8 py-5 text-slate-600 font-medium">{m.nextPayment}</td>
+                          <td className="px-8 py-5 flex gap-2"><button className="p-2 bg-[#1080ad] text-white rounded-lg shadow-md"><Mail size={16}/></button><button className="p-2 bg-[#dd6d22] text-white rounded-lg shadow-md"><Phone size={16}/></button></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+             </ProListCard>
           </div>
         )}
 
@@ -795,7 +870,6 @@ Paid-Daily Visitors:,${exportStats.dayPass}
         )}
       </main>
 
-      {/* --- MEMBER DETAIL MODAL --- */}
       {selectedMember && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#001f3f]/90 backdrop-blur-md">
            <div className="bg-white rounded-[2rem] w-full max-w-4xl flex overflow-hidden shadow-2xl relative">
