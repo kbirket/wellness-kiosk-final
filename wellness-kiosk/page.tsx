@@ -4,9 +4,9 @@ import { useState, useEffect, useRef } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { 
   Users, Search, QrCode, CreditCard, X, CheckCircle, 
-  AlertCircle, TrendingUp, Calendar, MapPin, Mail, LogOut, 
-  ShieldCheck, Phone, Activity, ChevronRight, LayoutDashboard,
-  Filter, Download, Bell, FileText, Plus, Smartphone, Clock, Camera, UserCircle
+  AlertCircle, LogOut, ShieldCheck, Phone, Activity, 
+  LayoutDashboard, Download, Bell, FileText, Plus, 
+  Smartphone, Clock, Camera, UserCircle, Mail
 } from 'lucide-react';
 
 // ============================================================
@@ -60,10 +60,10 @@ const DIRECTORS = [
 ];
 
 const Icons = {
-  dashboard: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>,
-  members: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>,
-  badge: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2" /><path d="M17 3h2a2 2 0 0 1 2 2v2" /><path d="M21 17v2a2 2 0 0 1-2 2h-2" /><path d="M7 21H5a2 2 0 0 1-2-2v-2" /><line x1="7" y1="12" x2="17" y2="12" /></svg>,
-  notif: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>,
+  dashboard: <LayoutDashboard size={18} />,
+  members: <Users size={18} />,
+  badge: <QrCode size={18} />,
+  notif: <Bell size={18} />
 };
 
 // ============================================================
@@ -295,7 +295,7 @@ Paid-Daily Visitors:,${reportStats.dayPass}
   );
 
   // ============================================================
-  // VIEW: LANDING PAGE (NOW WITH 3 BUTTONS)
+  // VIEW: LANDING PAGE (WITH 3 BUTTONS)
   // ============================================================
   if (view === 'landing') {
     return (
@@ -311,8 +311,7 @@ Paid-Daily Visitors:,${reportStats.dayPass}
                 <Smartphone size={56} className="text-[#1080ad] group-hover:scale-110 transition-transform" />
                 <span className="text-xl font-bold">iPad Badge-In</span>
              </button>
-             {/* THE RESTORED MEMBER PORTAL BUTTON */}
-             <button onClick={() => setView('member_login')} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group">
+             <button onClick={() => setView('member_login')} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group border-b-4 border-b-[#16a34a]">
                 <UserCircle size={56} className="text-[#16a34a] group-hover:scale-110 transition-transform" />
                 <span className="text-xl font-bold">Member Portal</span>
              </button>
@@ -351,7 +350,6 @@ Paid-Daily Visitors:,${reportStats.dayPass}
           <button id="btn_member_login" onClick={() => {
             const email = document.getElementById('m_email').value.toLowerCase().trim();
             const id = document.getElementById('m_id').value.toUpperCase().trim();
-            
             const foundMember = members.find(m => m.id === id && m.email.toLowerCase() === email);
             
             if(foundMember) { 
@@ -469,7 +467,7 @@ Paid-Daily Visitors:,${reportStats.dayPass}
     return (
       <div className="min-h-screen bg-[#001f3f] flex items-center justify-center p-4 font-sans">
         <div className="bg-white rounded-[3rem] shadow-2xl p-12 w-full max-w-md">
-          <h2 className="text-4xl font-black text-slate-900 mb-2 tracking-tight">Director Login</h2>
+          <h2 className="text-4xl font-black text-slate-900 mb-2 tracking-tight">Login</h2>
           <p className="text-slate-400 mb-10 font-medium tracking-tight">Enter director credentials to proceed.</p>
           <input type="text" placeholder="Username" id="u_in" className="w-full p-5 bg-slate-100 rounded-2xl mb-4 outline-none border-2 border-transparent focus:border-blue-500/20 text-lg" onKeyDown={(e) => e.key === 'Enter' && handleLogin()} />
           <input type="password" placeholder="Password" id="p_in" className="w-full p-5 bg-slate-100 rounded-2xl mb-8 outline-none border-2 border-transparent focus:border-blue-500/20 text-lg" onKeyDown={(e) => e.key === 'Enter' && handleLogin()} />
@@ -627,7 +625,7 @@ Paid-Daily Visitors:,${reportStats.dayPass}
                          <td className="px-8 py-5"><p className="font-bold text-slate-800">{m.firstName} {m.lastName}</p><p className="text-[11px] text-slate-400">{m.email}</p></td>
                          <td className="px-8 py-5 font-mono text-slate-400">{m.id}</td>
                          <td className="px-8 py-5"><span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black tracking-tight">{m.type}</span></td>
-                         <td className="px-8 py-5 text-slate-600 font-medium">{m.center} Center</td>
+                         <td className="px-8 py-5 text-slate-600 font-medium">{m.center}</td>
                          <td className="px-8 py-5"><span className={`px-3 py-1 rounded-full text-[10px] font-black ${m.status === 'ACTIVE' ? 'bg-green-100 text-green-600' : m.status === 'OVERDUE' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>{m.status}</span></td>
                          <td className="px-8 py-5 text-slate-600">{m.nextPayment}</td>
                          <td className="px-8 py-5 font-bold text-lg text-right">{m.visits}</td>
@@ -724,7 +722,7 @@ Paid-Daily Visitors:,${reportStats.dayPass}
           </div>
         )}
 
-        {/* VIEW: BADGE IN (With Camera Integration) */}
+        {/* VIEW: BADGE IN (With Working Camera Integration) */}
         {activeTab === 'badge' && (
           <div className="space-y-6">
              <div className="mb-8">
