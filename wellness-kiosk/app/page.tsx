@@ -115,11 +115,11 @@ export default function WellnessHub() {
               email: r.fields['Email'] || '',
               phone: r.fields['Phone'] || '',
               status: (r.fields['Membership Status'] || 'ACTIVE').toUpperCase(),
-              type: String(planText).toUpperCase(),
+              // Added .trim() to ensure there are no hidden spaces from Airtable messing up the math!
+              type: String(planText).toUpperCase().trim(),
               center: r.fields['Home Center'] || 'Anthony',
               visits: Number(r.fields['Total Visits'] || 0),
               nextPayment: r.fields['Next Payment Due'] || 'Mar 31, 2026',
-              sponsor: !!r.fields['Corporate Sponsor'],
             };
           });
           setMembers(mapped);
@@ -154,25 +154,17 @@ export default function WellnessHub() {
     today: filteredVisits.length
   };
 
+  // --- THE NEW PERFECT MATH: Maps exactly 1-to-1 with your Airtable Pricing Tiers ---
   const reportStats = {
-    single: scopedMembers.filter(m => m.type?.includes('SINGLE') || m.type?.includes('MONTHLY') || m.type?.includes('ANNUAL')).length,
-    family: scopedMembers.filter(m => m.type?.includes('FAMILY') && !m.type?.includes('SENIOR') && !m.type?.includes('STUDENT')).length,
-    student: scopedMembers.filter(m => m.type?.includes('STUDENT')).length,
-    senior: scopedMembers.filter(m => m.type?.includes('SENIOR') && !m.type?.includes('FAMILY')).length,
-    famStudent: scopedMembers.filter(m => m.type?.includes('FAMILY') && m.type?.includes('STUDENT')).length,
-    famSenior: scopedMembers.filter(m => m.type?.includes('FAMILY') && m.type?.includes('SENIOR')).length,
-    corporate: scopedMembers.filter(m => m.sponsor || m.type?.includes('CORPORATE')).length,
-    dayPass: scopedMembers.filter(m => m.type?.includes('PASS') || m.type?.includes('PUNCH')).length,
-  };
-  
-  const corpOnly = scopedMembers.filter(m => m.sponsor || m.type?.includes('CORPORATE'));
-  const corpStats = {
-    single: corpOnly.filter(m => m.type?.includes('SINGLE') || m.type?.includes('MONTHLY') || m.type?.includes('ANNUAL')).length,
-    family: corpOnly.filter(m => m.type?.includes('FAMILY') && !m.type?.includes('SENIOR') && !m.type?.includes('STUDENT')).length,
-    student: corpOnly.filter(m => m.type?.includes('STUDENT')).length,
-    senior: corpOnly.filter(m => m.type?.includes('SENIOR') && !m.type?.includes('FAMILY')).length,
-    famStudent: corpOnly.filter(m => m.type?.includes('FAMILY') && m.type?.includes('STUDENT')).length,
-    famSenior: corpOnly.filter(m => m.type?.includes('FAMILY') && m.type?.includes('SENIOR')).length,
+    single: scopedMembers.filter(m => m.type === 'SINGLE').length,
+    family: scopedMembers.filter(m => m.type === 'FAMILY').length,
+    seniorCitizen: scopedMembers.filter(m => m.type === 'SENIOR CITIZEN').length,
+    seniorFamily: scopedMembers.filter(m => m.type === 'SENIOR FAMILY').length,
+    student: scopedMembers.filter(m => m.type.includes('STUDENT')).length,
+    corporate: scopedMembers.filter(m => m.type === 'CORPORATE').length,
+    corporateFamily: scopedMembers.filter(m => m.type === 'CORPORATE FAMILY').length,
+    dayPass: scopedMembers.filter(m => m.type.includes('DAY PASS')).length,
+    staff: scopedMembers.filter(m => m.type.includes('HD6') || m.type.includes('HCHF')).length,
   };
 
   const familyMembers = activeMember 
@@ -272,31 +264,25 @@ export default function WellnessHub() {
   const handleMonthlySummary = () => {
     const centerName = viewingCenter === 'both' ? 'System-Wide' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1);
     
+    // Updated Excel Export to match your exact pricing structure
     const csvContent = `
 ${centerName} Wellness Center ${currentDateString} Summary
 
-STATS
-Single Memberships:,${reportStats.single}
-Family Memberships:,${reportStats.family}
-Student Memberships:,${reportStats.student}
-Senior Memberships:,${reportStats.senior}
-Family/Student Memberships:,${reportStats.famStudent}
-Family/Senior Memberships:,${reportStats.famSenior}
-Total Members:,${stats.total}
+STANDARD MEMBERSHIPS
+Single:,${reportStats.single}
+Family:,${reportStats.family}
+Senior Citizen:,${reportStats.seniorCitizen}
+Senior Family:,${reportStats.seniorFamily}
+Student (14-22):,${reportStats.student}
 
-CORPORATE BREAKDOWN
-Single Memberships:,${corpStats.single}
-Family Memberships:,${corpStats.family}
-Student Memberships:,${corpStats.student}
-Senior Memberships:,${corpStats.senior}
-Family/Student Memberships:,${corpStats.famStudent}
-Family/Senior Memberships:,${corpStats.famSenior}
-Total Corporate:,${reportStats.corporate}
+CORPORATE & STAFF
+Corporate:,${reportStats.corporate}
+Corporate Family:,${reportStats.corporateFamily}
+HD6/HCHF (Staff):,${reportStats.staff}
 
 OTHER INFORMATION
-New Members (Est):,0
-Gift Cards Purchased:,0
-Paid-Daily Visitors:,${reportStats.dayPass}
+Day Passes:,${reportStats.dayPass}
+Total Members:,${stats.total}
 `;
     const blob = new Blob([csvContent.trim()], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -548,7 +534,6 @@ Paid-Daily Visitors:,${reportStats.dayPass}
               <h3 className="font-bold text-[#001f3f] mb-4 flex items-center gap-2"><CreditCard size={18} className="text-[#1080ad]"/> Account Status</h3>
               <div className="space-y-4">
                  <div className="flex justify-between items-center border-b border-slate-50 pb-4">
-                     {/* THE FIX FOR THE MEMBER PORTAL DISPLAY AS WELL */}
                     <span className="text-sm font-bold text-slate-400 uppercase tracking-tight">Plan Type</span>
                     <span className="font-bold text-slate-800">{activeMember.type}</span>
                  </div>
@@ -684,7 +669,6 @@ Paid-Daily Visitors:,${reportStats.dayPass}
         {activeTab === 'dashboard' && (
           <div className="space-y-8">
             <div className="grid grid-cols-5 gap-6">
-               {/* FIX: Mapped correctly with `label`, `value`, `color` so the boxes show up! */}
                {[ { label: 'Total Members', value: stats.total, color: '#001f3f' }, { label: 'Active', value: stats.active, color: '#16a34a' }, { label: 'Overdue', value: stats.overdue, color: '#dc2626' }, { label: 'Expiring', value: stats.expiring, color: '#f59e0b' }, { label: 'Check-ins Today', value: stats.today, color: '#1080ad' } ].map((s, i) => (
                  <ProStatCard key={i} {...s} />
                ))}
@@ -792,40 +776,37 @@ Paid-Daily Visitors:,${reportStats.dayPass}
              </div>
              
              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-               <ProListCard title="Membership Stats">
+               
+               {/* NEW: STANDARD MEMBERSHIPS TIER */}
+               <ProListCard title="Standard Memberships">
                  <table className="w-full text-sm">
                    <tbody>
-                     <tr className="border-b"><td className="py-3 font-medium text-slate-600">Single Memberships:</td><td className="py-3 font-bold text-right">{reportStats.single}</td></tr>
-                     <tr className="border-b"><td className="py-3 font-medium text-slate-600">Family Memberships:</td><td className="py-3 font-bold text-right">{reportStats.family}</td></tr>
-                     <tr className="border-b"><td className="py-3 font-medium text-slate-600">Student Memberships:</td><td className="py-3 font-bold text-right">{reportStats.student}</td></tr>
-                     <tr className="border-b"><td className="py-3 font-medium text-slate-600">Senior Memberships:</td><td className="py-3 font-bold text-right">{reportStats.senior}</td></tr>
-                     <tr className="border-b"><td className="py-3 font-medium text-slate-600">Family/Student Memberships:</td><td className="py-3 font-bold text-right">{reportStats.famStudent}</td></tr>
-                     <tr className="border-b"><td className="py-3 font-medium text-slate-600">Family/Senior Memberships:</td><td className="py-3 font-bold text-right">{reportStats.famSenior}</td></tr>
-                     <tr className="bg-slate-50"><td className="py-3 px-2 font-bold text-[#001f3f]">Total Members:</td><td className="py-3 px-2 font-black text-right text-[#001f3f]">{stats.total}</td></tr>
+                     <tr className="border-b"><td className="py-3 font-medium text-slate-600">Single:</td><td className="py-3 font-bold text-right">{reportStats.single}</td></tr>
+                     <tr className="border-b"><td className="py-3 font-medium text-slate-600">Family:</td><td className="py-3 font-bold text-right">{reportStats.family}</td></tr>
+                     <tr className="border-b"><td className="py-3 font-medium text-slate-600">Senior Citizen:</td><td className="py-3 font-bold text-right">{reportStats.seniorCitizen}</td></tr>
+                     <tr className="border-b"><td className="py-3 font-medium text-slate-600">Senior Family:</td><td className="py-3 font-bold text-right">{reportStats.seniorFamily}</td></tr>
+                     <tr><td className="py-3 font-medium text-slate-600">Student (14-22):</td><td className="py-3 font-bold text-right">{reportStats.student}</td></tr>
                    </tbody>
                  </table>
                </ProListCard>
 
                <div className="space-y-8">
-                 <ProListCard title="Corporate Breakdown">
+                 {/* NEW: CORPORATE AND STAFF TIER */}
+                 <ProListCard title="Corporate & Staff">
                    <table className="w-full text-sm">
                      <tbody>
-                       <tr className="border-b"><td className="py-2 font-medium text-slate-600">Single Memberships:</td><td className="py-2 font-bold text-right">{corpStats.single}</td></tr>
-                       <tr className="border-b"><td className="py-2 font-medium text-slate-600">Family Memberships:</td><td className="py-2 font-bold text-right">{corpStats.family}</td></tr>
-                       <tr className="border-b"><td className="py-2 font-medium text-slate-600">Student Memberships:</td><td className="py-2 font-bold text-right">{corpStats.student}</td></tr>
-                       <tr className="border-b"><td className="py-2 font-medium text-slate-600">Senior Memberships:</td><td className="py-2 font-bold text-right">{corpStats.senior}</td></tr>
-                       <tr className="border-b"><td className="py-2 font-medium text-slate-600">Family/Student Memberships:</td><td className="py-2 font-bold text-right">{corpStats.famStudent}</td></tr>
-                       <tr className="border-b"><td className="py-2 font-medium text-slate-600">Family/Senior Memberships:</td><td className="py-2 font-bold text-right">{corpStats.famSenior}</td></tr>
-                       <tr className="bg-slate-50"><td className="py-2 px-2 font-bold text-[#001f3f]">Total Corporate Sponsored:</td><td className="py-2 px-2 font-black text-right text-[#001f3f]">{reportStats.corporate}</td></tr>
+                       <tr className="border-b"><td className="py-2 font-medium text-slate-600">Corporate:</td><td className="py-2 font-bold text-right">{reportStats.corporate}</td></tr>
+                       <tr className="border-b"><td className="py-2 font-medium text-slate-600">Corporate Family:</td><td className="py-2 font-bold text-right">{reportStats.corporateFamily}</td></tr>
+                       <tr><td className="py-2 font-medium text-slate-600">HD6/HCHF (Staff):</td><td className="py-2 font-bold text-right">{reportStats.staff}</td></tr>
                      </tbody>
                    </table>
                  </ProListCard>
-                 <ProListCard title="Other Information">
+                 
+                 <ProListCard title="Other & Totals">
                    <table className="w-full text-sm">
                      <tbody>
-                       <tr className="border-b"><td className="py-2 font-medium text-slate-600">New Members:</td><td className="py-2 font-bold text-right text-slate-400 italic">Auto-calc coming</td></tr>
-                       <tr className="border-b"><td className="py-2 font-medium text-slate-600">Gift Cards Purchased:</td><td className="py-2 font-bold text-right text-slate-400 italic">0</td></tr>
-                       <tr><td className="py-2 font-medium text-slate-600">Paid-Daily Visitors:</td><td className="py-2 font-bold text-right">{reportStats.dayPass}</td></tr>
+                       <tr className="border-b"><td className="py-2 font-medium text-slate-600">Day Passes:</td><td className="py-2 font-bold text-right">{reportStats.dayPass}</td></tr>
+                       <tr className="bg-slate-50"><td className="py-3 px-2 font-bold text-[#001f3f] text-lg">Total Members:</td><td className="py-3 px-2 font-black text-right text-[#001f3f] text-lg">{stats.total}</td></tr>
                      </tbody>
                    </table>
                  </ProListCard>
