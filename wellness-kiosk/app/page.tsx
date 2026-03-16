@@ -53,8 +53,6 @@ export default function WellnessHub() {
   const [editMode, setEditMode] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [kioskMessage, setKioskMessage] = useState({text: '', type: ''});
-  
-  // NEW: State to control the smart search typing
   const [kioskInput, setKioskInput] = useState('');
 
   const membersRef = useRef(members);
@@ -134,12 +132,11 @@ export default function WellnessHub() {
   const filteredMembers = scopedMembers.filter(m => `${m.firstName} ${m.lastName} ${m.id}`.toLowerCase().includes(searchQuery.toLowerCase()));
   const filteredVisits = visits.filter(v => viewingCenter === 'both' || (v.center && v.center.toLowerCase().includes(viewingCenter)));
   
-  // NEW: Smart Search filtering logic (Only shows if they type 2 or more letters)
   const kioskMatches = kioskInput.length >= 2 
     ? members.filter(m => 
         (m.firstName + ' ' + m.lastName).toLowerCase().includes(kioskInput.toLowerCase()) || 
         m.id.toLowerCase().includes(kioskInput.toLowerCase())
-      ).slice(0, 5) // Limit to top 5 so the screen doesn't get overcrowded
+      ).slice(0, 5)
     : [];
 
   const heatmapData = Array(15).fill(0);
@@ -275,6 +272,7 @@ export default function WellnessHub() {
   const handleMonthlySummary = () => {
     const centerName = viewingCenter === 'both' ? 'System-Wide' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1);
     
+    // FIX: The Excel logic has also been updated to separate Corporate from Base Stats!
     const csvContent = `
 ${centerName} Wellness Center ${currentDateString} Summary
 
@@ -285,7 +283,6 @@ Student Memberships:,${reportStats.student}
 Senior Memberships:,${reportStats.senior}
 Family/Student Memberships:,${reportStats.famStudent}
 Family/Senior Memberships:,${reportStats.famSenior}
-Corporate:,${reportStats.corporate}
 Total Members:,${stats.total}
 
 CORPORATE BREAKDOWN
@@ -295,6 +292,7 @@ Student Memberships:,${corpStats.student}
 Senior Memberships:,${corpStats.senior}
 Family/Student Memberships:,${corpStats.famStudent}
 Family/Senior Memberships:,${corpStats.famSenior}
+Total Corporate:,${reportStats.corporate}
 
 OTHER INFORMATION
 New Members (Est):,0
@@ -355,7 +353,7 @@ Paid-Daily Visitors:,${reportStats.dayPass}
   }
 
   // ============================================================
-  // VIEW: LOCKED-DOWN KIOSK MODE (WITH SMART SEARCH)
+  // VIEW: LOCKED-DOWN KIOSK MODE
   // ============================================================
   if (view === 'kiosk') {
     return (
@@ -391,7 +389,6 @@ Paid-Daily Visitors:,${reportStats.dayPass}
 
             <p className="text-sm font-bold text-slate-400 mb-4 tracking-widest uppercase">Or enter Name or ID</p>
             
-            {/* THE SMART SEARCH KIOSK WIDGET */}
             <div className="relative w-full max-w-md mx-auto">
               <div className="flex gap-4">
                  <input 
@@ -412,7 +409,6 @@ Paid-Daily Visitors:,${reportStats.dayPass}
                  }} className="bg-[#001f3f] text-white px-10 rounded-2xl font-bold text-xl hover:bg-blue-900 transition-colors shadow-lg">Go</button>
               </div>
 
-              {/* DROPDOWN FOR SMART SEARCH */}
               {kioskMatches.length > 0 && (
                 <div className="absolute bottom-[110%] left-0 w-full mb-2 bg-white border-2 border-[#1080ad] rounded-2xl shadow-2xl z-50 overflow-hidden text-left flex flex-col-reverse">
                   {kioskMatches.map(m => (
@@ -797,6 +793,7 @@ Paid-Daily Visitors:,${reportStats.dayPass}
              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                <ProListCard title="Membership Stats">
                  <table className="w-full text-sm">
+                   {/* FIX: Removed Corporate from this table so the base numbers add up to Total Members! */}
                    <tbody>
                      <tr className="border-b"><td className="py-3 font-medium text-slate-600">Single Memberships:</td><td className="py-3 font-bold text-right">{reportStats.single}</td></tr>
                      <tr className="border-b"><td className="py-3 font-medium text-slate-600">Family Memberships:</td><td className="py-3 font-bold text-right">{reportStats.family}</td></tr>
@@ -804,7 +801,6 @@ Paid-Daily Visitors:,${reportStats.dayPass}
                      <tr className="border-b"><td className="py-3 font-medium text-slate-600">Senior Memberships:</td><td className="py-3 font-bold text-right">{reportStats.senior}</td></tr>
                      <tr className="border-b"><td className="py-3 font-medium text-slate-600">Family/Student Memberships:</td><td className="py-3 font-bold text-right">{reportStats.famStudent}</td></tr>
                      <tr className="border-b"><td className="py-3 font-medium text-slate-600">Family/Senior Memberships:</td><td className="py-3 font-bold text-right">{reportStats.famSenior}</td></tr>
-                     <tr className="border-b"><td className="py-3 font-medium text-slate-600">Corporate:</td><td className="py-3 font-bold text-right">{reportStats.corporate}</td></tr>
                      <tr className="bg-slate-50"><td className="py-3 px-2 font-bold text-[#001f3f]">Total Members:</td><td className="py-3 px-2 font-black text-right text-[#001f3f]">{stats.total}</td></tr>
                    </tbody>
                  </table>
@@ -813,13 +809,15 @@ Paid-Daily Visitors:,${reportStats.dayPass}
                <div className="space-y-8">
                  <ProListCard title="Corporate Breakdown">
                    <table className="w-full text-sm">
+                     {/* FIX: Moved Total Corporate here to avoid double-counting confusion */}
                      <tbody>
                        <tr className="border-b"><td className="py-2 font-medium text-slate-600">Single Memberships:</td><td className="py-2 font-bold text-right">{corpStats.single}</td></tr>
                        <tr className="border-b"><td className="py-2 font-medium text-slate-600">Family Memberships:</td><td className="py-2 font-bold text-right">{corpStats.family}</td></tr>
                        <tr className="border-b"><td className="py-2 font-medium text-slate-600">Student Memberships:</td><td className="py-2 font-bold text-right">{corpStats.student}</td></tr>
                        <tr className="border-b"><td className="py-2 font-medium text-slate-600">Senior Memberships:</td><td className="py-2 font-bold text-right">{corpStats.senior}</td></tr>
                        <tr className="border-b"><td className="py-2 font-medium text-slate-600">Family/Student Memberships:</td><td className="py-2 font-bold text-right">{corpStats.famStudent}</td></tr>
-                       <tr><td className="py-2 font-medium text-slate-600">Family/Senior Memberships:</td><td className="py-2 font-bold text-right">{corpStats.famSenior}</td></tr>
+                       <tr className="border-b"><td className="py-2 font-medium text-slate-600">Family/Senior Memberships:</td><td className="py-2 font-bold text-right">{corpStats.famSenior}</td></tr>
+                       <tr className="bg-slate-50"><td className="py-2 px-2 font-bold text-[#001f3f]">Total Corporate Sponsored:</td><td className="py-2 px-2 font-black text-right text-[#001f3f]">{reportStats.corporate}</td></tr>
                      </tbody>
                    </table>
                  </ProListCard>
@@ -867,7 +865,7 @@ Paid-Daily Visitors:,${reportStats.dayPass}
           </div>
         )}
 
-        {/* VIEW: STAFF BADGE IN (WITH SMART SEARCH) */}
+        {/* VIEW: STAFF BADGE IN */}
         {activeTab === 'badge' && (
           <div className="space-y-6">
              <div className="mb-8">
@@ -879,7 +877,6 @@ Paid-Daily Visitors:,${reportStats.dayPass}
                    
                    <p className="text-sm font-bold text-slate-400 mb-4 tracking-tight">Enter Name or ID (or use USB scanner):</p>
                    
-                   {/* STAFF SMART SEARCH WIDGET */}
                    <div className="relative w-full max-w-sm mx-auto mb-10">
                       <div className="flex gap-4">
                          <input 
