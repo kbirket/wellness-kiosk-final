@@ -1,46 +1,26 @@
 import { NextResponse } from 'next/server';
 
+// These two lines tell Vercel to NEVER cache this data!
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET() {
   const baseId = process.env.AIRTABLE_BASE_ID;
   const token = process.env.AIRTABLE_PAT;
-  const tableId = 'tblEXRQUp2wzs5jhz'; // Your exact Table ID
-
-  // Safety check to ensure Vercel is actually passing the keys
-  if (!baseId || !token) {
-    return NextResponse.json({ 
-      error: "Missing Environment Variables",
-      details: "Check Vercel Settings -> Environment Variables" 
-    }, { status: 500 });
-  }
+  const tableName = 'Members'; // Your exact tab name
 
   try {
-    const response = await fetch(
-      `https://api.airtable.com/v0/${baseId}/${tableId}`,
-      {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token.trim()}`,
-          'Content-Type': 'application/json',
-        },
-        // This ensures Vercel doesn't show you "old" data
-        cache: 'no-store'
-      }
-    );
+    const response = await fetch(`https://api.airtable.com/v0/${baseId}/${tableName}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      // Extra cache-busting instruction
+      cache: 'no-store'
+    });
 
     const data = await response.json();
-
-    if (!response.ok) {
-      return NextResponse.json({
-        error: `Airtable responded with ${response.status}`,
-        details: data
-      }, { status: response.status });
-    }
-
     return NextResponse.json(data);
   } catch (error) {
-    return NextResponse.json({ 
-      error: "Bridge Connection Failed", 
-      details: error.message 
-    }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
