@@ -23,7 +23,6 @@ export async function POST(request) {
               "Check-in Time": body.time,
               "Center": body.center,
               "Check-in Method": body.method,
-              // Only sending to the correct 'Members' column!
               "Members": [body.airtableId] 
             }
           }
@@ -35,7 +34,8 @@ export async function POST(request) {
     const data = await response.json();
     
     if (data.error) {
-      const errorMessage = data.error.type || data.error.message || JSON.stringify(data.error);
+      // FIX: Now it will print the EXACT column name that is failing!
+      const errorMessage = data.error.message || data.error.type || JSON.stringify(data.error);
       return NextResponse.json({ success: false, error: errorMessage }, { status: 400 });
     }
 
