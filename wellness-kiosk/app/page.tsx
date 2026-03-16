@@ -59,7 +59,6 @@ export default function WellnessHub() {
   const centerRef = useRef(viewingCenter);
   useEffect(() => { centerRef.current = viewingCenter; }, [viewingCenter]);
 
-  // FIX: Anti-Hydration Crash logic for Date rendering
   useEffect(() => {
     setIsMounted(true);
     setCurrentDateString(new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }));
@@ -234,55 +233,55 @@ export default function WellnessHub() {
     a.click(); window.URL.revokeObjectURL(url);
   };
 
-  // FIX: These calculations are now safely outside the download button so the screen can see them!
-  const reportStats = {
-    single: scopedMembers.filter(m => m.type?.includes('SINGLE') || m.type?.includes('MONTHLY') || m.type?.includes('ANNUAL')).length,
-    family: scopedMembers.filter(m => m.type?.includes('FAMILY') && !m.type?.includes('SENIOR') && !m.type?.includes('STUDENT')).length,
-    student: scopedMembers.filter(m => m.type?.includes('STUDENT')).length,
-    senior: scopedMembers.filter(m => m.type?.includes('SENIOR') && !m.type?.includes('FAMILY')).length,
-    famStudent: scopedMembers.filter(m => m.type?.includes('FAMILY') && m.type?.includes('STUDENT')).length,
-    famSenior: scopedMembers.filter(m => m.type?.includes('FAMILY') && m.type?.includes('SENIOR')).length,
-    corporate: scopedMembers.filter(m => m.sponsor || m.type?.includes('CORPORATE')).length,
-    dayPass: scopedMembers.filter(m => m.type?.includes('PASS') || m.type?.includes('PUNCH')).length,
-  };
-  
-  const corpOnly = scopedMembers.filter(m => m.sponsor || m.type?.includes('CORPORATE'));
-  const corpStats = {
-    single: corpOnly.filter(m => m.type?.includes('SINGLE') || m.type?.includes('MONTHLY') || m.type?.includes('ANNUAL')).length,
-    family: corpOnly.filter(m => m.type?.includes('FAMILY') && !m.type?.includes('SENIOR') && !m.type?.includes('STUDENT')).length,
-    student: corpOnly.filter(m => m.type?.includes('STUDENT')).length,
-    senior: corpOnly.filter(m => m.type?.includes('SENIOR') && !m.type?.includes('FAMILY')).length,
-    famStudent: corpOnly.filter(m => m.type?.includes('FAMILY') && m.type?.includes('STUDENT')).length,
-    famSenior: corpOnly.filter(m => m.type?.includes('FAMILY') && m.type?.includes('SENIOR')).length,
-  };
-
   const handleMonthlySummary = () => {
     const centerName = viewingCenter === 'both' ? 'System-Wide' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1);
+    
+    const exportStats = {
+      single: scopedMembers.filter(m => m.type.includes('SINGLE') || m.type.includes('MONTHLY') || m.type.includes('ANNUAL')).length,
+      family: scopedMembers.filter(m => m.type.includes('FAMILY') && !m.type.includes('SENIOR') && !m.type.includes('STUDENT')).length,
+      student: scopedMembers.filter(m => m.type.includes('STUDENT')).length,
+      senior: scopedMembers.filter(m => m.type.includes('SENIOR') && !m.type.includes('FAMILY')).length,
+      famStudent: scopedMembers.filter(m => m.type.includes('FAMILY') && m.type.includes('STUDENT')).length,
+      famSenior: scopedMembers.filter(m => m.type.includes('FAMILY') && m.type.includes('SENIOR')).length,
+      corporate: scopedMembers.filter(m => m.sponsor || m.type.includes('CORPORATE')).length,
+      dayPass: scopedMembers.filter(m => m.type.includes('PASS') || m.type.includes('PUNCH')).length,
+    };
+    
+    const corpOnly = scopedMembers.filter(m => m.sponsor || m.type.includes('CORPORATE'));
+    const cStats = {
+      single: corpOnly.filter(m => m.type.includes('SINGLE') || m.type.includes('MONTHLY') || m.type.includes('ANNUAL')).length,
+      family: corpOnly.filter(m => m.type.includes('FAMILY') && !m.type.includes('SENIOR') && !m.type.includes('STUDENT')).length,
+      student: corpOnly.filter(m => m.type.includes('STUDENT')).length,
+      senior: corpOnly.filter(m => m.type.includes('SENIOR') && !m.type.includes('FAMILY')).length,
+      famStudent: corpOnly.filter(m => m.type.includes('FAMILY') && m.type.includes('STUDENT')).length,
+      famSenior: corpOnly.filter(m => m.type.includes('FAMILY') && m.type.includes('SENIOR')).length,
+    };
+
     const csvContent = `
 ${centerName} Wellness Center ${currentDateString} Summary
 
 STATS
-Single Memberships:,${reportStats.single}
-Family Memberships:,${reportStats.family}
-Student Memberships:,${reportStats.student}
-Senior Memberships:,${reportStats.senior}
-Family/Student Memberships:,${reportStats.famStudent}
-Family/Senior Memberships:,${reportStats.famSenior}
-Corporate:,${reportStats.corporate}
+Single Memberships:,${exportStats.single}
+Family Memberships:,${exportStats.family}
+Student Memberships:,${exportStats.student}
+Senior Memberships:,${exportStats.senior}
+Family/Student Memberships:,${exportStats.famStudent}
+Family/Senior Memberships:,${exportStats.famSenior}
+Corporate:,${exportStats.corporate}
 Total Members:,${stats.total}
 
 CORPORATE BREAKDOWN
-Single Memberships:,${corpStats.single}
-Family Memberships:,${corpStats.family}
-Student Memberships:,${corpStats.student}
-Senior Memberships:,${corpStats.senior}
-Family/Student Memberships:,${corpStats.famStudent}
-Family/Senior Memberships:,${corpStats.famSenior}
+Single Memberships:,${cStats.single}
+Family Memberships:,${cStats.family}
+Student Memberships:,${cStats.student}
+Senior Memberships:,${cStats.senior}
+Family/Student Memberships:,${cStats.famStudent}
+Family/Senior Memberships:,${cStats.famSenior}
 
 OTHER INFORMATION
 New Members (Est):,0
 Gift Cards Purchased:,0
-Paid-Daily Visitors:,${reportStats.dayPass}
+Paid-Daily Visitors:,${exportStats.dayPass}
 `;
     const blob = new Blob([csvContent.trim()], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -308,7 +307,6 @@ Paid-Daily Visitors:,${reportStats.dayPass}
     </div>
   );
 
-  // Guarantee hydration to prevent client-side exception
   if (!isMounted) return <div className="min-h-screen bg-[#001f3f]" />;
 
   // ============================================================
@@ -867,6 +865,7 @@ Paid-Daily Visitors:,${reportStats.dayPass}
         )}
       </main>
 
+      {/* --- MEMBER DETAIL MODAL WITH UPGRADED DATA --- */}
       {selectedMember && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#001f3f]/90 backdrop-blur-md">
            <div className="bg-white rounded-[2rem] w-full max-w-4xl flex overflow-hidden shadow-2xl relative">
@@ -881,12 +880,33 @@ Paid-Daily Visitors:,${reportStats.dayPass}
               <div className="flex-1 p-16">
                  <span className={`px-4 py-1 rounded-full text-[10px] font-black tracking-widest ${selectedMember.status === 'ACTIVE' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>{selectedMember.status}</span>
                  <h2 className="text-6xl font-black text-slate-900 mt-6 mb-12 tracking-tighter leading-none">{selectedMember.firstName}<br/>{selectedMember.lastName}</h2>
-                 <div className="grid grid-cols-2 gap-10 gap-x-12">
-                    <div><p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Primary Location</p><p className="text-lg font-bold">{selectedMember.center}</p></div>
-                    <div><p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Billing Plan</p><p className="text-lg font-bold">Standard Billing</p></div>
-                    <div><p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Engagement</p><p className="text-lg font-bold text-[#1080ad]">{selectedMember.visits} Total Visits</p></div>
-                    <div><p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Renewal Date</p><p className="text-lg font-bold">{selectedMember.nextPayment}</p></div>
+                 
+                 {/* THE NEW MEMBER PROFILE DATA DISPLAY */}
+                 <div className="grid grid-cols-2 gap-8 gap-x-12">
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Primary Location</p>
+                      <p className="text-lg font-bold text-slate-800">{selectedMember.center} Center</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Membership Type</p>
+                      <p className="text-lg font-bold text-slate-800">
+                        {selectedMember.type} {selectedMember.sponsor ? <span className="text-[#1080ad] text-sm block">Corporate Sponsored</span> : ''}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Contact Info</p>
+                      <p className="text-sm font-bold text-slate-800 truncate">{selectedMember.email || 'No Email'}<br/>{selectedMember.phone || 'No Phone'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Engagement</p>
+                      <p className="text-lg font-bold text-[#1080ad]">{selectedMember.visits} Total Visits</p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Renewal Date</p>
+                      <p className="text-lg font-bold text-slate-800">{selectedMember.nextPayment}</p>
+                    </div>
                  </div>
+
                  <div className="mt-14 flex gap-4">
                     <button onClick={() => { processCheckIn(selectedMember.id, "Director Override"); setSelectedMember(null); }} className="flex-1 bg-[#001f3f] text-white py-4 rounded-xl font-bold shadow-xl shadow-blue-900/20 active:scale-95 transition-all text-sm">Manual Check-In</button>
                     <button className="px-6 py-4 border-2 rounded-xl text-slate-300 hover:text-blue-500 hover:border-blue-500 transition-all"><Mail size={20}/></button>
