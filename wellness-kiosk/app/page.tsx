@@ -16,6 +16,40 @@ const QRCode = ({ data, size = 160, darkColor = '#001f3f' }) => {
   return <img src={qrUrl} alt="QR Code" style={{ width: size, height: size, display: 'block' }} />;
 };
 
+// NEW: Beautiful, Native CSS Donut Chart Component!
+const DonutChart = ({ data, totalLabel }) => {
+  const total = data.reduce((sum, d) => sum + d.value, 0) || 1;
+  let currentPercent = 0;
+  const stops = data.filter(d => d.value > 0).map(d => {
+     const percent = (d.value / total) * 100;
+     const stop = `${d.color} ${currentPercent}% ${currentPercent + percent}%`;
+     currentPercent += percent;
+     return stop;
+  }).join(', ');
+  
+  return (
+     <div className="flex items-center justify-center gap-8">
+       <div className="relative w-48 h-48 rounded-full shadow-sm" style={{ background: stops ? `conic-gradient(${stops})` : '#e2e8f0' }}>
+          <div className="absolute inset-5 bg-white rounded-full flex flex-col items-center justify-center shadow-inner">
+             <span className="text-3xl font-black text-[#001f3f] leading-none">{total === 1 && data.every(d => d.value === 0) ? 0 : data.reduce((s,d)=>s+d.value,0)}</span>
+             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{totalLabel}</span>
+          </div>
+       </div>
+       <div className="space-y-2 flex-1">
+         {data.filter(d => d.value > 0).map((d, i) => (
+           <div key={i} className="flex justify-between items-center text-sm border-b border-slate-50 last:border-0 pb-1">
+             <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: d.color }}></span>
+                <span className="font-bold text-slate-600">{d.label}</span>
+             </div>
+             <span className="font-black text-[#001f3f]">{d.value}</span>
+           </div>
+         ))}
+       </div>
+     </div>
+  );
+};
+
 const LOGO_URL = 'https://pattersonhc.org/sites/default/files/wellness_white.png';
 const DIRECTORS = [
   { username: 'admin', password: 'admin2026', name: 'System Admin', center: 'both' },
@@ -159,15 +193,21 @@ export default function WellnessHub() {
     military: scopedMembers.filter(m => m.type.includes('MILITARY')).length,
   };
   
-  const corpOnly = scopedMembers.filter(m => m.sponsor || m.type?.includes('CORPORATE'));
-  const corpStats = {
-    single: corpOnly.filter(m => m.type?.includes('SINGLE') || m.type?.includes('MONTHLY') || m.type?.includes('ANNUAL')).length,
-    family: corpOnly.filter(m => m.type?.includes('FAMILY') && !m.type?.includes('SENIOR') && !m.type?.includes('STUDENT')).length,
-    student: corpOnly.filter(m => m.type?.includes('STUDENT')).length,
-    senior: corpOnly.filter(m => m.type?.includes('SENIOR') && !m.type?.includes('FAMILY')).length,
-    famStudent: corpOnly.filter(m => m.type?.includes('FAMILY') && m.type?.includes('STUDENT')).length,
-    famSenior: corpOnly.filter(m => m.type?.includes('FAMILY') && m.type?.includes('SENIOR')).length,
-  };
+  // Data for the Pie Charts!
+  const planChartData = [
+    { label: 'Single', value: reportStats.single, color: '#1080ad' },
+    { label: 'Family', value: reportStats.family, color: '#f59e0b' },
+    { label: 'Senior', value: reportStats.seniorCitizen + reportStats.seniorFamily, color: '#16a34a' },
+    { label: 'Student', value: reportStats.student, color: '#8b5cf6' },
+    { label: 'Corporate', value: reportStats.corporate + reportStats.corporateFamily, color: '#ef4444' },
+    { label: 'Other (Staff/Mil/Pass)', value: reportStats.staff + reportStats.military + reportStats.dayPass, color: '#64748b' }
+  ];
+
+  const statusChartData = [
+    { label: 'Active', value: stats.active, color: '#16a34a' },
+    { label: 'Expiring Soon', value: stats.expiring, color: '#f59e0b' },
+    { label: 'Overdue / Locked', value: stats.overdue, color: '#ef4444' },
+  ];
 
   const familyMembers = activeMember 
     ? members.filter(m => m.id !== activeMember.id && ((m.email && m.email.toLowerCase() === activeMember.email.toLowerCase()) || (m.phone && m.phone === activeMember.phone)))
@@ -195,6 +235,8 @@ export default function WellnessHub() {
         phone: e.target.phone.value,
         plan: e.target.plan.value,
         center: e.target.center.value,
+        // NEW: Grabbing the birthday from the form!
+        birthday: e.target.birthday.value,
     };
 
     try {
@@ -535,7 +577,6 @@ Total Members:,${stats.total}
                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-2">Email Address</label>
                <input type="email" placeholder="you@email.com" id="m_email" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-[#16a34a] text-lg transition-colors" />
             </div>
-            {/* NEW: REPLACED MEMBER ID WITH BIRTHDAY PIN */}
             <div>
                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-2">4-Digit Birthday (MMDD)</label>
                <input type="password" maxLength={4} placeholder="e.g. 0524" id="m_pin" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-[#16a34a] text-xl text-center tracking-[0.5em] transition-colors" onKeyDown={(e) => { if (e.key === 'Enter') document.getElementById('btn_member_login').click(); }}/>
@@ -545,7 +586,6 @@ Total Members:,${stats.total}
           <button id="btn_member_login" onClick={() => {
             const email = document.getElementById('m_email').value.toLowerCase().trim();
             const pin = document.getElementById('m_pin').value.trim();
-            // Checking against the password field now!
             const foundMember = members.find(m => m.email.toLowerCase() === email && m.password === pin);
             if(foundMember) { setActiveMember(foundMember); setView('member_portal'); } 
             else { alert('Incorrect Email or Birthday PIN.'); }
@@ -558,7 +598,6 @@ Total Members:,${stats.total}
   }
 
   if (view === 'member_portal' && activeMember) {
-    // Look through current session visits to see their activity
     const mySessionVisits = visits.filter(v => v.name.toLowerCase() === (activeMember.firstName + ' ' + activeMember.lastName).toLowerCase());
 
     return (
@@ -598,7 +637,6 @@ Total Members:,${stats.total}
                  <span className="text-3xl font-black text-[#1080ad]">{activeMember.visits}</span>
               </div>
               
-              {/* NEW: RECENT WORKOUTS TRACKER */}
               <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-6 mb-3">Recent Activity</h4>
               {mySessionVisits.length > 0 ? (
                 <div className="space-y-2">
@@ -762,6 +800,20 @@ Total Members:,${stats.total}
                {[ { label: 'Total Members', value: stats.total, color: '#001f3f' }, { label: 'Active', value: stats.active, color: '#16a34a' }, { label: 'Overdue', value: stats.overdue, color: '#dc2626' }, { label: 'Expiring', value: stats.expiring, color: '#f59e0b' }, { label: 'Check-ins Today', value: stats.today, color: '#1080ad' } ].map((s, i) => (
                  <ProStatCard key={i} {...s} />
                ))}
+            </div>
+
+            {/* NEW: THE VISUAL DONUT CHARTS ROW! */}
+            <div className="grid grid-cols-2 gap-8">
+               <ProListCard title="Membership Breakdown">
+                  <div className="py-4">
+                     <DonutChart data={planChartData} totalLabel="Members" />
+                  </div>
+               </ProListCard>
+               <ProListCard title="Account Health">
+                  <div className="py-4">
+                     <DonutChart data={statusChartData} totalLabel="Accounts" />
+                  </div>
+               </ProListCard>
             </div>
 
             <ProListCard title="Peak Hours Activity Heatmap">
@@ -959,7 +1011,6 @@ Total Members:,${stats.total}
           </div>
         )}
 
-        {/* VIEW: STAFF BADGE IN */}
         {activeTab === 'badge' && (
           <div className="space-y-6">
              <div className="mb-8">
@@ -1044,7 +1095,7 @@ Total Members:,${stats.total}
         )}
       </main>
 
-      {/* --- ADD NEW MEMBER MODAL --- */}
+      {/* --- ADD NEW MEMBER MODAL WITH BIRTHDAY FIELD --- */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#001f3f]/90 backdrop-blur-md">
            <div className="bg-white rounded-3xl w-full max-w-xl p-10 relative shadow-2xl">
@@ -1072,6 +1123,11 @@ Total Members:,${stats.total}
                        <label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Phone</label>
                        <input id="phone" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" />
                     </div>
+                 </div>
+                 {/* NEW: THE BIRTHDAY DATE PICKER */}
+                 <div>
+                    <label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Birthday (For PIN)</label>
+                    <input type="date" id="birthday" required className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors text-slate-600" />
                  </div>
                  <div className="grid grid-cols-2 gap-5">
                     <div>
