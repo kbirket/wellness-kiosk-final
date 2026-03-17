@@ -70,6 +70,7 @@ export default function WellnessHub() {
   const [visits, setVisits] = useState([]);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
+  const [quickSearch, setQuickSearch] = useState('');
   const [viewingCenter, setViewingCenter] = useState('both');
   const [selectedMember, setSelectedMember] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -331,7 +332,154 @@ export default function WellnessHub() {
       <main className="flex-1 p-10 h-screen overflow-y-auto relative print:m-0 print:p-0 print:h-auto print:overflow-visible">
         <div className="mb-10 print:hidden"><h2 className="text-3xl font-bold text-[#001f3f] capitalize tracking-tight">{activeTab}</h2><p className="text-sm text-slate-400 font-medium">{viewingCenter === 'both' ? 'All Centers' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1) + ' Center'} · {currentDateString}</p></div>
 
-        {activeTab === 'dashboard' && (<div className="space-y-8"><div className="grid grid-cols-5 gap-6">{[{label:'Total Members',value:stats.total,color:'#001f3f'},{label:'Active',value:stats.active,color:'#16a34a'},{label:'Overdue',value:stats.overdue,color:'#dc2626'},{label:'Expiring',value:stats.expiring,color:'#f59e0b'},{label:'Check-ins Today',value:stats.today,color:'#1080ad'}].map((s,i) => (<ProStatCard key={i} {...s} />))}</div><div className="grid grid-cols-2 gap-8"><ProListCard title="Needs Attention"><div className="space-y-4">{scopedMembers.filter(m => m.status !== 'ACTIVE' || m.needsOrientation).slice(0,5).map(m => (<div key={m.id} className={`flex items-center justify-between p-4 rounded-xl border ${m.status === 'OVERDUE' ? 'bg-red-50 border-red-100' : m.needsOrientation ? 'bg-blue-50 border-blue-100' : 'bg-amber-50 border-amber-100'}`}><div><p className="font-bold">{m.firstName} {m.lastName}</p><p className="text-[11px] font-bold text-slate-400 uppercase">{m.needsOrientation ? 'Needs Orientation' : m.status === 'OVERDUE' ? `Overdue since ${m.nextPayment}` : `Expiring ${m.nextPayment}`}</p></div><span className={`px-3 py-1 rounded-full text-[10px] font-black ${m.status === 'OVERDUE' ? 'bg-red-100 text-red-600' : m.needsOrientation ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'}`}>{m.needsOrientation ? 'ORIENTATION' : m.status}</span></div>))}</div></ProListCard><ProListCard title="Today's Check-ins"><div className="space-y-4">{filteredVisits.filter(v => new Date(v.time).toDateString() === new Date().toDateString()).length === 0 ? <p className="text-slate-300 italic">Waiting for activity...</p> : filteredVisits.filter(v => new Date(v.time).toDateString() === new Date().toDateString()).slice(0,5).map((v,i) => (<div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100"><div><p className="font-bold">{v.name}</p><p className="text-[11px] font-bold text-[#f59e0b] uppercase">{v.center} · {v.type}</p></div><div className="flex items-center gap-2 text-slate-400 text-xs font-medium"><Clock size={14} /> {new Date(v.time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div></div>))}</div></ProListCard></div><div className="grid grid-cols-2 gap-8"><ProListCard title="Membership Breakdown"><div className="py-4"><DonutChart data={planChartData} totalLabel="Members" /></div></ProListCard><ProListCard title="Account Health"><div className="py-4"><DonutChart data={statusChartData} totalLabel="Accounts" /></div></ProListCard></div><ProListCard title="Peak Hours Activity Heatmap"><div className="flex items-end justify-between h-48 mt-8 gap-2">{heatmapData.map((count,i) => { const heightPercent = count === 0 ? 5 : (count/maxVisits)*100; const hourLabel = (i+6)>12?`${(i+6)-12}P`:`${i+6}A`; return (<div key={i} className="flex-1 flex flex-col items-center gap-2 group"><div className="w-full bg-blue-100 rounded-t-md relative flex items-end justify-center group-hover:bg-blue-200 transition-colors" style={{height:'100%'}}><div className="w-full bg-[#1080ad] rounded-t-md transition-all duration-500 relative" style={{height:`${heightPercent}%`}}><span className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold text-[#001f3f] opacity-0 group-hover:opacity-100 transition-opacity">{count}</span></div></div><span className="text-[10px] font-bold text-slate-400">{hourLabel}</span></div>); })}</div></ProListCard></div>)}
+        {activeTab === 'dashboard' && (<div className="space-y-8"><div className="grid grid-cols-5 gap-6">{[{label:'Total Members',value:stats.total,color:'#001f3f'},{label:'Active',value:stats.active,color:'#// ============================================================
+// MORNING BRIEFING & QUICK ACTIONS — 2 changes to make
+// ============================================================
+
+// ============================================================
+// STEP 1: Add this state variable near your other useState lines
+// (near the top of your WellnessHub component, around line 80ish,
+// near where you have const [searchQuery, setSearchQuery]...)
+// ============================================================
+// Add this line:
+
+const [quickSearch, setQuickSearch] = useState('');
+
+        {activeTab === 'dashboard' && (() => {
+          const today = new Date();
+          const todayStr = today.toDateString();
+          const weekFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+          const dueTodayMembers = scopedMembers.filter(m => m.nextPayment && new Date(m.nextPayment).toDateString() === todayStr);
+          const overdueMembers = scopedMembers.filter(m => m.status === 'OVERDUE');
+          const orientationMembers = scopedMembers.filter(m => m.needsOrientation);
+          const expiringThisWeek = scopedMembers.filter(m => { if (!m.nextPayment || m.status === 'OVERDUE') return false; const d = new Date(m.nextPayment); return d > today && d <= weekFromNow; });
+
+          const briefingItems = [
+            ...overdueMembers.map(m => ({ name: `${m.firstName} ${m.lastName}`, detail: `Overdue since ${m.nextPayment}`, type: 'overdue', id: m.id })),
+            ...dueTodayMembers.map(m => ({ name: `${m.firstName} ${m.lastName}`, detail: 'Payment due today', type: 'due', id: m.id })),
+            ...orientationMembers.map(m => ({ name: `${m.firstName} ${m.lastName}`, detail: 'Needs facility orientation', type: 'orientation', id: m.id })),
+            ...expiringThisWeek.map(m => ({ name: `${m.firstName} ${m.lastName}`, detail: `Expires ${m.nextPayment}`, type: 'expiring', id: m.id })),
+          ];
+
+          const quickResults = quickSearch.length >= 2 ? scopedMembers.filter(m => `${m.firstName} ${m.lastName} ${m.id} ${m.email}`.toLowerCase().includes(quickSearch.toLowerCase())).slice(0, 5) : [];
+
+          const exportTodaysLog = () => {
+            const todaysVisits = filteredVisits.filter(v => new Date(v.time).toDateString() === todayStr);
+            if (todaysVisits.length === 0) { alert('No check-ins today yet.'); return; }
+            const csvRows = ["Name,Center,Time,Membership Type", ...todaysVisits.map(v => `"${v.name}","${v.center}","${new Date(v.time).toLocaleTimeString()}","${v.type}"`)].join('\n');
+            const blob = new Blob([csvRows], { type: 'text/csv' }); const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = `Check_Ins_${new Date().toISOString().slice(0,10)}.csv`; a.click(); window.URL.revokeObjectURL(url);
+          };
+
+          const greeting = today.getHours() < 12 ? 'Good morning' : today.getHours() < 17 ? 'Good afternoon' : 'Good evening';
+
+          return (
+          <div className="space-y-8">
+
+            {/* MORNING BRIEFING */}
+            <div className="bg-gradient-to-br from-[#001f3f] to-[#003d6b] rounded-3xl p-8 text-white relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+              <div className="relative z-10">
+                <div className="flex justify-between items-start mb-6">
+                  <div>
+                    <h2 className="text-2xl font-black tracking-tight">{greeting}, {user?.name?.split(' ')[0] || 'Director'}.</h2>
+                    <p className="text-white/60 text-sm font-medium mt-1">{currentDateString} · {viewingCenter === 'both' ? 'All Centers' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1) + ' Center'}</p>
+                  </div>
+                  <div className="flex items-center gap-3 bg-white/10 px-4 py-2 rounded-xl">
+                    <Activity size={16} className="text-[#dba51f]" />
+                    <span className="text-sm font-bold">{stats.today} check-in{stats.today !== 1 ? 's' : ''} today</span>
+                  </div>
+                </div>
+
+                {briefingItems.length === 0 ? (
+                  <div className="bg-white/10 rounded-2xl p-6 text-center">
+                    <CheckCircle size={32} className="mx-auto mb-2 text-green-400" />
+                    <p className="font-bold text-lg">All clear!</p>
+                    <p className="text-white/50 text-sm">No members need attention right now.</p>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-3">Needs Your Attention ({briefingItems.length})</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[200px] overflow-y-auto pr-2">
+                      {briefingItems.slice(0, 8).map((item, i) => (
+                        <button key={i} onClick={() => { const found = scopedMembers.find(m => m.id === item.id); if (found) setSelectedMember(found); }} className="flex items-center gap-3 bg-white/10 hover:bg-white/20 rounded-xl p-3 text-left transition-all group">
+                          <div className={`w-2 h-8 rounded-full flex-shrink-0 ${item.type === 'overdue' ? 'bg-red-500' : item.type === 'due' ? 'bg-[#dd6d22]' : item.type === 'orientation' ? 'bg-[#1080ad]' : 'bg-[#dba51f]'}`}></div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-sm truncate">{item.name}</p>
+                            <p className="text-[11px] text-white/50">{item.detail}</p>
+                          </div>
+                          <ChevronRight size={14} className="text-white/30 group-hover:text-white/60 flex-shrink-0" />
+                        </button>
+                      ))}
+                    </div>
+                    {briefingItems.length > 8 && <p className="text-xs text-white/40 mt-3 text-center">+ {briefingItems.length - 8} more — check the Members tab</p>}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* QUICK ACTIONS BAR */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 relative">
+                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Search size={14} /> Quick Member Lookup</h3>
+                <div className="relative">
+                  <input className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] text-sm transition-colors" placeholder="Type a name, ID, or email..." value={quickSearch} onChange={e => setQuickSearch(e.target.value)} />
+                  {quickResults.length > 0 && (
+                    <div className="absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 overflow-hidden">
+                      {quickResults.map(m => (
+                        <button key={m.id} onClick={() => { setSelectedMember(m); setQuickSearch(''); }} className="w-full p-4 border-b border-slate-50 last:border-0 hover:bg-blue-50 transition-colors flex justify-between items-center text-left">
+                          <div><p className="font-bold text-[#001f3f]">{m.firstName} {m.lastName}</p><p className="text-[10px] text-slate-400">{m.id} · {m.type}</p></div>
+                          <span className={`px-2 py-1 rounded-full text-[9px] font-black ${getStoplight(m) === 'green' ? 'bg-green-100 text-green-600' : getStoplight(m) === 'yellow' ? 'bg-yellow-100 text-yellow-600' : 'bg-red-100 text-red-600'}`}>{getStoplight(m) === 'green' ? 'ACTIVE' : getStoplight(m) === 'yellow' ? 'GRACE' : 'LOCKED'}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><FileText size={14} /> Quick Export</h3>
+                <div className="space-y-3">
+                  <button onClick={exportTodaysLog} className="w-full bg-[#1080ad] text-white py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors shadow-sm"><Download size={16} /> Export Today's Check-in Log</button>
+                  <button onClick={handleExportCSV} className="w-full bg-slate-100 text-[#001f3f] py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-slate-200 transition-colors"><Download size={16} /> Export Full Member List</button>
+                </div>
+              </div>
+            </div>
+
+            {/* STAT CARDS */}
+            <div className="grid grid-cols-5 gap-6">
+               {[{label:'Total Members',value:stats.total,color:'#001f3f'},{label:'Active',value:stats.active,color:'#16a34a'},{label:'Overdue',value:stats.overdue,color:'#dc2626'},{label:'Expiring',value:stats.expiring,color:'#f59e0b'},{label:'Check-ins Today',value:stats.today,color:'#1080ad'}].map((s,i) => (<ProStatCard key={i} {...s} />))}
+            </div>
+
+            {/* TODAY'S CHECK-INS + CHARTS */}
+            <div className="grid grid-cols-2 gap-8">
+               <ProListCard title="Today's Check-ins">
+                 <div className="space-y-4">
+                   {filteredVisits.filter(v => new Date(v.time).toDateString() === todayStr).length === 0 ? <p className="text-slate-300 italic">Waiting for activity...</p> : filteredVisits.filter(v => new Date(v.time).toDateString() === todayStr).slice(0,8).map((v, i) => (
+                     <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
+                       <div><p className="font-bold">{v.name}</p><p className="text-[11px] font-bold text-[#f59e0b] uppercase">{v.center} · {v.type}</p></div>
+                       <div className="flex items-center gap-2 text-slate-400 text-xs font-medium"><Clock size={14} /> {new Date(v.time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
+                     </div>
+                   ))}
+                 </div>
+               </ProListCard>
+               <ProListCard title="Account Health">
+                  <div className="py-4"><DonutChart data={statusChartData} totalLabel="Accounts" /></div>
+               </ProListCard>
+            </div>
+
+            <div className="grid grid-cols-2 gap-8">
+               <ProListCard title="Membership Breakdown">
+                  <div className="py-4"><DonutChart data={planChartData} totalLabel="Members" /></div>
+               </ProListCard>
+               <ProListCard title="Peak Hours Activity Heatmap">
+                  <div className="flex items-end justify-between h-48 mt-8 gap-2">
+                    {heatmapData.map((count, i) => { const heightPercent = count === 0 ? 5 : (count/maxVisits)*100; const hourLabel = (i+6)>12?`${(i+6)-12}P`:`${i+6}A`; return (<div key={i} className="flex-1 flex flex-col items-center gap-2 group"><div className="w-full bg-blue-100 rounded-t-md relative flex items-end justify-center group-hover:bg-blue-200 transition-colors" style={{height:'100%'}}><div className="w-full bg-[#1080ad] rounded-t-md transition-all duration-500 relative" style={{height:`${heightPercent}%`}}><span className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold text-[#001f3f] opacity-0 group-hover:opacity-100 transition-opacity">{count}</span></div></div><span className="text-[10px] font-bold text-slate-400">{hourLabel}</span></div>); })}
+                  </div>
+               </ProListCard>
+            </div>
+          </div>
+          );
+        })()}
 
         {activeTab === 'members' && (<div className="space-y-6"><div className="flex justify-between items-center mb-8"><div><h2 className="text-3xl font-bold text-[#001f3f] tracking-tight">Members</h2></div><div className="flex gap-3"><button onClick={handleExportCSV} className="bg-white border border-slate-200 text-[#001f3f] px-6 py-2 rounded-xl font-bold text-sm shadow-sm flex items-center gap-2 hover:bg-slate-50 transition-all"><Download size={16} /> Export CSV</button><button onClick={() => { setShowAddModal(true); setNewMemberPin(null); }} className="bg-[#001f3f] text-white px-6 py-2 rounded-xl font-bold text-sm shadow-xl shadow-blue-900/10 flex items-center gap-2 hover:bg-blue-900 transition-colors"><Plus size={16} /> Add Member</button></div></div><div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex gap-4 items-center"><div className="relative flex-1"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} /><input className="pl-12 pr-4 py-2 border rounded-xl text-sm w-full outline-none" placeholder="Search..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} /></div></div>{loading ? (<div className="text-center py-20 text-slate-300 font-medium italic">Syncing Airtable...</div>) : apiError ? (<div className="bg-red-50 border-2 border-red-200 text-red-700 p-10 rounded-2xl text-center shadow-sm"><AlertCircle size={48} className="mx-auto mb-4 text-red-500" /><h3 className="text-2xl font-black mb-2">Airtable Refused Connection</h3><p className="font-mono text-sm bg-white p-4 rounded-lg border border-red-100 max-w-2xl mx-auto">{apiError}</p></div>) : (<div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden"><table className="w-full text-left border-collapse"><thead className="bg-slate-50 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b"><tr><th className="px-8 py-4 w-64">Member</th><th className="px-8 py-4">ID</th><th className="px-8 py-4 w-40">Type</th><th className="px-8 py-4 w-32">Status</th><th className="px-8 py-4 w-32">Next Payment</th><th className="px-8 py-4 w-24">Actions</th></tr></thead><tbody className="text-sm">{filteredMembers.map(m => { const light = getStoplight(m); return (<tr key={m.id} className="border-b hover:bg-slate-50/80 cursor-pointer" onClick={() => setSelectedMember(m)}><td className="px-8 py-5"><p className="font-bold text-slate-800 flex items-center gap-2">{m.firstName} {m.lastName}</p><p className="text-[11px] text-slate-400">{m.email}{m.needsOrientation && <span className="ml-2 px-2 py-0.5 rounded text-[9px] font-black bg-blue-100 text-blue-700 uppercase">Needs Orientation</span>}</p></td><td className="px-8 py-5 font-mono text-slate-400">{m.id}</td><td className="px-8 py-5"><span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black tracking-tight">{m.type}</span></td><td className="px-8 py-5"><span className={`px-3 py-1 rounded-full text-[10px] font-black ${light === 'green' ? 'bg-green-100 text-green-600' : light === 'yellow' ? 'bg-yellow-100 text-yellow-600' : 'bg-red-100 text-red-600'}`}>{light === 'green' ? 'ACTIVE' : light === 'yellow' ? 'GRACE PERIOD' : 'LOCKED'}</span></td><td className="px-8 py-5 text-slate-600">{m.nextPayment || 'N/A'}</td><td className="px-8 py-5"><button className="p-2 bg-[#1080ad] text-white rounded-lg shadow-md"><QrCode size={16}/></button></td></tr>); })}</tbody></table></div>)}</div>)}
 
