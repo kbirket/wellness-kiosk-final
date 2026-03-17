@@ -1,7 +1,7 @@
 // @ts-nocheck
 'use client';
 import { useState, useEffect } from 'react';
-import { CheckCircle, Activity, CreditCard, UserCircle, LogOut } from 'lucide-react';
+import { CheckCircle, Activity, CreditCard, UserCircle, LogOut, Dumbbell } from 'lucide-react';
 
 const QRCode = ({ data, size = 120 }) => {
   const safeData = encodeURIComponent(data || "WC-000");
@@ -11,6 +11,7 @@ const QRCode = ({ data, size = 120 }) => {
 
 export default function MemberWidget() {
   const [members, setMembers] = useState([]);
+  const [workouts, setWorkouts] = useState([]); // NEW: State to hold the workouts!
   const [activeMember, setActiveMember] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -18,6 +19,7 @@ export default function MemberWidget() {
     // Hide the main page background so the widget is transparent on your website!
     document.body.style.background = 'transparent';
 
+    // FETCH 1: Get the members
     fetch('/api/members')
       .then(res => res.json())
       .then(data => {
@@ -41,7 +43,23 @@ export default function MemberWidget() {
           });
           setMembers(mapped);
         }
-        setLoading(false);
+        
+        // FETCH 2: Get the saved workouts
+        fetch('/api/get-workouts')
+          .then(res => res.json())
+          .then(workoutData => {
+             if (workoutData.records) {
+                const mappedWorkouts = workoutData.records.map(w => ({
+                   id: w.id,
+                   memberId: w.fields['Member ID'],
+                   date: w.fields['Date'] || w.createdTime,
+                   routine: w.fields['Routine']
+                }));
+                setWorkouts(mappedWorkouts);
+             }
+             setLoading(false);
+          })
+          .catch(() => setLoading(false));
       });
   }, []);
 
@@ -103,6 +121,9 @@ export default function MemberWidget() {
   // --- WIDE PORTAL DASHBOARD ---
   const statusColor = getStoplight(activeMember);
   
+  // Filter workouts for ONLY the person logged in!
+  const myWorkouts = workouts.filter(w => w.memberId === activeMember.id);
+  
   return (
     <div className="bg-white/95 backdrop-blur-md p-8 rounded-[2rem] shadow-xl border border-slate-100 max-w-5xl mx-auto w-full font-sans relative overflow-hidden">
        <div className={`absolute top-0 left-0 w-full h-2 ${statusColor === 'green' ? 'bg-[#16a34a]' : statusColor === 'yellow' ? 'bg-[#f59e0b]' : 'bg-[#ef4444]'}`}></div>
@@ -119,7 +140,7 @@ export default function MemberWidget() {
           </button>
        </div>
 
-       <div className="flex flex-col md:flex-row gap-10 items-center">
+       <div className="flex flex-col md:flex-row gap-10 items-start">
           {/* QR Code Column */}
           <div className="flex flex-col items-center justify-center w-full md:w-1/3">
              <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200 mb-3 shadow-inner">
@@ -127,25 +148,50 @@ export default function MemberWidget() {
              </div>
              <p className="text-xl font-black text-[#001f3f] tracking-widest">{activeMember.id}</p>
              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Scan at Front Desk</p>
-          </div>
-
-          {/* Stats Column */}
-          <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 gap-5">
-             <div className="bg-blue-50/50 p-5 rounded-2xl border border-blue-100">
-                <div className="flex items-center gap-2 text-blue-800 mb-2"><Activity size={18} className="text-[#1080ad]"/><h3 className="font-bold">Lifetime Visits</h3></div>
+             
+             <div className="w-full mt-6 bg-blue-50/50 p-5 rounded-2xl border border-blue-100 text-center">
+                <div className="flex items-center justify-center gap-2 text-blue-800 mb-1"><Activity size={18} className="text-[#1080ad]"/><h3 className="font-bold">Lifetime Visits</h3></div>
                 <p className="text-4xl font-black text-[#1080ad]">{activeMember.visits}</p>
              </div>
-             <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200">
-                <div className="flex items-center gap-2 text-slate-700 mb-3"><CreditCard size={18} className="text-slate-500"/><h3 className="font-bold">Account Info</h3></div>
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-tight">Plan: <span className="text-slate-800 ml-1">{activeMember.type}</span></p>
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-tight mt-2">Renews: <span className={`ml-1 ${statusColor !== 'green' ? 'text-red-500' : 'text-slate-800'}`}>{activeMember.nextPayment || 'N/A'}</span></p>
+          </div>
+
+          {/* Stats & Workouts Column */}
+          <div className="flex-1 w-full flex flex-col h-full space-y-6">
+             
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                 <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                    <div className="flex items-center gap-2 text-slate-700 mb-3"><CreditCard size={18} className="text-slate-500"/><h3 className="font-bold">Account Info</h3></div>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-tight">Plan: <span className="text-slate-800 ml-1">{activeMember.type}</span></p>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-tight mt-2">Renews: <span className={`ml-1 ${statusColor !== 'green' ? 'text-red-500' : 'text-slate-800'}`}>{activeMember.nextPayment || 'N/A'}</span></p>
+                 </div>
+                 <div className="bg-gradient-to-r from-[#1080ad] to-[#001f3f] p-5 rounded-2xl text-white shadow-lg flex flex-col justify-center">
+                    <h3 className="font-bold text-lg flex items-center gap-2"><CheckCircle size={18} className="text-green-400" /> Fitforge Active</h3>
+                    <p className="text-sm text-blue-200 mt-1 font-medium leading-tight">Your generated workouts will automatically save to your profile.</p>
+                 </div>
              </div>
-             <div className="sm:col-span-2 bg-gradient-to-r from-[#1080ad] to-[#001f3f] p-5 rounded-2xl text-white flex items-center justify-between shadow-lg">
-                <div>
-                  <h3 className="font-bold text-lg flex items-center gap-2"><CheckCircle size={18} className="text-green-400" /> Fitforge Integration Active</h3>
-                  <p className="text-sm text-blue-200 mt-1 font-medium">Your custom workouts are currently syncing to your Member ID.</p>
+
+             {/* THE NEW SAVED WORKOUTS FILING CABINET */}
+             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex-1 flex flex-col max-h-[400px]">
+                <h3 className="font-bold text-[#001f3f] mb-4 flex items-center gap-2"><Dumbbell size={18} className="text-[#8b5cf6]"/> My Saved Workouts</h3>
+                
+                <div className="overflow-y-auto pr-2 space-y-4 custom-scrollbar flex-1">
+                    {myWorkouts.length > 0 ? (
+                        myWorkouts.map((w, i) => (
+                            <div key={i} className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">{new Date(w.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric'})}</span>
+                               <p className="text-sm text-slate-700 whitespace-pre-wrap font-medium">{w.routine}</p>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="text-center py-10 h-full flex flex-col items-center justify-center">
+                           <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-3 text-slate-300"><Dumbbell size={24} /></div>
+                           <p className="text-slate-500 font-bold">No saved workouts yet.</p>
+                           <p className="text-xs text-slate-400 mt-1">Use the Fitforge engine to build and save your first routine!</p>
+                        </div>
+                    )}
                 </div>
              </div>
+
           </div>
        </div>
     </div>
