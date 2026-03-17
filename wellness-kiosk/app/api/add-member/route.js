@@ -1,6 +1,19 @@
-import { NextResponse } from 'next/server';
+// ============================================================
+// FILE 1: app/api/add-member/route.js
+// Replace your existing add-member route with this
+// ============================================================
 
+import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
+
+// Generate a random 4-digit PIN (avoids 0000 and 1111)
+function generatePIN() {
+  let pin;
+  do {
+    pin = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+  } while (pin === '0000' || pin === '1111');
+  return pin;
+}
 
 export async function POST(request) {
   const baseId = process.env.AIRTABLE_BASE_ID;
@@ -9,7 +22,8 @@ export async function POST(request) {
 
   try {
     const body = await request.json();
-    
+    const newPIN = generatePIN();
+
     const response = await fetch(`https://api.airtable.com/v0/${baseId}/${tableName}`, {
       method: 'POST',
       headers: {
@@ -26,23 +40,24 @@ export async function POST(request) {
               "Phone": body.phone,
               "Plan Name": body.plan,
               "Home Center": body.center,
-              // NEW: We are sending the Birthday to Airtable!
-              "Birthday": body.birthday,
+              "Password": newPIN,
               "Membership Status": "ACTIVE"
             }
           }
         ],
-        typecast: true 
+        typecast: true
       })
     });
 
     const data = await response.json();
-    
+
     if (data.error) {
       return NextResponse.json({ success: false, error: data.error.message || "Airtable Error" }, { status: 400 });
     }
 
-    return NextResponse.json({ success: true, data: data });
+    // Return the generated PIN so staff can give it to the member
+    return NextResponse.json({ success: true, pin: newPIN, data: data });
+
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
