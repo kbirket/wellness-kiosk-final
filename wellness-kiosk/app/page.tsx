@@ -50,12 +50,6 @@ const DonutChart = ({ data, totalLabel }) => {
 
 const LOGO_URL = 'https://pattersonhc.org/sites/default/files/wellness_white.png';
 
-// =======================================================================
-// SECURITY FIX #1: NO HARDCODED PASSWORDS
-// The DIRECTORS and CORPORATES arrays are GONE.
-// All auth goes through /api/login on the server.
-// =======================================================================
-
 export default function WellnessHub() {
   const [isMounted, setIsMounted] = useState(false);
   const [currentDateString, setCurrentDateString] = useState('');
@@ -65,7 +59,6 @@ export default function WellnessHub() {
   const [activeCorp, setActiveCorp] = useState(null); 
   const [sessionToken, setSessionToken] = useState(null);
   const [lastActivity, setLastActivity] = useState(Date.now());
-  
   const [members, setMembers] = useState([]);
   const [visits, setVisits] = useState([]);
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -75,17 +68,13 @@ export default function WellnessHub() {
   const [selectedMember, setSelectedMember] = useState(null);
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState('');
-  
   const [scannerActive, setScannerActive] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
-  
   const [showAddModal, setShowAddModal] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [newMemberPin, setNewMemberPin] = useState(null);
-  
   const [isDeleting, setIsDeleting] = useState(false);
-
   const [kioskMessage, setKioskMessage] = useState({text: '', type: '', subtext: ''});
   const [kioskInput, setKioskInput] = useState('');
   const [pinModal, setPinModal] = useState(null); 
@@ -96,7 +85,6 @@ export default function WellnessHub() {
   const centerRef = useRef(viewingCenter);
   useEffect(() => { centerRef.current = viewingCenter; }, [viewingCenter]);
 
-  // SECURITY FIX #1: Session restore via server token
   useEffect(() => {
     setIsMounted(true);
     setCurrentDateString(new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }));
@@ -116,17 +104,14 @@ export default function WellnessHub() {
     if (savedCenter) setViewingCenter(savedCenter);
   }, []);
 
-  // SECURITY FIX #1: Server-side login
   const handleLogin = async () => {
     const u = document.getElementById('u_in').value.toLowerCase().trim();
     const p = document.getElementById('p_in').value.trim();
     try {
       const res = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: u, password: p, loginType: 'director' }) });
       const data = await res.json();
-      if (data.success) {
-        setUser(data.user); setSessionToken(data.token); setViewingCenter(data.user.center); setLastActivity(Date.now());
-        localStorage.setItem('wellnessToken', data.token); localStorage.setItem('wellnessCenter', data.user.center); setView('dashboard');
-      } else { alert('Incorrect credentials.'); }
+      if (data.success) { setUser(data.user); setSessionToken(data.token); setViewingCenter(data.user.center); setLastActivity(Date.now()); localStorage.setItem('wellnessToken', data.token); localStorage.setItem('wellnessCenter', data.user.center); setView('dashboard'); }
+      else { alert('Incorrect credentials.'); }
     } catch (err) { alert('Login failed. Please try again.'); }
   };
 
@@ -143,7 +128,6 @@ export default function WellnessHub() {
 
   const handleLogout = () => { setUser(null); setActiveCorp(null); setSessionToken(null); localStorage.removeItem('wellnessToken'); localStorage.removeItem('wellnessCenter'); setView('landing'); };
 
-  // SECURITY FIX #2: 8-hour session timeout
   const SESSION_TIMEOUT = 8 * 60 * 60 * 1000;
   useEffect(() => {
     const updateActivity = () => setLastActivity(Date.now());
@@ -157,7 +141,6 @@ export default function WellnessHub() {
     return () => clearInterval(interval);
   }, [user, activeCorp, lastActivity]);
 
-  // DATA FETCHING
   useEffect(() => {
     setLoading(true);
     fetch('/api/members').then(res => res.json()).then(data => {
@@ -172,12 +155,7 @@ export default function WellnessHub() {
         setMembers(mappedMembers); setApiError('');
         fetch('/api/get-visits').then(res => res.json()).then(visitData => {
           if (visitData.records) {
-            const mappedVisits = visitData.records.map(v => {
-              const linkedArray = v.fields['Member'] || v.fields['Members'] || []; const linkId = linkedArray[0];
-              const foundMember = mappedMembers.find(m => m.airtableId === linkId);
-              const fallbackName = Array.isArray(v.fields['Name']) ? v.fields['Name'][0] : v.fields['Name'] || 'Unknown Member';
-              return { name: foundMember ? `${foundMember.firstName} ${foundMember.lastName}` : fallbackName, center: v.fields['Center'] || v.fields['Location'] || 'Both', time: v.fields['Time'] || v.fields['Date'] || v.createdTime, type: foundMember ? foundMember.type : 'Unknown' };
-            });
+            const mappedVisits = visitData.records.map(v => { const linkedArray = v.fields['Member'] || v.fields['Members'] || []; const linkId = linkedArray[0]; const foundMember = mappedMembers.find(m => m.airtableId === linkId); const fallbackName = Array.isArray(v.fields['Name']) ? v.fields['Name'][0] : v.fields['Name'] || 'Unknown Member'; return { name: foundMember ? `${foundMember.firstName} ${foundMember.lastName}` : fallbackName, center: v.fields['Center'] || v.fields['Location'] || 'Both', time: v.fields['Time'] || v.fields['Date'] || v.createdTime, type: foundMember ? foundMember.type : 'Unknown' }; });
             mappedVisits.sort((a,b) => new Date(b.time) - new Date(a.time)); setVisits(mappedVisits);
           }
           setLoading(false);
@@ -186,7 +164,6 @@ export default function WellnessHub() {
     }).catch(err => { setApiError(err.message || "Failed to fetch from Vercel"); setLoading(false); });
   }, []);
 
-  // COMPUTED DATA
   const scopedMembers = members.filter(m => viewingCenter === 'both' || (m.center && m.center.toLowerCase().includes(viewingCenter)));
   const filteredMembers = scopedMembers.filter(m => `${m.firstName} ${m.lastName} ${m.id}`.toLowerCase().includes(searchQuery.toLowerCase()));
   const filteredVisits = visits.filter(v => viewingCenter === 'both' || (v.center && v.center.toLowerCase().includes(viewingCenter)));
@@ -200,111 +177,29 @@ export default function WellnessHub() {
   const statusChartData = [ { label: 'Active', value: stats.active, color: '#16a34a' }, { label: 'Expiring Soon', value: stats.expiring, color: '#f59e0b' }, { label: 'Overdue / Locked', value: stats.overdue, color: '#ef4444' } ];
   const familyMembers = activeMember ? members.filter(m => m.id !== activeMember.id && ((m.email && m.email.toLowerCase() === activeMember.email.toLowerCase()) || (m.phone && m.phone === activeMember.phone))) : [];
 
-  // MEMBER ACTIONS
-  const handleUpdateProfile = async () => {
-    setIsUpdating(true);
-    const newEmail = document.getElementById('edit_email').value.trim();
-    const newPhone = document.getElementById('edit_phone').value.trim();
-    setActiveMember({...activeMember, email: newEmail, phone: newPhone}); setEditMode(false);
-    try { await fetch('/api/update-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: activeMember.airtableId, email: newEmail, phone: newPhone }) }); } catch (err) { alert("App updated locally."); }
-    setIsUpdating(false);
-  };
+  const handleUpdateProfile = async () => { setIsUpdating(true); const newEmail = document.getElementById('edit_email').value.trim(); const newPhone = document.getElementById('edit_phone').value.trim(); setActiveMember({...activeMember, email: newEmail, phone: newPhone}); setEditMode(false); try { await fetch('/api/update-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: activeMember.airtableId, email: newEmail, phone: newPhone }) }); } catch (err) { alert("App updated locally."); } setIsUpdating(false); };
 
-  // RANDOM PIN: No more birthdays
-  const handleAddMemberSubmit = async (e) => {
-    e.preventDefault(); setIsAdding(true); setNewMemberPin(null);
-    const newMemberData = { firstName: e.target.fname.value, lastName: e.target.lname.value, email: e.target.email.value, phone: e.target.phone.value, plan: e.target.plan.value, center: e.target.center.value };
-    try {
-      const res = await fetch('/api/add-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newMemberData) });
-      const result = await res.json();
-      if (result.success) { setNewMemberPin({ name: newMemberData.firstName + ' ' + newMemberData.lastName, pin: result.pin || '1111' }); }
-      else { alert('Error adding member: ' + result.error); }
-    } catch (err) { alert('Network error. Please try again.'); }
-    setIsAdding(false);
-  };
+  const handleAddMemberSubmit = async (e) => { e.preventDefault(); setIsAdding(true); setNewMemberPin(null); const newMemberData = { firstName: e.target.fname.value, lastName: e.target.lname.value, email: e.target.email.value, phone: e.target.phone.value, plan: e.target.plan.value, center: e.target.center.value }; try { const res = await fetch('/api/add-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newMemberData) }); const result = await res.json(); if (result.success) { setNewMemberPin({ name: newMemberData.firstName + ' ' + newMemberData.lastName, pin: result.pin || '1111' }); } else { alert('Error adding member: ' + result.error); } } catch (err) { alert('Network error. Please try again.'); } setIsAdding(false); };
 
-  // SECURITY FIX #3: Admin-only delete
-  const handleDeleteMember = async () => {
-    if (!user || user.role !== 'admin') { alert('Only System Admins can delete members. Please contact your administrator.'); return; }
-    if (!window.confirm(`Are you sure you want to permanently delete ${selectedMember.firstName} ${selectedMember.lastName}? This cannot be undone.`)) return;
-    setIsDeleting(true);
-    try {
-      const res = await fetch('/api/delete-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: selectedMember.airtableId }) });
-      const result = await res.json();
-      if (result.success) { setMembers(prev => prev.filter(m => m.airtableId !== selectedMember.airtableId)); setSelectedMember(null); }
-      else { alert('Error deleting member: ' + result.error); }
-    } catch (err) { alert('Network error while deleting. Please try again.'); }
-    setIsDeleting(false);
-  };
+  const handleDeleteMember = async () => { if (!user || user.role !== 'admin') { alert('Only System Admins can delete members. Please contact your administrator.'); return; } if (!window.confirm(`Are you sure you want to permanently delete ${selectedMember.firstName} ${selectedMember.lastName}? This cannot be undone.`)) return; setIsDeleting(true); try { const res = await fetch('/api/delete-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: selectedMember.airtableId }) }); const result = await res.json(); if (result.success) { setMembers(prev => prev.filter(m => m.airtableId !== selectedMember.airtableId)); setSelectedMember(null); } else { alert('Error deleting member: ' + result.error); } } catch (err) { alert('Network error while deleting. Please try again.'); } setIsDeleting(false); };
 
-  // PIN RESET for staff
-  const handleResetPin = async (member) => {
-    if (!window.confirm(`Reset PIN for ${member.firstName} ${member.lastName}? A new random PIN will be generated.`)) return;
-    try {
-      const newPin = String(Math.floor(1000 + Math.random() * 9000));
-      await fetch('/api/update-pin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ recordId: member.airtableId, newPin }) });
-      setMembers(prev => prev.map(m => m.airtableId === member.airtableId ? { ...m, password: newPin } : m));
-      alert(`New PIN for ${member.firstName}: ${newPin}\n\nPlease give this to the member.`);
-    } catch (err) { alert('Could not reset PIN. Please try again.'); }
-  };
+  const handleResetPin = async (member) => { if (!window.confirm(`Reset PIN for ${member.firstName} ${member.lastName}? A new random PIN will be generated.`)) return; try { const newPin = String(Math.floor(1000 + Math.random() * 9000)); await fetch('/api/update-pin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ recordId: member.airtableId, newPin }) }); setMembers(prev => prev.map(m => m.airtableId === member.airtableId ? { ...m, password: newPin } : m)); alert(`New PIN for ${member.firstName}: ${newPin}\n\nPlease give this to the member.`); } catch (err) { alert('Could not reset PIN. Please try again.'); } };
 
-  // CHECK-IN LOGIC
   const getStoplight = (member) => { if (!member.nextPayment) return 'green'; const due = new Date(member.nextPayment); const diffDays = Math.ceil((new Date() - due) / (1000*60*60*24)); if (diffDays <= 0) return 'green'; if (diffDays <= 14) return 'yellow'; return 'red'; };
 
-  const processCheckIn = async (memberId, method = "Manual Entry") => {
-    const id = memberId.toUpperCase().trim(); const m = membersRef.current.find(m => m.id === id);
-    if(m) {
-      if (m.needsOrientation) { setKioskMessage({ text: `Orientation Required`, type: 'error', subtext: 'Please see front desk to complete your orientation.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 5000); return false; }
-      const light = getStoplight(m);
-      if (light === 'red') { setKioskMessage({ text: `Please see front desk.`, type: 'error', subtext: 'We need to quickly update your account.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4500); return false; }
-      const currentCenter = centerRef.current; const scanCenter = currentCenter === 'both' ? m.center : currentCenter.charAt(0).toUpperCase() + currentCenter.slice(1); const currentTime = new Date().toISOString();
-      try {
-        const res = await fetch('/api/visits', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: m.airtableId, center: scanCenter, time: currentTime, method: method }) });
-        const result = await res.json();
-        if (!result.success) { setKioskMessage({ text: `System Error`, type: 'error', subtext: `Please see the front desk.` }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4000); return false; }
-        setVisits(prev => [{name: m.firstName + ' ' + m.lastName, center: scanCenter, time: currentTime, type: m.type}, ...prev]);
-        setMembers(prev => prev.map(member => member.id === id ? { ...member, visits: member.visits + 1 } : member));
-        if (activeMember && activeMember.id === id) setActiveMember(prev => ({...prev, visits: prev.visits + 1}));
-        if (light === 'yellow') { setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'warning', subtext: 'Please see the front desk at your convenience.' }); }
-        else { setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'success', subtext: '' }); }
-        setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 3500); return true;
-      } catch (err) { setKioskMessage({ text: `Network Error`, type: 'error', subtext: 'Please try again.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4000); return false; }
-    } else { setKioskMessage({ text: `ID not found.`, type: 'error', subtext: 'Please see front desk.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 3500); return false; }
-  };
+  const processCheckIn = async (memberId, method = "Manual Entry") => { const id = memberId.toUpperCase().trim(); const m = membersRef.current.find(m => m.id === id); if(m) { if (m.needsOrientation) { setKioskMessage({ text: 'Orientation Required', type: 'error', subtext: 'Please see front desk to complete your orientation.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 5000); return false; } const light = getStoplight(m); if (light === 'red') { setKioskMessage({ text: 'Please see front desk.', type: 'error', subtext: 'We need to quickly update your account.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4500); return false; } const currentCenter = centerRef.current; const scanCenter = currentCenter === 'both' ? m.center : currentCenter.charAt(0).toUpperCase() + currentCenter.slice(1); const currentTime = new Date().toISOString(); try { const res = await fetch('/api/visits', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: m.airtableId, center: scanCenter, time: currentTime, method: method }) }); const result = await res.json(); if (!result.success) { setKioskMessage({ text: 'System Error', type: 'error', subtext: 'Please see the front desk.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4000); return false; } setVisits(prev => [{name: m.firstName + ' ' + m.lastName, center: scanCenter, time: currentTime, type: m.type}, ...prev]); setMembers(prev => prev.map(member => member.id === id ? { ...member, visits: member.visits + 1 } : member)); if (activeMember && activeMember.id === id) setActiveMember(prev => ({...prev, visits: prev.visits + 1})); if (light === 'yellow') { setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'warning', subtext: 'Please see the front desk at your convenience.' }); } else { setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'success', subtext: '' }); } setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 3500); return true; } catch (err) { setKioskMessage({ text: 'Network Error', type: 'error', subtext: 'Please try again.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4000); return false; } } else { setKioskMessage({ text: 'ID not found.', type: 'error', subtext: 'Please see front desk.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 3500); return false; } };
 
   useEffect(() => { let scanner = null; if (view === 'secret_scanner' && scannerActive) { scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 280, height: 280} }, false); scanner.render((decodedText) => { processCheckIn(decodedText, "Camera Scan"); }, () => {}); } return () => { if(scanner) scanner.clear().catch(e => console.error(e)); }; }, [view, scannerActive]);
 
-  // EXPORTS
   const handleExportCSV = () => { if (filteredMembers.length === 0) return; const headers = ["Member ID","First Name","Last Name","Email","Phone","Membership Type","Home Center","Status","Total Visits","Next Payment"]; const csvRows = [headers.join(','), ...filteredMembers.map(m => `"${m.id}","${m.firstName}","${m.lastName}","${m.email}","${m.phone}","${m.type}","${m.center}","${m.status}","${m.visits}","${m.nextPayment}"`)].join('\n'); const blob = new Blob([csvRows], { type: 'text/csv' }); const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `Wellness_Members_${new Date().toISOString().slice(0,10)}.csv`; a.click(); window.URL.revokeObjectURL(url); };
   const handleMonthlySummary = () => { const centerName = viewingCenter === 'both' ? 'System-Wide' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1); const csvContent = `${centerName} Wellness Center ${currentDateString} Summary\n\nSTANDARD MEMBERSHIPS\nSingle:,${reportStats.single}\nFamily:,${reportStats.family}\nSenior Citizen:,${reportStats.seniorCitizen}\nSenior Family:,${reportStats.seniorFamily}\nStudent (14-22):,${reportStats.student}\n\nCORPORATE, STAFF & MILITARY\nCorporate:,${reportStats.corporate}\nCorporate Family:,${reportStats.corporateFamily}\nHD6/HCHF (Staff):,${reportStats.staff}\nActive Military (Free):,${reportStats.military}\n\nOTHER INFORMATION\nDay Passes:,${reportStats.dayPass}\nTotal Members:,${stats.total}`; const blob = new Blob([csvContent.trim()], { type: 'text/csv' }); const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `${centerName}_Monthly_Summary.csv`; a.click(); window.URL.revokeObjectURL(url); };
 
-  // UI COMPONENTS
   const ProStatCard = ({ value, label, color }) => (<div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 print:shadow-none print:border-slate-300" style={{ borderLeft: `6px solid ${color}` }}><p className="text-5xl font-extrabold mb-1 print:text-3xl" style={{ color }}>{value}</p><p className="text-xs font-bold text-[#001f3f] uppercase tracking-tight print:text-[10px]">{label}</p></div>);
   const ProListCard = ({ title, children, actions }) => (<div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 h-full print:p-4 print:shadow-none print:border-slate-300 print:break-inside-avoid"><div className="flex justify-between items-center mb-6 print:mb-2"><h3 className="text-lg font-bold text-[#001f3f] print:text-base">{title}</h3>{actions}</div>{children}</div>);
 
   if (!isMounted) return <div className="min-h-screen bg-[#001f3f]" />;
 
-  // =======================================================================
-  // ALL VIEWS BELOW — with birthday references removed, delete button
-  // wrapped for admin-only, and PIN reset button added
-  // =======================================================================
-
-  if (view === 'landing') {
-    return (
-      <div className="min-h-screen bg-[#001f3f] flex items-center justify-center font-sans p-6 relative">
-        <div className="text-center max-w-6xl w-full relative z-10">
-          <img src={LOGO_URL} alt="Logo" className="h-40 mx-auto mb-16 opacity-100 drop-shadow-2xl" />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-             <button onClick={() => {setView('kiosk'); setViewingCenter('both'); setKioskInput('');}} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group"><Smartphone size={56} className="text-[#1080ad] group-hover:scale-110 transition-transform" /><span className="text-xl font-bold">Public Kiosk</span></button>
-             <button onClick={() => setView('member_login')} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group"><UserCircle size={56} className="text-[#16a34a] group-hover:scale-110 transition-transform" /><span className="text-xl font-bold">Member Portal</span></button>
-             <button onClick={() => setView('corp_login')} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group"><Briefcase size={56} className="text-[#8b5cf6] group-hover:scale-110 transition-transform" /><span className="text-xl font-bold">Corporate Portal</span></button>
-             <button onClick={() => setView('login')} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group border-b-4 border-b-[#f59e0b]"><ShieldCheck size={56} className="text-[#f59e0b] group-hover:scale-110 transition-transform" /><span className="text-xl font-bold">Director Portal</span></button>
-          </div>
-        </div>
-        <button onClick={() => {setView('secret_scanner'); setViewingCenter('both');}} className="absolute bottom-6 right-6 opacity-10 hover:opacity-50 transition-opacity p-4"><Lock size={20} className="text-white"/></button>
-      </div>
-    );
-  }
+  if (view === 'landing') { return (<div className="min-h-screen bg-[#001f3f] flex items-center justify-center font-sans p-6 relative"><div className="text-center max-w-6xl w-full relative z-10"><img src={LOGO_URL} alt="Logo" className="h-40 mx-auto mb-16 opacity-100 drop-shadow-2xl" /><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"><button onClick={() => {setView('kiosk'); setViewingCenter('both'); setKioskInput('');}} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group"><Smartphone size={56} className="text-[#1080ad] group-hover:scale-110 transition-transform" /><span className="text-xl font-bold">Public Kiosk</span></button><button onClick={() => setView('member_login')} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group"><UserCircle size={56} className="text-[#16a34a] group-hover:scale-110 transition-transform" /><span className="text-xl font-bold">Member Portal</span></button><button onClick={() => setView('corp_login')} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group"><Briefcase size={56} className="text-[#8b5cf6] group-hover:scale-110 transition-transform" /><span className="text-xl font-bold">Corporate Portal</span></button><button onClick={() => setView('login')} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group border-b-4 border-b-[#f59e0b]"><ShieldCheck size={56} className="text-[#f59e0b] group-hover:scale-110 transition-transform" /><span className="text-xl font-bold">Director Portal</span></button></div></div><button onClick={() => {setView('secret_scanner'); setViewingCenter('both');}} className="absolute bottom-6 right-6 opacity-10 hover:opacity-50 transition-opacity p-4"><Lock size={20} className="text-white"/></button></div>); }
 
   if (view === 'corp_login') { return (<div className="min-h-screen bg-[#001f3f] flex items-center justify-center p-4 font-sans"><div className="bg-white rounded-[3rem] shadow-2xl p-12 w-full max-w-md border-t-8 border-[#8b5cf6]"><div className="flex justify-center mb-6"><Briefcase size={64} className="text-[#8b5cf6]" /></div><h2 className="text-4xl font-black text-center text-slate-900 mb-2 tracking-tight">Partner Login</h2><p className="text-slate-400 mb-10 text-center font-medium tracking-tight">Access your employee wellness roster.</p><input type="text" placeholder="Company Username" id="c_in" className="w-full p-5 bg-slate-100 rounded-2xl mb-4 outline-none border-2 border-transparent focus:border-purple-500/20 text-lg" onKeyDown={(e) => e.key === 'Enter' && handleCorpLogin()} /><input type="password" placeholder="Access PIN" id="c_pin" className="w-full p-5 bg-slate-100 rounded-2xl mb-8 outline-none border-2 border-transparent focus:border-purple-500/20 text-lg" onKeyDown={(e) => e.key === 'Enter' && handleCorpLogin()} /><button onClick={handleCorpLogin} className="w-full bg-[#8b5cf6] text-white p-5 rounded-2xl font-bold text-xl shadow-xl hover:bg-purple-700 transition-all">Sign In</button><button onClick={() => setView('landing')} className="w-full mt-6 text-slate-400 font-bold hover:text-slate-600 transition-colors">Return to Home</button></div></div>); }
 
@@ -332,19 +227,7 @@ export default function WellnessHub() {
       <main className="flex-1 p-10 h-screen overflow-y-auto relative print:m-0 print:p-0 print:h-auto print:overflow-visible">
         <div className="mb-10 print:hidden"><h2 className="text-3xl font-bold text-[#001f3f] capitalize tracking-tight">{activeTab}</h2><p className="text-sm text-slate-400 font-medium">{viewingCenter === 'both' ? 'All Centers' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1) + ' Center'} · {currentDateString}</p></div>
 
-        {activeTab === 'dashboard' && (<div className="space-y-8"><div className="grid grid-cols-5 gap-6">{[{label:'Total Members',value:stats.total,color:'#001f3f'},{label:'Active',value:stats.active,color:'#// ============================================================
-// MORNING BRIEFING & QUICK ACTIONS — 2 changes to make
-// ============================================================
-
-// ============================================================
-// STEP 1: Add this state variable near your other useState lines
-// (near the top of your WellnessHub component, around line 80ish,
-// near where you have const [searchQuery, setSearchQuery]...)
-// ============================================================
-// Add this line:
-
-const [quickSearch, setQuickSearch] = useState('');
-
+        {/* DASHBOARD WITH MORNING BRIEFING */}
         {activeTab === 'dashboard' && (() => {
           const today = new Date();
           const todayStr = today.toDateString();
@@ -353,132 +236,17 @@ const [quickSearch, setQuickSearch] = useState('');
           const overdueMembers = scopedMembers.filter(m => m.status === 'OVERDUE');
           const orientationMembers = scopedMembers.filter(m => m.needsOrientation);
           const expiringThisWeek = scopedMembers.filter(m => { if (!m.nextPayment || m.status === 'OVERDUE') return false; const d = new Date(m.nextPayment); return d > today && d <= weekFromNow; });
-
-          const briefingItems = [
-            ...overdueMembers.map(m => ({ name: `${m.firstName} ${m.lastName}`, detail: `Overdue since ${m.nextPayment}`, type: 'overdue', id: m.id })),
-            ...dueTodayMembers.map(m => ({ name: `${m.firstName} ${m.lastName}`, detail: 'Payment due today', type: 'due', id: m.id })),
-            ...orientationMembers.map(m => ({ name: `${m.firstName} ${m.lastName}`, detail: 'Needs facility orientation', type: 'orientation', id: m.id })),
-            ...expiringThisWeek.map(m => ({ name: `${m.firstName} ${m.lastName}`, detail: `Expires ${m.nextPayment}`, type: 'expiring', id: m.id })),
-          ];
-
+          const briefingItems = [...overdueMembers.map(m => ({ name: `${m.firstName} ${m.lastName}`, detail: `Overdue since ${m.nextPayment}`, type: 'overdue', id: m.id })), ...dueTodayMembers.map(m => ({ name: `${m.firstName} ${m.lastName}`, detail: 'Payment due today', type: 'due', id: m.id })), ...orientationMembers.map(m => ({ name: `${m.firstName} ${m.lastName}`, detail: 'Needs facility orientation', type: 'orientation', id: m.id })), ...expiringThisWeek.map(m => ({ name: `${m.firstName} ${m.lastName}`, detail: `Expires ${m.nextPayment}`, type: 'expiring', id: m.id }))];
           const quickResults = quickSearch.length >= 2 ? scopedMembers.filter(m => `${m.firstName} ${m.lastName} ${m.id} ${m.email}`.toLowerCase().includes(quickSearch.toLowerCase())).slice(0, 5) : [];
-
-          const exportTodaysLog = () => {
-            const todaysVisits = filteredVisits.filter(v => new Date(v.time).toDateString() === todayStr);
-            if (todaysVisits.length === 0) { alert('No check-ins today yet.'); return; }
-            const csvRows = ["Name,Center,Time,Membership Type", ...todaysVisits.map(v => `"${v.name}","${v.center}","${new Date(v.time).toLocaleTimeString()}","${v.type}"`)].join('\n');
-            const blob = new Blob([csvRows], { type: 'text/csv' }); const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href = url; a.download = `Check_Ins_${new Date().toISOString().slice(0,10)}.csv`; a.click(); window.URL.revokeObjectURL(url);
-          };
-
+          const exportTodaysLog = () => { const todaysVisits = filteredVisits.filter(v => new Date(v.time).toDateString() === todayStr); if (todaysVisits.length === 0) { alert('No check-ins today yet.'); return; } const csvRows = ["Name,Center,Time,Membership Type", ...todaysVisits.map(v => `"${v.name}","${v.center}","${new Date(v.time).toLocaleTimeString()}","${v.type}"`)].join('\n'); const blob = new Blob([csvRows], { type: 'text/csv' }); const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `Check_Ins_${new Date().toISOString().slice(0,10)}.csv`; a.click(); window.URL.revokeObjectURL(url); };
           const greeting = today.getHours() < 12 ? 'Good morning' : today.getHours() < 17 ? 'Good afternoon' : 'Good evening';
-
-          return (
-          <div className="space-y-8">
-
-            {/* MORNING BRIEFING */}
-            <div className="bg-gradient-to-br from-[#001f3f] to-[#003d6b] rounded-3xl p-8 text-white relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-              <div className="relative z-10">
-                <div className="flex justify-between items-start mb-6">
-                  <div>
-                    <h2 className="text-2xl font-black tracking-tight">{greeting}, {user?.name?.split(' ')[0] || 'Director'}.</h2>
-                    <p className="text-white/60 text-sm font-medium mt-1">{currentDateString} · {viewingCenter === 'both' ? 'All Centers' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1) + ' Center'}</p>
-                  </div>
-                  <div className="flex items-center gap-3 bg-white/10 px-4 py-2 rounded-xl">
-                    <Activity size={16} className="text-[#dba51f]" />
-                    <span className="text-sm font-bold">{stats.today} check-in{stats.today !== 1 ? 's' : ''} today</span>
-                  </div>
-                </div>
-
-                {briefingItems.length === 0 ? (
-                  <div className="bg-white/10 rounded-2xl p-6 text-center">
-                    <CheckCircle size={32} className="mx-auto mb-2 text-green-400" />
-                    <p className="font-bold text-lg">All clear!</p>
-                    <p className="text-white/50 text-sm">No members need attention right now.</p>
-                  </div>
-                ) : (
-                  <div>
-                    <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-3">Needs Your Attention ({briefingItems.length})</p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[200px] overflow-y-auto pr-2">
-                      {briefingItems.slice(0, 8).map((item, i) => (
-                        <button key={i} onClick={() => { const found = scopedMembers.find(m => m.id === item.id); if (found) setSelectedMember(found); }} className="flex items-center gap-3 bg-white/10 hover:bg-white/20 rounded-xl p-3 text-left transition-all group">
-                          <div className={`w-2 h-8 rounded-full flex-shrink-0 ${item.type === 'overdue' ? 'bg-red-500' : item.type === 'due' ? 'bg-[#dd6d22]' : item.type === 'orientation' ? 'bg-[#1080ad]' : 'bg-[#dba51f]'}`}></div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-bold text-sm truncate">{item.name}</p>
-                            <p className="text-[11px] text-white/50">{item.detail}</p>
-                          </div>
-                          <ChevronRight size={14} className="text-white/30 group-hover:text-white/60 flex-shrink-0" />
-                        </button>
-                      ))}
-                    </div>
-                    {briefingItems.length > 8 && <p className="text-xs text-white/40 mt-3 text-center">+ {briefingItems.length - 8} more — check the Members tab</p>}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* QUICK ACTIONS BAR */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 relative">
-                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Search size={14} /> Quick Member Lookup</h3>
-                <div className="relative">
-                  <input className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] text-sm transition-colors" placeholder="Type a name, ID, or email..." value={quickSearch} onChange={e => setQuickSearch(e.target.value)} />
-                  {quickResults.length > 0 && (
-                    <div className="absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 overflow-hidden">
-                      {quickResults.map(m => (
-                        <button key={m.id} onClick={() => { setSelectedMember(m); setQuickSearch(''); }} className="w-full p-4 border-b border-slate-50 last:border-0 hover:bg-blue-50 transition-colors flex justify-between items-center text-left">
-                          <div><p className="font-bold text-[#001f3f]">{m.firstName} {m.lastName}</p><p className="text-[10px] text-slate-400">{m.id} · {m.type}</p></div>
-                          <span className={`px-2 py-1 rounded-full text-[9px] font-black ${getStoplight(m) === 'green' ? 'bg-green-100 text-green-600' : getStoplight(m) === 'yellow' ? 'bg-yellow-100 text-yellow-600' : 'bg-red-100 text-red-600'}`}>{getStoplight(m) === 'green' ? 'ACTIVE' : getStoplight(m) === 'yellow' ? 'GRACE' : 'LOCKED'}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
-                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><FileText size={14} /> Quick Export</h3>
-                <div className="space-y-3">
-                  <button onClick={exportTodaysLog} className="w-full bg-[#1080ad] text-white py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors shadow-sm"><Download size={16} /> Export Today's Check-in Log</button>
-                  <button onClick={handleExportCSV} className="w-full bg-slate-100 text-[#001f3f] py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-slate-200 transition-colors"><Download size={16} /> Export Full Member List</button>
-                </div>
-              </div>
-            </div>
-
-            {/* STAT CARDS */}
-            <div className="grid grid-cols-5 gap-6">
-               {[{label:'Total Members',value:stats.total,color:'#001f3f'},{label:'Active',value:stats.active,color:'#16a34a'},{label:'Overdue',value:stats.overdue,color:'#dc2626'},{label:'Expiring',value:stats.expiring,color:'#f59e0b'},{label:'Check-ins Today',value:stats.today,color:'#1080ad'}].map((s,i) => (<ProStatCard key={i} {...s} />))}
-            </div>
-
-            {/* TODAY'S CHECK-INS + CHARTS */}
-            <div className="grid grid-cols-2 gap-8">
-               <ProListCard title="Today's Check-ins">
-                 <div className="space-y-4">
-                   {filteredVisits.filter(v => new Date(v.time).toDateString() === todayStr).length === 0 ? <p className="text-slate-300 italic">Waiting for activity...</p> : filteredVisits.filter(v => new Date(v.time).toDateString() === todayStr).slice(0,8).map((v, i) => (
-                     <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
-                       <div><p className="font-bold">{v.name}</p><p className="text-[11px] font-bold text-[#f59e0b] uppercase">{v.center} · {v.type}</p></div>
-                       <div className="flex items-center gap-2 text-slate-400 text-xs font-medium"><Clock size={14} /> {new Date(v.time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
-                     </div>
-                   ))}
-                 </div>
-               </ProListCard>
-               <ProListCard title="Account Health">
-                  <div className="py-4"><DonutChart data={statusChartData} totalLabel="Accounts" /></div>
-               </ProListCard>
-            </div>
-
-            <div className="grid grid-cols-2 gap-8">
-               <ProListCard title="Membership Breakdown">
-                  <div className="py-4"><DonutChart data={planChartData} totalLabel="Members" /></div>
-               </ProListCard>
-               <ProListCard title="Peak Hours Activity Heatmap">
-                  <div className="flex items-end justify-between h-48 mt-8 gap-2">
-                    {heatmapData.map((count, i) => { const heightPercent = count === 0 ? 5 : (count/maxVisits)*100; const hourLabel = (i+6)>12?`${(i+6)-12}P`:`${i+6}A`; return (<div key={i} className="flex-1 flex flex-col items-center gap-2 group"><div className="w-full bg-blue-100 rounded-t-md relative flex items-end justify-center group-hover:bg-blue-200 transition-colors" style={{height:'100%'}}><div className="w-full bg-[#1080ad] rounded-t-md transition-all duration-500 relative" style={{height:`${heightPercent}%`}}><span className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold text-[#001f3f] opacity-0 group-hover:opacity-100 transition-opacity">{count}</span></div></div><span className="text-[10px] font-bold text-slate-400">{hourLabel}</span></div>); })}
-                  </div>
-               </ProListCard>
-            </div>
-          </div>
-          );
+          return (<div className="space-y-8">
+            <div className="bg-gradient-to-br from-[#001f3f] to-[#003d6b] rounded-3xl p-8 text-white relative overflow-hidden"><div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div><div className="relative z-10"><div className="flex justify-between items-start mb-6"><div><h2 className="text-2xl font-black tracking-tight">{greeting}, {user?.name?.split(' ')[0] || 'Director'}.</h2><p className="text-white/60 text-sm font-medium mt-1">{currentDateString} · {viewingCenter === 'both' ? 'All Centers' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1) + ' Center'}</p></div><div className="flex items-center gap-3 bg-white/10 px-4 py-2 rounded-xl"><Activity size={16} className="text-[#dba51f]" /><span className="text-sm font-bold">{stats.today} check-in{stats.today !== 1 ? 's' : ''} today</span></div></div>{briefingItems.length === 0 ? (<div className="bg-white/10 rounded-2xl p-6 text-center"><CheckCircle size={32} className="mx-auto mb-2 text-green-400" /><p className="font-bold text-lg">All clear!</p><p className="text-white/50 text-sm">No members need attention right now.</p></div>) : (<div><p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-3">Needs Your Attention ({briefingItems.length})</p><div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[200px] overflow-y-auto pr-2">{briefingItems.slice(0, 8).map((item, i) => (<button key={i} onClick={() => { const found = scopedMembers.find(m => m.id === item.id); if (found) setSelectedMember(found); }} className="flex items-center gap-3 bg-white/10 hover:bg-white/20 rounded-xl p-3 text-left transition-all group"><div className={`w-2 h-8 rounded-full flex-shrink-0 ${item.type === 'overdue' ? 'bg-red-500' : item.type === 'due' ? 'bg-[#dd6d22]' : item.type === 'orientation' ? 'bg-[#1080ad]' : 'bg-[#dba51f]'}`}></div><div className="flex-1 min-w-0"><p className="font-bold text-sm truncate">{item.name}</p><p className="text-[11px] text-white/50">{item.detail}</p></div><ChevronRight size={14} className="text-white/30 group-hover:text-white/60 flex-shrink-0" /></button>))}</div>{briefingItems.length > 8 && <p className="text-xs text-white/40 mt-3 text-center">+ {briefingItems.length - 8} more — check the Members tab</p>}</div>)}</div></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 relative"><h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Search size={14} /> Quick Member Lookup</h3><div className="relative"><input className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] text-sm transition-colors" placeholder="Type a name, ID, or email..." value={quickSearch} onChange={e => setQuickSearch(e.target.value)} />{quickResults.length > 0 && (<div className="absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 overflow-hidden">{quickResults.map(m => (<button key={m.id} onClick={() => { setSelectedMember(m); setQuickSearch(''); }} className="w-full p-4 border-b border-slate-50 last:border-0 hover:bg-blue-50 transition-colors flex justify-between items-center text-left"><div><p className="font-bold text-[#001f3f]">{m.firstName} {m.lastName}</p><p className="text-[10px] text-slate-400">{m.id} · {m.type}</p></div><span className={`px-2 py-1 rounded-full text-[9px] font-black ${getStoplight(m) === 'green' ? 'bg-green-100 text-green-600' : getStoplight(m) === 'yellow' ? 'bg-yellow-100 text-yellow-600' : 'bg-red-100 text-red-600'}`}>{getStoplight(m) === 'green' ? 'ACTIVE' : getStoplight(m) === 'yellow' ? 'GRACE' : 'LOCKED'}</span></button>))}</div>)}</div></div><div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between"><h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><FileText size={14} /> Quick Export</h3><div className="space-y-3"><button onClick={exportTodaysLog} className="w-full bg-[#1080ad] text-white py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors shadow-sm"><Download size={16} /> Export Today's Check-in Log</button><button onClick={handleExportCSV} className="w-full bg-slate-100 text-[#001f3f] py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-slate-200 transition-colors"><Download size={16} /> Export Full Member List</button></div></div></div>
+            <div className="grid grid-cols-5 gap-6">{[{label:'Total Members',value:stats.total,color:'#001f3f'},{label:'Active',value:stats.active,color:'#16a34a'},{label:'Overdue',value:stats.overdue,color:'#dc2626'},{label:'Expiring',value:stats.expiring,color:'#f59e0b'},{label:'Check-ins Today',value:stats.today,color:'#1080ad'}].map((s,i) => (<ProStatCard key={i} {...s} />))}</div>
+            <div className="grid grid-cols-2 gap-8"><ProListCard title="Today's Check-ins"><div className="space-y-4">{filteredVisits.filter(v => new Date(v.time).toDateString() === todayStr).length === 0 ? <p className="text-slate-300 italic">Waiting for activity...</p> : filteredVisits.filter(v => new Date(v.time).toDateString() === todayStr).slice(0,8).map((v, i) => (<div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100"><div><p className="font-bold">{v.name}</p><p className="text-[11px] font-bold text-[#f59e0b] uppercase">{v.center} · {v.type}</p></div><div className="flex items-center gap-2 text-slate-400 text-xs font-medium"><Clock size={14} /> {new Date(v.time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div></div>))}</div></ProListCard><ProListCard title="Account Health"><div className="py-4"><DonutChart data={statusChartData} totalLabel="Accounts" /></div></ProListCard></div>
+            <div className="grid grid-cols-2 gap-8"><ProListCard title="Membership Breakdown"><div className="py-4"><DonutChart data={planChartData} totalLabel="Members" /></div></ProListCard><ProListCard title="Peak Hours Activity Heatmap"><div className="flex items-end justify-between h-48 mt-8 gap-2">{heatmapData.map((count, i) => { const heightPercent = count === 0 ? 5 : (count/maxVisits)*100; const hourLabel = (i+6)>12?`${(i+6)-12}P`:`${i+6}A`; return (<div key={i} className="flex-1 flex flex-col items-center gap-2 group"><div className="w-full bg-blue-100 rounded-t-md relative flex items-end justify-center group-hover:bg-blue-200 transition-colors" style={{height:'100%'}}><div className="w-full bg-[#1080ad] rounded-t-md transition-all duration-500 relative" style={{height:`${heightPercent}%`}}><span className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold text-[#001f3f] opacity-0 group-hover:opacity-100 transition-opacity">{count}</span></div></div><span className="text-[10px] font-bold text-slate-400">{hourLabel}</span></div>); })}</div></ProListCard></div>
+          </div>);
         })()}
 
         {activeTab === 'members' && (<div className="space-y-6"><div className="flex justify-between items-center mb-8"><div><h2 className="text-3xl font-bold text-[#001f3f] tracking-tight">Members</h2></div><div className="flex gap-3"><button onClick={handleExportCSV} className="bg-white border border-slate-200 text-[#001f3f] px-6 py-2 rounded-xl font-bold text-sm shadow-sm flex items-center gap-2 hover:bg-slate-50 transition-all"><Download size={16} /> Export CSV</button><button onClick={() => { setShowAddModal(true); setNewMemberPin(null); }} className="bg-[#001f3f] text-white px-6 py-2 rounded-xl font-bold text-sm shadow-xl shadow-blue-900/10 flex items-center gap-2 hover:bg-blue-900 transition-colors"><Plus size={16} /> Add Member</button></div></div><div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex gap-4 items-center"><div className="relative flex-1"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} /><input className="pl-12 pr-4 py-2 border rounded-xl text-sm w-full outline-none" placeholder="Search..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} /></div></div>{loading ? (<div className="text-center py-20 text-slate-300 font-medium italic">Syncing Airtable...</div>) : apiError ? (<div className="bg-red-50 border-2 border-red-200 text-red-700 p-10 rounded-2xl text-center shadow-sm"><AlertCircle size={48} className="mx-auto mb-4 text-red-500" /><h3 className="text-2xl font-black mb-2">Airtable Refused Connection</h3><p className="font-mono text-sm bg-white p-4 rounded-lg border border-red-100 max-w-2xl mx-auto">{apiError}</p></div>) : (<div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden"><table className="w-full text-left border-collapse"><thead className="bg-slate-50 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b"><tr><th className="px-8 py-4 w-64">Member</th><th className="px-8 py-4">ID</th><th className="px-8 py-4 w-40">Type</th><th className="px-8 py-4 w-32">Status</th><th className="px-8 py-4 w-32">Next Payment</th><th className="px-8 py-4 w-24">Actions</th></tr></thead><tbody className="text-sm">{filteredMembers.map(m => { const light = getStoplight(m); return (<tr key={m.id} className="border-b hover:bg-slate-50/80 cursor-pointer" onClick={() => setSelectedMember(m)}><td className="px-8 py-5"><p className="font-bold text-slate-800 flex items-center gap-2">{m.firstName} {m.lastName}</p><p className="text-[11px] text-slate-400">{m.email}{m.needsOrientation && <span className="ml-2 px-2 py-0.5 rounded text-[9px] font-black bg-blue-100 text-blue-700 uppercase">Needs Orientation</span>}</p></td><td className="px-8 py-5 font-mono text-slate-400">{m.id}</td><td className="px-8 py-5"><span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black tracking-tight">{m.type}</span></td><td className="px-8 py-5"><span className={`px-3 py-1 rounded-full text-[10px] font-black ${light === 'green' ? 'bg-green-100 text-green-600' : light === 'yellow' ? 'bg-yellow-100 text-yellow-600' : 'bg-red-100 text-red-600'}`}>{light === 'green' ? 'ACTIVE' : light === 'yellow' ? 'GRACE PERIOD' : 'LOCKED'}</span></td><td className="px-8 py-5 text-slate-600">{m.nextPayment || 'N/A'}</td><td className="px-8 py-5"><button className="p-2 bg-[#1080ad] text-white rounded-lg shadow-md"><QrCode size={16}/></button></td></tr>); })}</tbody></table></div>)}</div>)}
@@ -490,80 +258,9 @@ const [quickSearch, setQuickSearch] = useState('');
         {activeTab === 'badge' && (<div className="space-y-6"><div className="mb-8"><h2 className="text-3xl font-bold text-[#001f3f] tracking-tight mb-1">Staff Check-In</h2><p className="text-slate-400 font-medium">Log a check-in manually or via external barcode scanner.</p></div><div className="flex gap-8"><div className="bg-white p-12 rounded-3xl shadow-sm border border-slate-200 flex-1 text-center"><p className="text-sm font-bold text-slate-400 mb-4 tracking-tight">Enter Name or ID (or plug in external scanner):</p><div className="relative w-full max-w-sm mx-auto mb-10"><div className="flex gap-4"><input className="flex-1 p-4 border rounded-xl outline-none font-sans text-xl text-center bg-slate-100 focus:border-[#1080ad] focus:bg-white transition-colors" placeholder="e.g. Smith" id="kiosk_in_staff" value={kioskInput} onChange={(e) => setKioskInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { processCheckIn(kioskInput, "Staff Scan/Entry"); setKioskInput(''); } }} /><button onClick={() => { processCheckIn(kioskInput, "Staff Scan/Entry"); setKioskInput(''); }} className="bg-[#001f3f] text-white px-8 rounded-xl font-bold hover:bg-blue-900 transition-colors shadow-sm">Check In</button></div>{kioskMatches.length > 0 && (<div className="absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 overflow-hidden text-left">{kioskMatches.map(m => (<button key={m.id} onClick={() => { processCheckIn(m.id, "Staff Override Entry"); setKioskInput(''); }} className="w-full p-4 border-b border-slate-100 last:border-0 hover:bg-blue-50 transition-colors flex justify-between items-center group"><div><p className="font-bold text-[#001f3f] text-lg">{m.firstName} {m.lastName}</p><p className="text-[10px] text-slate-400 uppercase tracking-widest">{m.phone || 'No Phone'}</p></div><div className="bg-[#1080ad] text-white px-3 py-1 rounded-lg text-xs font-bold shadow-sm group-hover:scale-105 transition-transform">Select</div></button>))}</div>)}</div>{kioskMessage.text && (<div className={`mt-8 p-4 rounded-xl text-center font-bold text-lg ${kioskMessage.type === 'success' ? 'bg-green-100 text-green-700' : kioskMessage.type === 'warning' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>{kioskMessage.text}{kioskMessage.subtext && <p className="text-sm mt-1">{kioskMessage.subtext}</p>}</div>)}</div></div></div>)}
       </main>
 
-      {/* ADD MEMBER MODAL — birthday field removed, PIN success screen added */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#001f3f]/90 backdrop-blur-md">
-           <div className="bg-white rounded-3xl w-full max-w-xl p-10 relative shadow-2xl">
-              <button onClick={() => { setShowAddModal(false); setNewMemberPin(null); }} className="absolute top-6 right-6 text-slate-300 hover:text-red-500 transition-all"><X size={24}/></button>
-              
-              {newMemberPin ? (
-                <div className="flex flex-col items-center justify-center text-center py-4">
-                  <CheckCircle size={64} className="text-[#16a34a] mb-6" />
-                  <h3 className="text-2xl font-black text-[#001f3f] mb-2">Member Created!</h3>
-                  <p className="text-slate-500 mb-8">Give this PIN to <strong>{newMemberPin.name}</strong></p>
-                  <div className="bg-slate-100 px-12 py-6 rounded-2xl mb-8">
-                    <p className="text-5xl font-black tracking-[0.3em] text-[#001f3f]">{newMemberPin.pin}</p>
-                  </div>
-                  <p className="text-xs text-slate-400 mb-8">They'll use this PIN + their email to log in.</p>
-                  <button onClick={() => { setNewMemberPin(null); setShowAddModal(false); window.location.reload(); }} className="bg-[#001f3f] text-white px-8 py-4 rounded-xl font-bold">Done</button>
-                </div>
-              ) : (
-                <>
-                  <h3 className="text-3xl font-black text-[#001f3f] mb-2 tracking-tight">Manual Registration</h3>
-                  <p className="text-slate-500 font-medium mb-8">Add a new member. A random PIN will be generated automatically.</p>
-                  <form onSubmit={handleAddMemberSubmit} className="space-y-5">
-                     <div className="grid grid-cols-2 gap-5">
-                        <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">First Name</label><input id="fname" required className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div>
-                        <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Last Name</label><input id="lname" required className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div>
-                     </div>
-                     <div className="grid grid-cols-2 gap-5">
-                        <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Email</label><input type="email" id="email" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div>
-                        <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Phone</label><input id="phone" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div>
-                     </div>
-                     <div className="grid grid-cols-2 gap-5">
-                        <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Plan Type</label><select id="plan" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors font-bold text-slate-700"><option value="SINGLE">Single</option><option value="FAMILY">Family</option><option value="SENIOR CITIZEN">Senior Citizen</option><option value="SENIOR FAMILY">Senior Family</option><option value="STUDENT">Student (14-22)</option><option value="CORPORATE">Corporate</option><option value="CORPORATE FAMILY">Corporate Family</option><option value="MILITARY">Military</option><option value="HD6">Staff (HD6)</option><option value="HCHF">Staff (HCHF)</option></select></div>
-                        <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Home Center</label><select id="center" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors font-bold text-slate-700"><option value="Anthony">Anthony</option><option value="Harper">Harper</option></select></div>
-                     </div>
-                     <button type="submit" disabled={isAdding} className="w-full bg-[#1080ad] text-white p-5 rounded-xl font-bold mt-8 shadow-lg hover:bg-blue-800 transition-colors text-lg flex items-center justify-center gap-2">{isAdding ? 'Saving to Airtable...' : 'Create Member Profile'}</button>
-                  </form>
-                </>
-              )}
-           </div>
-        </div>
-      )}
+      {showAddModal && (<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#001f3f]/90 backdrop-blur-md"><div className="bg-white rounded-3xl w-full max-w-xl p-10 relative shadow-2xl"><button onClick={() => { setShowAddModal(false); setNewMemberPin(null); }} className="absolute top-6 right-6 text-slate-300 hover:text-red-500 transition-all"><X size={24}/></button>{newMemberPin ? (<div className="flex flex-col items-center justify-center text-center py-4"><CheckCircle size={64} className="text-[#16a34a] mb-6" /><h3 className="text-2xl font-black text-[#001f3f] mb-2">Member Created!</h3><p className="text-slate-500 mb-8">Give this PIN to <strong>{newMemberPin.name}</strong></p><div className="bg-slate-100 px-12 py-6 rounded-2xl mb-8"><p className="text-5xl font-black tracking-[0.3em] text-[#001f3f]">{newMemberPin.pin}</p></div><p className="text-xs text-slate-400 mb-8">They will use this PIN + their email to log in.</p><button onClick={() => { setNewMemberPin(null); setShowAddModal(false); window.location.reload(); }} className="bg-[#001f3f] text-white px-8 py-4 rounded-xl font-bold">Done</button></div>) : (<><h3 className="text-3xl font-black text-[#001f3f] mb-2 tracking-tight">Manual Registration</h3><p className="text-slate-500 font-medium mb-8">Add a new member. A random PIN will be generated automatically.</p><form onSubmit={handleAddMemberSubmit} className="space-y-5"><div className="grid grid-cols-2 gap-5"><div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">First Name</label><input id="fname" required className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div><div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Last Name</label><input id="lname" required className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div></div><div className="grid grid-cols-2 gap-5"><div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Email</label><input type="email" id="email" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div><div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Phone</label><input id="phone" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div></div><div className="grid grid-cols-2 gap-5"><div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Plan Type</label><select id="plan" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors font-bold text-slate-700"><option value="SINGLE">Single</option><option value="FAMILY">Family</option><option value="SENIOR CITIZEN">Senior Citizen</option><option value="SENIOR FAMILY">Senior Family</option><option value="STUDENT">Student (14-22)</option><option value="CORPORATE">Corporate</option><option value="CORPORATE FAMILY">Corporate Family</option><option value="MILITARY">Military</option><option value="HD6">Staff (HD6)</option><option value="HCHF">Staff (HCHF)</option></select></div><div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Home Center</label><select id="center" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors font-bold text-slate-700"><option value="Anthony">Anthony</option><option value="Harper">Harper</option></select></div></div><button type="submit" disabled={isAdding} className="w-full bg-[#1080ad] text-white p-5 rounded-xl font-bold mt-8 shadow-lg hover:bg-blue-800 transition-colors text-lg flex items-center justify-center gap-2">{isAdding ? 'Saving to Airtable...' : 'Create Member Profile'}</button></form></>)}</div></div>)}
 
-      {/* MEMBER DETAIL MODAL — delete is admin-only, PIN reset button added */}
-      {selectedMember && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#001f3f]/90 backdrop-blur-md">
-           <div className="bg-white rounded-[2rem] w-full max-w-4xl flex overflow-hidden shadow-2xl relative">
-              <button onClick={() => setSelectedMember(null)} className="absolute top-6 right-6 text-slate-300 hover:text-red-500 transition-all"><X size={24}/></button>
-              <div className="w-1/3 bg-slate-50 p-12 flex flex-col items-center justify-center border-r border-slate-100">
-                 <div className="bg-white p-6 rounded-2xl shadow-xl mb-8 border border-slate-100"><QRCode data={selectedMember.id} size={180} /></div>
-                 <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Member Identity</p>
-                 <p className="text-xl font-bold text-[#001f3f]">#{selectedMember.id}</p>
-              </div>
-              <div className="flex-1 p-16">
-                 {selectedMember.needsOrientation && (<div className="mb-6 bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg"><p className="text-blue-800 font-bold text-sm">Action Required: This member has not completed their orientation.</p></div>)}
-                 <span className={`px-4 py-1 rounded-full text-[10px] font-black tracking-widest ${getStoplight(selectedMember) === 'green' ? 'bg-green-100 text-green-600' : getStoplight(selectedMember) === 'yellow' ? 'bg-yellow-100 text-yellow-600' : 'bg-red-100 text-red-600'}`}>{getStoplight(selectedMember) === 'green' ? 'ACTIVE' : getStoplight(selectedMember) === 'yellow' ? 'GRACE PERIOD' : 'ACCOUNT LOCKED'}</span>
-                 <h2 className="text-6xl font-black text-slate-900 mt-6 mb-12 tracking-tighter leading-none">{selectedMember.firstName}<br/>{selectedMember.lastName}</h2>
-                 <div className="grid grid-cols-2 gap-8 gap-x-12">
-                    <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Membership Type</p><p className="text-lg font-bold text-slate-800">{selectedMember.type}</p></div>
-                    <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Contact Info</p><p className="text-sm font-bold text-slate-800 truncate">{selectedMember.email || 'No Email'}<br/>{selectedMember.phone || 'No Phone'}</p></div>
-                    <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Renewal Date</p><p className={`text-lg font-bold ${getStoplight(selectedMember) !== 'green' ? 'text-red-500' : 'text-slate-800'}`}>{selectedMember.nextPayment || 'N/A'}</p></div>
-                 </div>
-                 <div className="mt-14 flex gap-4">
-                    <button onClick={() => { processCheckIn(selectedMember.id, "Director Override"); setSelectedMember(null); }} className="flex-1 bg-[#001f3f] text-white py-4 rounded-xl font-bold shadow-xl shadow-blue-900/20 active:scale-95 transition-all text-sm">Force Manual Check-In</button>
-                    <button onClick={() => handleResetPin(selectedMember)} className="px-6 bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex items-center justify-center" title="Reset PIN"><KeyRound size={20} /></button>
-                    {user?.role === 'admin' && (
-                      <button onClick={handleDeleteMember} disabled={isDeleting} className="px-6 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex items-center justify-center">
-                         {isDeleting ? '...' : <Trash2 size={20} />}
-                      </button>
-                    )}
-                 </div>
-              </div>
-           </div>
-        </div>
-      )}
+      {selectedMember && (<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#001f3f]/90 backdrop-blur-md"><div className="bg-white rounded-[2rem] w-full max-w-4xl flex overflow-hidden shadow-2xl relative"><button onClick={() => setSelectedMember(null)} className="absolute top-6 right-6 text-slate-300 hover:text-red-500 transition-all"><X size={24}/></button><div className="w-1/3 bg-slate-50 p-12 flex flex-col items-center justify-center border-r border-slate-100"><div className="bg-white p-6 rounded-2xl shadow-xl mb-8 border border-slate-100"><QRCode data={selectedMember.id} size={180} /></div><p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Member Identity</p><p className="text-xl font-bold text-[#001f3f]">#{selectedMember.id}</p></div><div className="flex-1 p-16">{selectedMember.needsOrientation && (<div className="mb-6 bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg"><p className="text-blue-800 font-bold text-sm">Action Required: This member has not completed their orientation.</p></div>)}<span className={`px-4 py-1 rounded-full text-[10px] font-black tracking-widest ${getStoplight(selectedMember) === 'green' ? 'bg-green-100 text-green-600' : getStoplight(selectedMember) === 'yellow' ? 'bg-yellow-100 text-yellow-600' : 'bg-red-100 text-red-600'}`}>{getStoplight(selectedMember) === 'green' ? 'ACTIVE' : getStoplight(selectedMember) === 'yellow' ? 'GRACE PERIOD' : 'ACCOUNT LOCKED'}</span><h2 className="text-6xl font-black text-slate-900 mt-6 mb-12 tracking-tighter leading-none">{selectedMember.firstName}<br/>{selectedMember.lastName}</h2><div className="grid grid-cols-2 gap-8 gap-x-12"><div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Membership Type</p><p className="text-lg font-bold text-slate-800">{selectedMember.type}</p></div><div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Contact Info</p><p className="text-sm font-bold text-slate-800 truncate">{selectedMember.email || 'No Email'}<br/>{selectedMember.phone || 'No Phone'}</p></div><div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Renewal Date</p><p className={`text-lg font-bold ${getStoplight(selectedMember) !== 'green' ? 'text-red-500' : 'text-slate-800'}`}>{selectedMember.nextPayment || 'N/A'}</p></div></div><div className="mt-14 flex gap-4"><button onClick={() => { processCheckIn(selectedMember.id, "Director Override"); setSelectedMember(null); }} className="flex-1 bg-[#001f3f] text-white py-4 rounded-xl font-bold shadow-xl shadow-blue-900/20 active:scale-95 transition-all text-sm">Force Manual Check-In</button><button onClick={() => handleResetPin(selectedMember)} className="px-6 bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex items-center justify-center" title="Reset PIN"><KeyRound size={20} /></button>{user?.role === 'admin' && (<button onClick={handleDeleteMember} disabled={isDeleting} className="px-6 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex items-center justify-center">{isDeleting ? '...' : <Trash2 size={20} />}</button>)}</div></div></div></div>)}
     </div>
   );
 }
