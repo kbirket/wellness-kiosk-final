@@ -1,58 +1,33 @@
 // /app/api/login/route.js
-// Server-side authentication — credentials never sent to the browser
+// Server-side authentication
+// - Director accounts: credentials from env vars
+// - Corporate accounts: pulled from Airtable "Corporate Partners" table
 //
-// Add these to your .env.local:
+// Required env vars:
+//   AIRTABLE_API_KEY=pat_xxxxxxxxxxxxx
+//   AIRTABLE_BASE_ID=appXXXXXXXXXXXXXX
 //   DIRECTOR_ADMIN_PASS=admin2026
 //   DIRECTOR_HARPER_PASS=harper2026
 //   DIRECTOR_ANTHONY_PASS=anthony2026
-//   CORP_ACME_PASS=acme2026
-//   CORP_PATTERSON_PASS=patterson2026
-//   AUTH_SECRET=wellness-hub-secret-change-me-to-something-random
-//
-// Generate a real AUTH_SECRET with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+//   AUTH_SECRET=<random string>
 
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 
 const AUTH_SECRET = process.env.AUTH_SECRET || 'fallback-dev-secret';
+const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
+const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
 
-// Director accounts — passwords from env vars, never in client code
 const DIRECTORS = [
   { username: 'admin', password: process.env.DIRECTOR_ADMIN_PASS, name: 'System Admin', center: 'both', role: 'admin' },
-  { username: 'harper', password: process.env.DIRECTOR_HARPER_PASS, name: 'Patrick', center: 'harper', role: 'director' },
-  { username: 'anthony', password: process.env.DIRECTOR_ANTHONY_PASS, name: 'Deanna', center: 'anthony', role: 'director' },
+  { username: 'harper', password: process.env.DIRECTOR_HARPER_PASS, name: 'Harper Director', center: 'harper', role: 'director' },
+  { username: 'anthony', password: process.env.DIRECTOR_ANTHONY_PASS, name: 'Anthony Director', center: 'anthony', role: 'director' },
 ];
 
-// Corporate partner accounts
-const CORPORATES = [
-  { username: 'acme', password: process.env.CORP_ACME_PASS, companyName: 'Acme Corp' },
-  { username: 'patterson', password: process.env.CORP_PATTERSON_PASS, companyName: 'Patterson Inc' },
-];
-
-// Generate a signed session token (HMAC — not a full JWT, but secure for this use case)
 function createToken(payload) {
-  const data = JSON.stringify({ ...payload, exp: Date.now() + (8 * 60 * 60 * 1000) }); // 8 hour expiry
+  const data = JSON.stringify({ ...payload, exp: Date.now() + (8 * 60 * 60 * 1000) });
   const signature = crypto.createHmac('sha256', AUTH_SECRET).update(data).digest('hex');
-  // Base64 encode payload + signature
-  const token = Buffer.from(JSON.stringify({ data, signature })).toString('base64');
-  return token;
-}
-
-// Verify and decode a token
- function verifyToken(token) {
-  try {
-    const { data, signature } = JSON.parse(Buffer.from(token, 'base64').toString());
-    const expectedSig = crypto.createHmac('sha256', AUTH_SECRET).update(data).digest('hex');
-    
-    if (signature !== expectedSig) return null; // Tampered
-    
-    const payload = JSON.parse(data);
-    if (payload.exp < Date.now()) return null; // Expired
-    
-    return payload;
-  } catch {
-    return null;
-  }
+  return Buffer.from(JSON.stringify({ data, signature })).toString('base64');
 }
 
 export async function POST(request) {
@@ -66,7 +41,7 @@ export async function POST(request) {
     const u = username.toLowerCase().trim();
     const p = password.trim();
 
-    // Director login
+    // ---- DIRECTOR LOGIN ----
     if (loginType === 'director') {
       const found = DIRECTORS.find(d => d.username === u && d.password === p);
       if (!found) {
@@ -84,18 +59,37 @@ export async function POST(request) {
       return NextResponse.json({
         success: true,
         token,
-        user: {
-          username: found.username,
-          name: found.name,
-          center: found.center,
-          role: found.role,
-        },
+        user: { username: found.username, name: found.name, center: found.center, role: found.role },
       });
     }
 
-    // Corporate login
+    // ---- CORPORATE LOGIN (from Airtable) ----
     if (loginType === 'corporate') {
-      const found = CORPORATES.find(c => c.username === u && c.password === p);
+      const tableName = encodeURIComponent('Corporate Partners');
+      const airtableUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${tableName}`;
+
+      const res = await fetch(airtableUrl, {
+        headers: { 'Authorization': `Bearer ${AIRTABLE_API_KEY}` },
+      });
+
+      if (!res.ok) {
+        console.error('Airtable fetch failed:', await res.text());
+        return NextResponse.json({ error: 'Could not verify corporate credentials' }, { status: 500 });
+      }
+
+      const airtableData = await res.json();
+      const partners = (airtableData.records || []).map(r => ({
+        username: String(r.fields['Username'] || '').toLowerCase().trim(),
+        password: String(r.fields['Password'] || '').trim(),
+        companyName: String(r.fields['Company Name'] || '').trim(),
+        sponsorFieldName: String(r.fields['Sponsor Match'] || r.fields['Company Name'] || '').trim(),
+        contactName: r.fields['Contact Name'] || '',
+        contactEmail: r.fields['Contact Email'] || '',
+        active: r.fields['Active'] !== false,
+      }));
+
+      const found = partners.find(c => c.username === u && c.password === p && c.active);
+
       if (!found) {
         return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
       }
@@ -104,6 +98,7 @@ export async function POST(request) {
         type: 'corporate',
         username: found.username,
         companyName: found.companyName,
+        sponsorFieldName: found.sponsorFieldName,
       });
 
       return NextResponse.json({
@@ -112,6 +107,7 @@ export async function POST(request) {
         corp: {
           username: found.username,
           companyName: found.companyName,
+          sponsorFieldName: found.sponsorFieldName,
         },
       });
     }
