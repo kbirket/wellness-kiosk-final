@@ -19,8 +19,9 @@ const AUTH_SECRET = process.env.AUTH_SECRET || 'fallback-dev-secret';
 // Director accounts — passwords from env vars, never in client code
 const DIRECTORS = [
   { username: 'admin', password: process.env.DIRECTOR_ADMIN_PASS, name: 'System Admin', center: 'both', role: 'admin' },
-  { username: 'harper', password: process.env.DIRECTOR_HARPER_PASS, name: 'Harper Director', center: 'harper', role: 'director' },
-  { username: 'anthony', password: process.env.DIRECTOR_ANTHONY_PASS, name: 'Anthony Director', center: 'anthony', role: 'director' },
+  { username: 'harper', password: process.env.DIRECTOR_HARPER_PASS, name: 'Patrick', center: 'harper', role: 'director' },
+  { username: 'anthony', password: process.env.DIRECTOR_ANTHONY_PASS, name: 'Deanna', center: 'anthony', role: 'director' },
+];
 ];
 
 // Corporate partner accounts
