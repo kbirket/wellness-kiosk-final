@@ -39,7 +39,7 @@ function createToken(payload) {
 }
 
 // Verify and decode a token
-export function verifyToken(token) {
+ function verifyToken(token) {
   try {
     const { data, signature } = JSON.parse(Buffer.from(token, 'base64').toString());
     const expectedSig = crypto.createHmac('sha256', AUTH_SECRET).update(data).digest('hex');
