@@ -26,6 +26,8 @@ export async function POST(request) {
               "Phone": body.phone,
               "Plan Name": body.plan,
               "Home Center": body.center,
+              // NEW: We are sending the Birthday to Airtable!
+              "Birthday": body.birthday,
               "Membership Status": "ACTIVE"
             }
           }
