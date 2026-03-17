@@ -6,7 +6,7 @@ import {
   Users, Search, QrCode, CreditCard, X, CheckCircle, 
   AlertCircle, TrendingUp, Calendar, MapPin, Mail, LogOut, 
   ShieldCheck, Phone, Activity, ChevronRight, LayoutDashboard,
-  Filter, Download, Bell, FileText, Plus, Smartphone, Clock, Camera, UserCircle, Lock, Printer, Trash2
+  Filter, Download, Bell, FileText, Plus, Smartphone, Clock, Camera, UserCircle, Lock, Printer, Trash2, Briefcase
 } from 'lucide-react';
 
 const QRCode = ({ data, size = 160, darkColor = '#001f3f' }) => {
@@ -56,12 +56,19 @@ const DIRECTORS = [
   { username: 'anthony', password: 'anthony2026', name: 'Anthony Director', center: 'anthony' }
 ];
 
+// NEW: CORPORATE PARTNER ACCOUNTS
+const CORPORATES = [
+  { username: 'acme', password: 'acme2026', companyName: 'Acme Corp' },
+  { username: 'patterson', password: 'patterson2026', companyName: 'Patterson Inc' }
+];
+
 export default function WellnessHub() {
   const [isMounted, setIsMounted] = useState(false);
   const [currentDateString, setCurrentDateString] = useState('');
   const [view, setView] = useState('landing'); 
   const [user, setUser] = useState(null);
   const [activeMember, setActiveMember] = useState(null);
+  const [activeCorp, setActiveCorp] = useState(null); // NEW: Tracks logged-in business
   
   const [members, setMembers] = useState([]);
   const [visits, setVisits] = useState([]);
@@ -79,7 +86,6 @@ export default function WellnessHub() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   
-  // NEW: State for deleting a member
   const [isDeleting, setIsDeleting] = useState(false);
 
   const [kioskMessage, setKioskMessage] = useState({text: '', type: '', subtext: ''});
@@ -113,8 +119,22 @@ export default function WellnessHub() {
     } else { alert('Incorrect credentials.'); }
   };
 
+  const handleCorpLogin = () => {
+    const u = document.getElementById('c_in').value.toLowerCase().trim();
+    const p = document.getElementById('c_pin').value.trim();
+    const found = CORPORATES.find(c => c.username === u && c.password === p);
+    if(found) { 
+      setActiveCorp(found);
+      setView('corp_portal'); 
+    } else { alert('Incorrect corporate credentials.'); }
+  };
+
   const handleLogout = () => {
-    setUser(null); localStorage.removeItem('wellnessUser'); localStorage.removeItem('wellnessCenter'); setView('landing');
+    setUser(null); 
+    setActiveCorp(null);
+    localStorage.removeItem('wellnessUser'); 
+    localStorage.removeItem('wellnessCenter'); 
+    setView('landing');
   };
 
   useEffect(() => {
@@ -146,6 +166,7 @@ export default function WellnessHub() {
               visits: Number(r.fields['Total Visits'] || 0),
               nextPayment: r.fields['Next Payment Due'] || null,
               sponsor: !!r.fields['Corporate Sponsor'],
+              sponsorName: r.fields['Corporate Sponsor'] ? String(r.fields['Corporate Sponsor']).trim() : '', // Captures the specific company name!
               needsOrientation: !!r.fields['Needs Orientation'], 
             };
           });
@@ -259,7 +280,6 @@ export default function WellnessHub() {
     setIsAdding(false);
   };
 
-  // NEW: Handle deleting a member
   const handleDeleteMember = async () => {
     if (!window.confirm(`Are you sure you want to permanently delete ${selectedMember.firstName} ${selectedMember.lastName}? This cannot be undone.`)) {
         return;
@@ -275,7 +295,6 @@ export default function WellnessHub() {
         const result = await res.json();
         
         if (result.success) {
-            // Remove them from the local screen so we don't have to refresh
             setMembers(prev => prev.filter(m => m.airtableId !== selectedMember.airtableId));
             setSelectedMember(null);
         } else {
@@ -433,20 +452,25 @@ Total Members:,${stats.total}
   if (view === 'landing') {
     return (
       <div className="min-h-screen bg-[#001f3f] flex items-center justify-center font-sans p-6 relative">
-        <div className="text-center max-w-5xl w-full relative z-10">
+        <div className="text-center max-w-6xl w-full relative z-10">
           <img src={LOGO_URL} alt="Logo" className="h-40 mx-auto mb-16 opacity-100 drop-shadow-2xl" />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-             <button onClick={() => setView('login')} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group">
-                <ShieldCheck size={56} className="text-[#f59e0b] group-hover:scale-110 transition-transform" />
-                <span className="text-xl font-bold">Director Portal</span>
-             </button>
+          {/* NEW: EXPANDED TO 4 COLUMNS TO FIT CORPORATE */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
              <button onClick={() => {setView('kiosk'); setViewingCenter('both'); setKioskInput('');}} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group">
                 <Smartphone size={56} className="text-[#1080ad] group-hover:scale-110 transition-transform" />
                 <span className="text-xl font-bold">Public Kiosk</span>
              </button>
-             <button onClick={() => setView('member_login')} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group border-b-4 border-b-[#16a34a]">
+             <button onClick={() => setView('member_login')} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group">
                 <UserCircle size={56} className="text-[#16a34a] group-hover:scale-110 transition-transform" />
                 <span className="text-xl font-bold">Member Portal</span>
+             </button>
+             <button onClick={() => setView('corp_login')} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group">
+                <Briefcase size={56} className="text-[#8b5cf6] group-hover:scale-110 transition-transform" />
+                <span className="text-xl font-bold">Corporate Portal</span>
+             </button>
+             <button onClick={() => setView('login')} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group border-b-4 border-b-[#f59e0b]">
+                <ShieldCheck size={56} className="text-[#f59e0b] group-hover:scale-110 transition-transform" />
+                <span className="text-xl font-bold">Director Portal</span>
              </button>
           </div>
         </div>
@@ -456,6 +480,90 @@ Total Members:,${stats.total}
       </div>
     );
   }
+
+  // --- NEW: CORPORATE LOGIN VIEW ---
+  if (view === 'corp_login') {
+    return (
+      <div className="min-h-screen bg-[#001f3f] flex items-center justify-center p-4 font-sans">
+        <div className="bg-white rounded-[3rem] shadow-2xl p-12 w-full max-w-md border-t-8 border-[#8b5cf6]">
+          <div className="flex justify-center mb-6"><Briefcase size={64} className="text-[#8b5cf6]" /></div>
+          <h2 className="text-4xl font-black text-center text-slate-900 mb-2 tracking-tight">Partner Login</h2>
+          <p className="text-slate-400 mb-10 text-center font-medium tracking-tight">Access your employee wellness roster.</p>
+          <input type="text" placeholder="Company Username" id="c_in" className="w-full p-5 bg-slate-100 rounded-2xl mb-4 outline-none border-2 border-transparent focus:border-purple-500/20 text-lg" onKeyDown={(e) => e.key === 'Enter' && handleCorpLogin()} />
+          <input type="password" placeholder="Access PIN" id="c_pin" className="w-full p-5 bg-slate-100 rounded-2xl mb-8 outline-none border-2 border-transparent focus:border-purple-500/20 text-lg" onKeyDown={(e) => e.key === 'Enter' && handleCorpLogin()} />
+          <button onClick={handleCorpLogin} className="w-full bg-[#8b5cf6] text-white p-5 rounded-2xl font-bold text-xl shadow-xl hover:bg-purple-700 transition-all">Sign In</button>
+          <button onClick={() => setView('landing')} className="w-full mt-6 text-slate-400 font-bold hover:text-slate-600 transition-colors">Return to Home</button>
+        </div>
+      </div>
+    );
+  }
+
+  // --- NEW: CORPORATE DASHBOARD VIEW ---
+  if (view === 'corp_portal' && activeCorp) {
+    const corpMembers = members.filter(m => m.sponsorName.toLowerCase() === activeCorp.companyName.toLowerCase());
+    const totalCorpVisits = corpMembers.reduce((sum, m) => sum + m.visits, 0);
+    const singlePlans = corpMembers.filter(m => m.type.includes('SINGLE')).length;
+    const familyPlans = corpMembers.filter(m => m.type.includes('FAMILY')).length;
+
+    return (
+      <div className="min-h-screen bg-[#f0f2f5] font-sans">
+        <nav className="bg-[#001f3f] text-white p-4 shadow-md flex justify-between items-center sticky top-0 z-10">
+          <div className="flex items-center gap-3">
+             <img src={LOGO_URL} alt="Logo" className="h-6" /> 
+             <span className="font-bold tracking-tight border-l border-white/20 pl-3">Corporate Partner Portal</span>
+          </div>
+          <button onClick={handleLogout} className="text-white/60 hover:text-white flex items-center gap-2 text-sm font-medium">
+             <LogOut size={16}/> Sign Out
+          </button>
+        </nav>
+
+        <main className="max-w-5xl mx-auto p-8 space-y-8 mt-4">
+           <div>
+             <h1 className="text-4xl font-black text-[#001f3f] tracking-tight mb-1">{activeCorp.companyName} Wellness Roster</h1>
+             <p className="text-slate-500 font-medium">Review your enrolled employees and gym utilization.</p>
+           </div>
+
+           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <ProStatCard value={corpMembers.length} label="Total Enrolled" color="#001f3f" />
+              <ProStatCard value={totalCorpVisits} label="Total Visits" color="#1080ad" />
+              <ProStatCard value={singlePlans} label="Individual Plans" color="#16a34a" />
+              <ProStatCard value={familyPlans} label="Family Plans" color="#f59e0b" />
+           </div>
+
+           <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="p-6 border-b border-slate-100 bg-slate-50">
+                 <h3 className="text-lg font-bold text-[#001f3f]">Employee Directory</h3>
+              </div>
+              <table className="w-full text-left border-collapse">
+                 <thead className="bg-white text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                    <tr>
+                       <th className="px-8 py-4">Employee Name</th>
+                       <th className="px-8 py-4">Member ID</th>
+                       <th className="px-8 py-4">Plan Type</th>
+                       <th className="px-8 py-4 text-right">Lifetime Visits</th>
+                    </tr>
+                 </thead>
+                 <tbody className="text-sm">
+                    {corpMembers.length === 0 ? (
+                       <tr><td colSpan="4" className="text-center py-12 text-slate-400 font-medium italic">No employees currently enrolled under this company.</td></tr>
+                    ) : (
+                       corpMembers.map(m => (
+                          <tr key={m.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors">
+                             <td className="px-8 py-5 font-bold text-slate-800">{m.firstName} {m.lastName}</td>
+                             <td className="px-8 py-5 font-mono text-slate-400">{m.id}</td>
+                             <td className="px-8 py-5"><span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black tracking-tight">{m.type}</span></td>
+                             <td className="px-8 py-5 text-right font-black text-[#1080ad] text-lg">{m.visits}</td>
+                          </tr>
+                       ))
+                    )}
+                 </tbody>
+              </table>
+           </div>
+        </main>
+      </div>
+    );
+  }
+
 
   if (view === 'kiosk') {
     return (
@@ -1237,7 +1345,6 @@ Total Members:,${stats.total}
                     </div>
                  </div>
 
-                 {/* NEW: THE DELETE BUTTON IS NOW HERE! */}
                  <div className="mt-14 flex gap-4">
                     <button onClick={() => { processCheckIn(selectedMember.id, "Director Override"); setSelectedMember(null); }} className="flex-1 bg-[#001f3f] text-white py-4 rounded-xl font-bold shadow-xl shadow-blue-900/20 active:scale-95 transition-all text-sm">Force Manual Check-In</button>
                     <button onClick={handleDeleteMember} disabled={isDeleting} className="px-6 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex items-center justify-center">
