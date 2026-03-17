@@ -1,25 +1,23 @@
 // @ts-nocheck
 'use client';
 import { useState, useEffect } from 'react';
-import { CheckCircle, Activity, CreditCard, UserCircle, LogOut, Dumbbell } from 'lucide-react';
+import { CheckCircle, Activity, CreditCard, UserCircle, LogOut, Dumbbell, QrCode as QrIcon } from 'lucide-react';
 
 const QRCode = ({ data, size = 120 }) => {
   const safeData = encodeURIComponent(data || "WC-000");
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${safeData}&color=001f3f&bgcolor=transparent`;
-  return <img src={qrUrl} alt="QR Code" className="mx-auto rounded-xl mix-blend-multiply" style={{ width: size, height: size }} />;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${safeData}&color=001f3f&bgcolor=ffffff`;
+  return <img src={qrUrl} alt="QR Code" className="mx-auto rounded-xl shadow-sm" style={{ width: size, height: size }} />;
 };
 
 export default function MemberWidget() {
   const [members, setMembers] = useState([]);
-  const [workouts, setWorkouts] = useState([]); // NEW: State to hold the workouts!
+  const [workouts, setWorkouts] = useState([]); 
   const [activeMember, setActiveMember] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Hide the main page background so the widget is transparent on your website!
     document.body.style.background = 'transparent';
 
-    // FETCH 1: Get the members
     fetch('/api/members')
       .then(res => res.json())
       .then(data => {
@@ -44,7 +42,6 @@ export default function MemberWidget() {
           setMembers(mapped);
         }
         
-        // FETCH 2: Get the saved workouts
         fetch('/api/get-workouts')
           .then(res => res.json())
           .then(workoutData => {
@@ -70,7 +67,6 @@ export default function MemberWidget() {
     
     if(found) {
       setActiveMember(found);
-      // THE MAGIC CONNECTION: This tells the Fitforge website exactly who is logged in!
       window.parent.postMessage({ 
           type: 'FITFORGE_LOGIN', 
           memberId: found.id, 
@@ -83,7 +79,6 @@ export default function MemberWidget() {
 
   const handleLogout = () => {
       setActiveMember(null);
-      // Tells Fitforge they logged out
       window.parent.postMessage({ type: 'FITFORGE_LOGOUT' }, '*');
   };
 
@@ -96,103 +91,103 @@ export default function MemberWidget() {
     return 'red'; 
   };
 
-  if (loading) return <div className="p-8 text-center text-slate-400 font-bold animate-pulse">Loading secure portal...</div>;
+  if (loading) return <div className="p-8 text-center text-slate-400 font-bold animate-pulse">Loading secure connection...</div>;
 
-  // --- WIDE LOGIN SCREEN ---
+  // --- SLEEK DARK LOGIN BANNER ---
   if (!activeMember) {
     return (
-      <div className="bg-white/90 backdrop-blur-md p-6 sm:p-10 rounded-[2rem] shadow-xl border border-slate-100 max-w-5xl mx-auto w-full font-sans">
-         <div className="flex flex-col md:flex-row items-center gap-8">
-            <div className="flex-1 text-center md:text-left border-b md:border-b-0 md:border-r border-slate-200 pb-6 md:pb-0 md:pr-8">
-               <UserCircle size={56} className="text-[#1080ad] mx-auto md:mx-0 mb-4" />
-               <h2 className="text-3xl font-black text-[#001f3f] tracking-tight">Member Access</h2>
-               <p className="text-slate-500 font-medium mt-2">Log in to view your digital badge and automatically sync your Fitforge custom workouts.</p>
+      <div className="w-full max-w-4xl mx-auto bg-[#1a1c23]/90 backdrop-blur-md border border-slate-700/50 rounded-2xl p-6 sm:p-8 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6 font-sans">
+         <div className="flex items-center gap-4 text-center md:text-left">
+            <div className="bg-blue-500/20 p-3 rounded-full text-blue-400 hidden sm:block">
+               <UserCircle size={36} />
             </div>
-            <div className="flex-1 w-full space-y-4">
-               <input type="email" id="w_email" placeholder="Account Email" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" />
-               <input type="password" id="w_pin" maxLength={4} placeholder="4-Digit Birthday (MMDD)" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] tracking-[0.5em] text-center transition-colors" onKeyDown={e => e.key === 'Enter' && handleLogin()}/>
-               <button onClick={handleLogin} className="w-full bg-[#1080ad] text-white p-4 rounded-xl font-bold shadow-lg hover:bg-blue-800 transition-colors text-lg">Sync & Login</button>
+            <div>
+               <h2 className="text-2xl font-black text-white tracking-tight">Member Sync</h2>
+               <p className="text-sm text-slate-400 font-medium mt-1">Log in to track workouts and view your ID.</p>
             </div>
+         </div>
+         <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+            <input type="email" id="w_email" placeholder="Account Email" className="w-full sm:w-56 p-3.5 bg-slate-900 border border-slate-700 text-white rounded-xl outline-none focus:border-blue-500 transition-colors text-sm" />
+            <input type="password" id="w_pin" maxLength={4} placeholder="PIN (MMDD)" className="w-full sm:w-32 p-3.5 bg-slate-900 border border-slate-700 text-white rounded-xl outline-none focus:border-blue-500 tracking-[0.3em] text-center transition-colors text-sm" onKeyDown={e => e.key === 'Enter' && handleLogin()}/>
+            <button onClick={handleLogin} className="w-full sm:w-auto bg-[#1080ad] hover:bg-blue-500 text-white px-8 py-3.5 rounded-xl font-bold shadow-lg transition-colors text-sm whitespace-nowrap">Connect</button>
          </div>
       </div>
     );
   }
 
-  // --- WIDE PORTAL DASHBOARD ---
+  // --- SLEEK DARK DASHBOARD ---
   const statusColor = getStoplight(activeMember);
-  
-  // Filter workouts for ONLY the person logged in!
   const myWorkouts = workouts.filter(w => w.memberId === activeMember.id);
   
   return (
-    <div className="bg-white/95 backdrop-blur-md p-8 rounded-[2rem] shadow-xl border border-slate-100 max-w-5xl mx-auto w-full font-sans relative overflow-hidden">
-       <div className={`absolute top-0 left-0 w-full h-2 ${statusColor === 'green' ? 'bg-[#16a34a]' : statusColor === 'yellow' ? 'bg-[#f59e0b]' : 'bg-[#ef4444]'}`}></div>
+    <div className="w-full max-w-4xl mx-auto bg-[#1a1c23]/95 backdrop-blur-md border border-slate-700/50 rounded-2xl shadow-2xl overflow-hidden font-sans">
        
-       <div className="flex justify-between items-start mb-8 pb-6 border-b border-slate-100">
-          <div>
-            <h1 className="text-3xl font-black text-[#001f3f] tracking-tight">Hi, {activeMember.firstName}!</h1>
-            <span className={`inline-block mt-2 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase ${statusColor === 'green' ? 'bg-green-100 text-green-700' : statusColor === 'yellow' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
-               {statusColor === 'green' ? 'ACTIVE MEMBER' : statusColor === 'yellow' ? 'PAYMENT DUE' : 'ACCOUNT LOCKED'}
-            </span>
-          </div>
-          <button onClick={handleLogout} className="text-slate-400 hover:text-red-500 hover:bg-red-50 px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold transition-all">
-            <LogOut size={18}/> Sign Out
-          </button>
-       </div>
-
-       <div className="flex flex-col md:flex-row gap-10 items-start">
-          {/* QR Code Column */}
-          <div className="flex flex-col items-center justify-center w-full md:w-1/3">
-             <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200 mb-3 shadow-inner">
-                <QRCode data={activeMember.id} size={150} />
-             </div>
-             <p className="text-xl font-black text-[#001f3f] tracking-widest">{activeMember.id}</p>
-             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Scan at Front Desk</p>
-             
-             <div className="w-full mt-6 bg-blue-50/50 p-5 rounded-2xl border border-blue-100 text-center">
-                <div className="flex items-center justify-center gap-2 text-blue-800 mb-1"><Activity size={18} className="text-[#1080ad]"/><h3 className="font-bold">Lifetime Visits</h3></div>
-                <p className="text-4xl font-black text-[#1080ad]">{activeMember.visits}</p>
-             </div>
-          </div>
-
-          {/* Stats & Workouts Column */}
-          <div className="flex-1 w-full flex flex-col h-full space-y-6">
-             
-             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                 <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200">
-                    <div className="flex items-center gap-2 text-slate-700 mb-3"><CreditCard size={18} className="text-slate-500"/><h3 className="font-bold">Account Info</h3></div>
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-tight">Plan: <span className="text-slate-800 ml-1">{activeMember.type}</span></p>
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-tight mt-2">Renews: <span className={`ml-1 ${statusColor !== 'green' ? 'text-red-500' : 'text-slate-800'}`}>{activeMember.nextPayment || 'N/A'}</span></p>
+       {/* Top Status Bar */}
+       <div className={`h-1.5 w-full ${statusColor === 'green' ? 'bg-green-500' : statusColor === 'yellow' ? 'bg-yellow-500' : 'bg-red-500'}`}></div>
+       
+       <div className="p-6">
+           {/* Header */}
+           <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-700/50">
+              <div className="flex items-center gap-3">
+                 <div className="w-10 h-10 bg-blue-500/20 text-blue-400 rounded-full flex items-center justify-center font-bold text-lg">{activeMember.firstName.charAt(0)}</div>
+                 <div>
+                    <h1 className="text-xl font-black text-white leading-tight">{activeMember.firstName} {activeMember.lastName}</h1>
+                    <p className="text-xs text-slate-400 font-mono mt-0.5">{activeMember.id} • {activeMember.type}</p>
                  </div>
-                 <div className="bg-gradient-to-r from-[#1080ad] to-[#001f3f] p-5 rounded-2xl text-white shadow-lg flex flex-col justify-center">
-                    <h3 className="font-bold text-lg flex items-center gap-2"><CheckCircle size={18} className="text-green-400" /> Fitforge Active</h3>
-                    <p className="text-sm text-blue-200 mt-1 font-medium leading-tight">Your generated workouts will automatically save to your profile.</p>
-                 </div>
-             </div>
+              </div>
+              <button onClick={handleLogout} className="bg-red-500/10 hover:bg-red-500/20 text-red-400 px-4 py-2 rounded-lg flex items-center gap-2 text-xs font-bold transition-all border border-red-500/20">
+                <LogOut size={14}/> Disconnect
+              </button>
+           </div>
 
-             {/* THE NEW SAVED WORKOUTS FILING CABINET */}
-             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex-1 flex flex-col max-h-[400px]">
-                <h3 className="font-bold text-[#001f3f] mb-4 flex items-center gap-2"><Dumbbell size={18} className="text-[#8b5cf6]"/> My Saved Workouts</h3>
-                
-                <div className="overflow-y-auto pr-2 space-y-4 custom-scrollbar flex-1">
-                    {myWorkouts.length > 0 ? (
-                        myWorkouts.map((w, i) => (
-                            <div key={i} className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">{new Date(w.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric'})}</span>
-                               <p className="text-sm text-slate-700 whitespace-pre-wrap font-medium">{w.routine}</p>
+           {/* Two Column Layout */}
+           <div className="flex flex-col md:flex-row gap-6">
+              
+              {/* Left: ID & Stats */}
+              <div className="w-full md:w-1/3 flex flex-col gap-4">
+                 <div className="bg-white p-4 rounded-xl flex flex-col items-center justify-center shadow-inner">
+                    <QRCode data={activeMember.id} size={130} />
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-3 flex items-center gap-1"><QrIcon size={12}/> Scan to Enter</p>
+                 </div>
+                 <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 text-center">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 flex items-center justify-center gap-1"><Activity size={12}/> Lifetime Visits</p>
+                    <p className="text-3xl font-black text-blue-400">{activeMember.visits}</p>
+                 </div>
+              </div>
+
+              {/* Right: Workouts */}
+              <div className="flex-1 flex flex-col">
+                 <div className="flex justify-between items-end mb-3">
+                    <h3 className="font-bold text-white flex items-center gap-2 text-sm"><Dumbbell size={16} className="text-[#8b5cf6]"/> My Saved Workouts</h3>
+                    <span className="text-[10px] font-bold text-green-400 bg-green-500/10 px-2 py-1 rounded border border-green-500/20 flex items-center gap-1"><CheckCircle size={10}/> Sync Active</span>
+                 </div>
+                 
+                 <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-3 flex-1 h-[240px] overflow-y-auto">
+                    <style>{`
+                      .dark-scroll::-webkit-scrollbar { width: 6px; }
+                      .dark-scroll::-webkit-scrollbar-track { background: transparent; }
+                      .dark-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+                    `}</style>
+                    <div className="space-y-3 dark-scroll h-full pr-1">
+                        {myWorkouts.length > 0 ? (
+                            myWorkouts.map((w, i) => (
+                                <div key={i} className="bg-slate-800 border border-slate-700 rounded-lg p-4 transition-colors hover:border-slate-500">
+                                   <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2 block border-b border-slate-700 pb-2">{new Date(w.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric'})}</span>
+                                   <p className="text-xs text-slate-300 whitespace-pre-wrap font-medium leading-relaxed">{w.routine}</p>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="h-full flex flex-col items-center justify-center text-center opacity-50">
+                               <Dumbbell size={32} className="text-slate-500 mb-2" />
+                               <p className="text-slate-400 text-sm font-bold">No saved workouts yet.</p>
+                               <p className="text-xs text-slate-500 mt-1 max-w-[200px]">Generate a workout below and click "Save to Profile"!</p>
                             </div>
-                        ))
-                    ) : (
-                        <div className="text-center py-10 h-full flex flex-col items-center justify-center">
-                           <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-3 text-slate-300"><Dumbbell size={24} /></div>
-                           <p className="text-slate-500 font-bold">No saved workouts yet.</p>
-                           <p className="text-xs text-slate-400 mt-1">Use the Fitforge engine to build and save your first routine!</p>
-                        </div>
-                    )}
-                </div>
-             </div>
+                        )}
+                    </div>
+                 </div>
+              </div>
 
-          </div>
+           </div>
        </div>
     </div>
   );
