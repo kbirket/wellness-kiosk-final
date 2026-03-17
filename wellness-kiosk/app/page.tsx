@@ -38,8 +38,8 @@ const DonutChart = ({ data, totalLabel }) => {
          {data.filter(d => d.value > 0).map((d, i) => (
            <div key={i} className="flex justify-between items-center text-sm print:text-xs border-b border-slate-50 print:border-slate-200 last:border-0 pb-1">
              <div className="flex items-center gap-2 print:gap-1">
-                 <span className="w-3 h-3 print:w-2 print:h-2 rounded-full" style={{ backgroundColor: d.color, printColorAdjust: 'exact' }}></span>
-                 <span className="font-bold text-slate-600 print:text-black">{d.label}</span>
+                <span className="w-3 h-3 print:w-2 print:h-2 rounded-full" style={{ backgroundColor: d.color, printColorAdjust: 'exact' }}></span>
+                <span className="font-bold text-slate-600 print:text-black">{d.label}</span>
              </div>
              <span className="font-black text-[#001f3f]">{d.value}</span>
            </div>
@@ -138,20 +138,19 @@ export default function WellnessHub() {
 
   useEffect(() => {
     setLoading(true);
+    // FETCH 1: PULL ALL MEMBERS
     fetch('/api/members')
       .then(res => res.json())
       .then(data => {
         if (data.error) {
-           const errMsg = data.error.message || data.error.type || JSON.stringify(data.error);
-           setApiError(errMsg);
+           setApiError(data.error.message || JSON.stringify(data.error));
            setLoading(false);
            return;
         }
 
         if (data.records) {
-          const mapped = data.records.map(r => {
+          const mappedMembers = data.records.map(r => {
             let planText = r.fields['Plan Name'] ? (Array.isArray(r.fields['Plan Name']) ? r.fields['Plan Name'][0] : r.fields['Plan Name']) : 'UNKNOWN PLAN';
-            
             let rawPassword = String(r.fields['Password'] || '').trim();
             let finalPassword = (rawPassword === '' || rawPassword.includes('ERROR')) ? '1111' : rawPassword;
 
@@ -173,10 +172,44 @@ export default function WellnessHub() {
               needsOrientation: !!r.fields['Needs Orientation'], 
             };
           });
-          setMembers(mapped);
+          setMembers(mappedMembers);
           setApiError(''); 
+
+          // FETCH 2: NEW! PULL HISTORICAL VISITS
+          fetch('/api/get-visits')
+            .then(res => res.json())
+            .then(visitData => {
+               if (visitData.records) {
+                  const mappedVisits = visitData.records.map(v => {
+                     // Find who this visit belongs to by checking the Linked Record
+                     const linkedArray = v.fields['Member'] || v.fields['Members'] || [];
+                     const linkId = linkedArray[0];
+                     const foundMember = mappedMembers.find(m => m.airtableId === linkId);
+
+                     const fallbackName = Array.isArray(v.fields['Name']) ? v.fields['Name'][0] : v.fields['Name'] || 'Unknown Member';
+
+                     return {
+                        name: foundMember ? `${foundMember.firstName} ${foundMember.lastName}` : fallbackName,
+                        center: v.fields['Center'] || v.fields['Location'] || 'Both',
+                        time: v.fields['Time'] || v.fields['Date'] || v.createdTime,
+                        type: foundMember ? foundMember.type : 'Unknown'
+                     };
+                  });
+
+                  // Sort so the most recent check-in is always at the very top!
+                  mappedVisits.sort((a,b) => new Date(b.time) - new Date(a.time));
+                  setVisits(mappedVisits);
+               }
+               setLoading(false);
+            })
+            .catch(err => {
+               console.error("Could not fetch historical visits:", err);
+               setLoading(false);
+            });
+
+        } else {
+           setLoading(false);
         }
-        setLoading(false);
       }).catch(err => {
          setApiError(err.message || "Failed to fetch from Vercel");
          setLoading(false);
@@ -203,7 +236,7 @@ export default function WellnessHub() {
     active: scopedMembers.filter(m => m.status === 'ACTIVE').length,
     overdue: scopedMembers.filter(m => m.status === 'OVERDUE').length,
     expiring: scopedMembers.filter(m => m.status === 'EXPIRING').length,
-    today: filteredVisits.length
+    today: filteredVisits.filter(v => new Date(v.time).toDateString() === new Date().toDateString()).length // Only counts ACTUAL today now!
   };
 
   const reportStats = {
@@ -512,7 +545,6 @@ Total Members:,${stats.total}
              <img src={LOGO_URL} alt="Logo" className="h-6" /> 
              <span className="font-bold tracking-tight border-l border-white/20 pl-3">Corporate Partner Portal</span>
           </div>
-          {/* BIG RED LOGOUT BUTTON FOR CORPORATE */}
           <button onClick={handleLogout} className="bg-red-500/20 text-red-100 hover:bg-red-500 hover:text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold transition-all">
              <LogOut size={16}/> Logout
           </button>
@@ -746,7 +778,8 @@ Total Members:,${stats.total}
   }
 
   if (view === 'member_portal' && activeMember) {
-    const mySessionVisits = visits.filter(v => v.name.toLowerCase() === (activeMember.firstName + ' ' + activeMember.lastName).toLowerCase());
+    // NEW: Now looking at the PERMANENT history we just fetched!
+    const myHistoricalVisits = visits.filter(v => v.name.toLowerCase() === (activeMember.firstName + ' ' + activeMember.lastName).toLowerCase()).slice(0, 10);
 
     return (
       <div className="min-h-screen bg-[#f0f2f5] font-sans pb-20 md:pb-0">
@@ -755,7 +788,6 @@ Total Members:,${stats.total}
              <img src={LOGO_URL} alt="Logo" className="h-6" /> 
              <span className="font-bold tracking-tight border-l border-white/20 pl-3">Wellness Portal</span>
           </div>
-          {/* BIG RED LOGOUT BUTTON FOR MEMBER */}
           <button onClick={() => { setActiveMember(null); setView('landing'); }} className="bg-red-500/20 text-red-100 hover:bg-red-500 hover:text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold transition-all">
              <LogOut size={16}/> Logout
           </button>
@@ -787,9 +819,9 @@ Total Members:,${stats.total}
               </div>
               
               <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-6 mb-3">Recent Activity</h4>
-              {mySessionVisits.length > 0 ? (
+              {myHistoricalVisits.length > 0 ? (
                 <div className="space-y-2">
-                   {mySessionVisits.map((v, i) => (
+                   {myHistoricalVisits.map((v, i) => (
                       <div key={i} className="flex justify-between items-center bg-blue-50 p-3 rounded-xl border border-blue-100">
                          <span className="text-sm font-bold text-slate-700 flex items-center gap-2"><CheckCircle size={14} className="text-[#1080ad]"/> {v.center}</span>
                          <span className="text-xs font-bold text-slate-500">{new Date(v.time).toLocaleDateString()}</span>
@@ -973,7 +1005,7 @@ Total Members:,${stats.total}
 
                <ProListCard title="Today's Check-ins">
                  <div className="space-y-4">
-                   {filteredVisits.length === 0 ? <p className="text-slate-300 italic">Waiting for activity...</p> : filteredVisits.slice(0,5).map((v, i) => (
+                   {filteredVisits.filter(v => new Date(v.time).toDateString() === new Date().toDateString()).length === 0 ? <p className="text-slate-300 italic">Waiting for activity...</p> : filteredVisits.filter(v => new Date(v.time).toDateString() === new Date().toDateString()).slice(0,5).map((v, i) => (
                      <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
                        <div><p className="font-bold">{v.name}</p><p className="text-[11px] font-bold text-[#f59e0b] uppercase">{v.center} · {v.type}</p></div>
                        <div className="flex items-center gap-2 text-slate-400 text-xs font-medium"><Clock size={14} /> {new Date(v.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
