@@ -151,6 +151,11 @@ export default function WellnessHub() {
         if (data.records) {
           const mapped = data.records.map(r => {
             let planText = r.fields['Plan Name'] ? (Array.isArray(r.fields['Plan Name']) ? r.fields['Plan Name'][0] : r.fields['Plan Name']) : 'UNKNOWN PLAN';
+            
+            // NEW: Fallback PIN logic! If blank or formula error, use 1111.
+            let rawPassword = String(r.fields['Password'] || '').trim();
+            let finalPassword = (rawPassword === '' || rawPassword.includes('ERROR')) ? '1111' : rawPassword;
+
             return {
               airtableId: r.id, 
               id: r.fields['Member ID'] || r.id,
@@ -158,7 +163,7 @@ export default function WellnessHub() {
               lastName: r.fields['Last Name'] || '',
               email: r.fields['Email'] || '',
               phone: r.fields['Phone'] || '',
-              password: String(r.fields['Password'] || '').trim(), 
+              password: finalPassword, 
               status: (r.fields['Membership Status'] || 'ACTIVE').toUpperCase(),
               type: String(planText).toUpperCase().trim(),
               center: r.fields['Home Center'] || 'Anthony',
@@ -495,7 +500,6 @@ Total Members:,${stats.total}
     );
   }
 
-  // --- CORPORATE DASHBOARD VIEW WITH PRINT UPDATE ---
   if (view === 'corp_portal' && activeCorp) {
     const corpMembers = members.filter(m => m.sponsorName.toLowerCase() === activeCorp.companyName.toLowerCase());
     const totalCorpVisits = corpMembers.reduce((sum, m) => sum + m.visits, 0);
@@ -516,19 +520,16 @@ Total Members:,${stats.total}
 
         <main className="max-w-5xl mx-auto p-8 space-y-8 mt-4 print:p-0 print:m-0 print:max-w-none print:mt-0">
            
-           {/* WEB HEADER */}
            <div className="flex justify-between items-end print:hidden">
              <div>
                <h1 className="text-4xl font-black text-[#001f3f] tracking-tight mb-1">{activeCorp.companyName} Wellness Roster</h1>
                <p className="text-slate-500 font-medium">Review your enrolled employees and gym utilization.</p>
              </div>
-             {/* NEW PRINT BUTTON */}
              <button onClick={() => window.print()} className="bg-white border border-slate-200 text-[#001f3f] px-6 py-3 rounded-xl font-bold text-sm shadow-sm flex items-center gap-2 hover:bg-slate-50 transition-all">
                <Printer size={16} /> Print Roster
              </button>
            </div>
 
-           {/* PRINT HEADER */}
            <div className="hidden print:block mb-6 border-b-4 border-[#001f3f] pb-6 text-center">
                <img src={LOGO_URL} alt="Logo" className="h-12 mx-auto mb-4 invert grayscale" />
                <h1 className="text-3xl font-black text-[#001f3f] tracking-tight">{activeCorp.companyName} Wellness Roster</h1>
