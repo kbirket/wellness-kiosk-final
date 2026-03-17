@@ -22,7 +22,6 @@ const DIRECTORS = [
   { username: 'harper', password: process.env.DIRECTOR_HARPER_PASS, name: 'Patrick', center: 'harper', role: 'director' },
   { username: 'anthony', password: process.env.DIRECTOR_ANTHONY_PASS, name: 'Deanna', center: 'anthony', role: 'director' },
 ];
-];
 
 // Corporate partner accounts
 const CORPORATES = [
