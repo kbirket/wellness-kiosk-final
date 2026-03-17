@@ -31,7 +31,7 @@ export async function POST(request) {
             "Last Name": body.lastName,
             "Email": body.email || '',
             "Phone": body.phone || '',
-            "Plan Name": body.plan,
+            "Membership Type": body.plan,
             "Home Center": body.center,
             "Password": newPIN,
             "Membership Status": "ACTIVE",
