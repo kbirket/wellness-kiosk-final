@@ -56,7 +56,6 @@ const DIRECTORS = [
   { username: 'anthony', password: 'anthony2026', name: 'Anthony Director', center: 'anthony' }
 ];
 
-// NEW: CORPORATE PARTNER ACCOUNTS
 const CORPORATES = [
   { username: 'acme', password: 'acme2026', companyName: 'Acme Corp' },
   { username: 'patterson', password: 'patterson2026', companyName: 'Patterson Inc' }
@@ -68,7 +67,7 @@ export default function WellnessHub() {
   const [view, setView] = useState('landing'); 
   const [user, setUser] = useState(null);
   const [activeMember, setActiveMember] = useState(null);
-  const [activeCorp, setActiveCorp] = useState(null); // NEW: Tracks logged-in business
+  const [activeCorp, setActiveCorp] = useState(null); 
   
   const [members, setMembers] = useState([]);
   const [visits, setVisits] = useState([]);
@@ -166,7 +165,7 @@ export default function WellnessHub() {
               visits: Number(r.fields['Total Visits'] || 0),
               nextPayment: r.fields['Next Payment Due'] || null,
               sponsor: !!r.fields['Corporate Sponsor'],
-              sponsorName: r.fields['Corporate Sponsor'] ? String(r.fields['Corporate Sponsor']).trim() : '', // Captures the specific company name!
+              sponsorName: r.fields['Corporate Sponsor'] ? String(r.fields['Corporate Sponsor']).trim() : '',
               needsOrientation: !!r.fields['Needs Orientation'], 
             };
           });
@@ -431,9 +430,9 @@ Total Members:,${stats.total}
   };
 
   const ProStatCard = ({ value, label, color }) => (
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200" style={{ borderLeft: `6px solid ${color}` }}>
-      <p className="text-5xl font-extrabold mb-1" style={{ color }}>{value}</p>
-      <p className="text-xs font-bold text-[#001f3f] uppercase tracking-tight">{label}</p>
+    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 print:shadow-none print:border-slate-300" style={{ borderLeft: `6px solid ${color}` }}>
+      <p className="text-5xl font-extrabold mb-1 print:text-3xl" style={{ color }}>{value}</p>
+      <p className="text-xs font-bold text-[#001f3f] uppercase tracking-tight print:text-[10px]">{label}</p>
     </div>
   );
 
@@ -454,7 +453,6 @@ Total Members:,${stats.total}
       <div className="min-h-screen bg-[#001f3f] flex items-center justify-center font-sans p-6 relative">
         <div className="text-center max-w-6xl w-full relative z-10">
           <img src={LOGO_URL} alt="Logo" className="h-40 mx-auto mb-16 opacity-100 drop-shadow-2xl" />
-          {/* NEW: EXPANDED TO 4 COLUMNS TO FIT CORPORATE */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
              <button onClick={() => {setView('kiosk'); setViewingCenter('both'); setKioskInput('');}} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group">
                 <Smartphone size={56} className="text-[#1080ad] group-hover:scale-110 transition-transform" />
@@ -481,7 +479,6 @@ Total Members:,${stats.total}
     );
   }
 
-  // --- NEW: CORPORATE LOGIN VIEW ---
   if (view === 'corp_login') {
     return (
       <div className="min-h-screen bg-[#001f3f] flex items-center justify-center p-4 font-sans">
@@ -498,7 +495,7 @@ Total Members:,${stats.total}
     );
   }
 
-  // --- NEW: CORPORATE DASHBOARD VIEW ---
+  // --- CORPORATE DASHBOARD VIEW WITH PRINT UPDATE ---
   if (view === 'corp_portal' && activeCorp) {
     const corpMembers = members.filter(m => m.sponsorName.toLowerCase() === activeCorp.companyName.toLowerCase());
     const totalCorpVisits = corpMembers.reduce((sum, m) => sum + m.visits, 0);
@@ -506,8 +503,8 @@ Total Members:,${stats.total}
     const familyPlans = corpMembers.filter(m => m.type.includes('FAMILY')).length;
 
     return (
-      <div className="min-h-screen bg-[#f0f2f5] font-sans">
-        <nav className="bg-[#001f3f] text-white p-4 shadow-md flex justify-between items-center sticky top-0 z-10">
+      <div className="min-h-screen bg-[#f0f2f5] font-sans print:bg-white">
+        <nav className="bg-[#001f3f] text-white p-4 shadow-md flex justify-between items-center sticky top-0 z-10 print:hidden">
           <div className="flex items-center gap-3">
              <img src={LOGO_URL} alt="Logo" className="h-6" /> 
              <span className="font-bold tracking-tight border-l border-white/20 pl-3">Corporate Partner Portal</span>
@@ -517,30 +514,45 @@ Total Members:,${stats.total}
           </button>
         </nav>
 
-        <main className="max-w-5xl mx-auto p-8 space-y-8 mt-4">
-           <div>
-             <h1 className="text-4xl font-black text-[#001f3f] tracking-tight mb-1">{activeCorp.companyName} Wellness Roster</h1>
-             <p className="text-slate-500 font-medium">Review your enrolled employees and gym utilization.</p>
+        <main className="max-w-5xl mx-auto p-8 space-y-8 mt-4 print:p-0 print:m-0 print:max-w-none print:mt-0">
+           
+           {/* WEB HEADER */}
+           <div className="flex justify-between items-end print:hidden">
+             <div>
+               <h1 className="text-4xl font-black text-[#001f3f] tracking-tight mb-1">{activeCorp.companyName} Wellness Roster</h1>
+               <p className="text-slate-500 font-medium">Review your enrolled employees and gym utilization.</p>
+             </div>
+             {/* NEW PRINT BUTTON */}
+             <button onClick={() => window.print()} className="bg-white border border-slate-200 text-[#001f3f] px-6 py-3 rounded-xl font-bold text-sm shadow-sm flex items-center gap-2 hover:bg-slate-50 transition-all">
+               <Printer size={16} /> Print Roster
+             </button>
            </div>
 
-           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+           {/* PRINT HEADER */}
+           <div className="hidden print:block mb-6 border-b-4 border-[#001f3f] pb-6 text-center">
+               <img src={LOGO_URL} alt="Logo" className="h-12 mx-auto mb-4 invert grayscale" />
+               <h1 className="text-3xl font-black text-[#001f3f] tracking-tight">{activeCorp.companyName} Wellness Roster</h1>
+               <p className="text-slate-500 font-bold uppercase tracking-widest mt-2">{currentDateString}</p>
+           </div>
+
+           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 print:grid-cols-4 print:gap-4">
               <ProStatCard value={corpMembers.length} label="Total Enrolled" color="#001f3f" />
               <ProStatCard value={totalCorpVisits} label="Total Visits" color="#1080ad" />
               <ProStatCard value={singlePlans} label="Individual Plans" color="#16a34a" />
               <ProStatCard value={familyPlans} label="Family Plans" color="#f59e0b" />
            </div>
 
-           <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="p-6 border-b border-slate-100 bg-slate-50">
+           <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden print:border-slate-300 print:shadow-none print:rounded-none">
+              <div className="p-6 border-b border-slate-100 bg-slate-50 print:bg-white print:p-4">
                  <h3 className="text-lg font-bold text-[#001f3f]">Employee Directory</h3>
               </div>
-              <table className="w-full text-left border-collapse">
-                 <thead className="bg-white text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+              <table className="w-full text-left border-collapse print:text-sm">
+                 <thead className="bg-white text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 print:border-b-2 print:border-slate-800">
                     <tr>
-                       <th className="px-8 py-4">Employee Name</th>
-                       <th className="px-8 py-4">Member ID</th>
-                       <th className="px-8 py-4">Plan Type</th>
-                       <th className="px-8 py-4 text-right">Lifetime Visits</th>
+                       <th className="px-8 py-4 print:py-2">Employee Name</th>
+                       <th className="px-8 py-4 print:py-2">Member ID</th>
+                       <th className="px-8 py-4 print:py-2">Plan Type</th>
+                       <th className="px-8 py-4 print:py-2 text-right">Lifetime Visits</th>
                     </tr>
                  </thead>
                  <tbody className="text-sm">
@@ -548,11 +560,11 @@ Total Members:,${stats.total}
                        <tr><td colSpan="4" className="text-center py-12 text-slate-400 font-medium italic">No employees currently enrolled under this company.</td></tr>
                     ) : (
                        corpMembers.map(m => (
-                          <tr key={m.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors">
-                             <td className="px-8 py-5 font-bold text-slate-800">{m.firstName} {m.lastName}</td>
-                             <td className="px-8 py-5 font-mono text-slate-400">{m.id}</td>
-                             <td className="px-8 py-5"><span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black tracking-tight">{m.type}</span></td>
-                             <td className="px-8 py-5 text-right font-black text-[#1080ad] text-lg">{m.visits}</td>
+                          <tr key={m.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors print:border-slate-200">
+                             <td className="px-8 py-5 print:py-2 font-bold text-slate-800">{m.firstName} {m.lastName}</td>
+                             <td className="px-8 py-5 print:py-2 font-mono text-slate-400">{m.id}</td>
+                             <td className="px-8 py-5 print:py-2"><span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 print:bg-transparent print:px-0 print:text-black text-[10px] font-black tracking-tight">{m.type}</span></td>
+                             <td className="px-8 py-5 print:py-2 text-right font-black text-[#1080ad] print:text-black text-lg print:text-base">{m.visits}</td>
                           </tr>
                        ))
                     )}
@@ -563,7 +575,6 @@ Total Members:,${stats.total}
       </div>
     );
   }
-
 
   if (view === 'kiosk') {
     return (
