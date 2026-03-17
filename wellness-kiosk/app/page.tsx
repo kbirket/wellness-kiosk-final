@@ -528,20 +528,28 @@ Total Members:,${stats.total}
         <div className="bg-white rounded-[3rem] shadow-2xl p-10 w-full max-w-md border-t-8 border-[#16a34a]">
           <div className="flex justify-center mb-6"><UserCircle size={64} className="text-[#16a34a]" /></div>
           <h2 className="text-3xl font-black text-center text-[#001f3f] mb-2 tracking-tight">Member Access</h2>
-          <p className="text-slate-500 mb-8 text-center font-medium">Log in to view your digital badge.</p>
+          <p className="text-slate-500 mb-8 text-center font-medium">Log in to view your digital badge and history.</p>
           
           <div className="space-y-4">
-            <div><label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-2">Email Address</label><input type="email" placeholder="you@email.com" id="m_email" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-[#16a34a] text-lg transition-colors" /></div>
-            <div><label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-2">Member ID</label><input type="text" placeholder="e.g. WC-001" id="m_id" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-[#16a34a] text-lg uppercase transition-colors" onKeyDown={(e) => { if (e.key === 'Enter') document.getElementById('btn_member_login').click(); }}/></div>
-          </div>
+            <div>
+               <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-2">Email Address</label>
+               <input type="email" placeholder="you@email.com" id="m_email" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-[#16a34a] text-lg transition-colors" />
+            </div>
+            {/* NEW: REPLACED MEMBER ID WITH BIRTHDAY PIN */}
+            <div>
+               <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-2">4-Digit Birthday (MMDD)</label>
+               <input type="password" maxLength={4} placeholder="e.g. 0524" id="m_pin" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-[#16a34a] text-xl text-center tracking-[0.5em] transition-colors" onKeyDown={(e) => { if (e.key === 'Enter') document.getElementById('btn_member_login').click(); }}/>
+            </div>
+         </div>
 
           <button id="btn_member_login" onClick={() => {
             const email = document.getElementById('m_email').value.toLowerCase().trim();
-            const id = document.getElementById('m_id').value.toUpperCase().trim();
-            const foundMember = members.find(m => m.id === id && m.email.toLowerCase() === email);
+            const pin = document.getElementById('m_pin').value.trim();
+            // Checking against the password field now!
+            const foundMember = members.find(m => m.email.toLowerCase() === email && m.password === pin);
             if(foundMember) { setActiveMember(foundMember); setView('member_portal'); } 
-            else { alert('Member not found.'); }
-          }} className="w-full bg-[#16a34a] text-white p-5 rounded-2xl font-bold text-lg shadow-lg shadow-green-600/20 hover:bg-green-700 transition-all mt-8">Access My Badge</button>
+            else { alert('Incorrect Email or Birthday PIN.'); }
+          }} className="w-full bg-[#16a34a] text-white p-5 rounded-2xl font-bold text-lg shadow-lg shadow-green-600/20 hover:bg-green-700 transition-all mt-8">Access My Account</button>
           
           <button onClick={() => setView('landing')} className="w-full mt-6 text-slate-400 font-bold hover:text-slate-600 transition-colors">Return to Home</button>
         </div>
@@ -550,6 +558,9 @@ Total Members:,${stats.total}
   }
 
   if (view === 'member_portal' && activeMember) {
+    // Look through current session visits to see their activity
+    const mySessionVisits = visits.filter(v => v.name.toLowerCase() === (activeMember.firstName + ' ' + activeMember.lastName).toLowerCase());
+
     return (
       <div className="min-h-screen bg-[#f0f2f5] font-sans pb-20 md:pb-0">
         <nav className="bg-[#001f3f] text-white p-4 shadow-md flex justify-between items-center sticky top-0 z-10">
@@ -582,10 +593,27 @@ Total Members:,${stats.total}
 
            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
               <h3 className="font-bold text-[#001f3f] mb-4 flex items-center gap-2"><Activity size={18} className="text-[#f59e0b]"/> Lifetime Visits</h3>
-              <div className="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border border-slate-100">
+              <div className="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-4">
                  <span className="text-sm font-bold text-slate-500">Total Check-ins</span>
                  <span className="text-3xl font-black text-[#1080ad]">{activeMember.visits}</span>
               </div>
+              
+              {/* NEW: RECENT WORKOUTS TRACKER */}
+              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-6 mb-3">Recent Activity</h4>
+              {mySessionVisits.length > 0 ? (
+                <div className="space-y-2">
+                   {mySessionVisits.map((v, i) => (
+                      <div key={i} className="flex justify-between items-center bg-blue-50 p-3 rounded-xl border border-blue-100">
+                         <span className="text-sm font-bold text-slate-700 flex items-center gap-2"><CheckCircle size={14} className="text-[#1080ad]"/> {v.center}</span>
+                         <span className="text-xs font-bold text-slate-500">{new Date(v.time).toLocaleDateString()}</span>
+                      </div>
+                   ))}
+                </div>
+              ) : (
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-center">
+                   <p className="text-xs font-bold text-slate-400">Head to the gym to log your next workout!</p>
+                </div>
+              )}
            </div>
 
            {familyMembers.length > 0 && (
@@ -728,7 +756,6 @@ Total Members:,${stats.total}
            <p className="text-sm text-slate-400 font-medium">{viewingCenter === 'both' ? 'All Centers' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1) + ' Center'} · {currentDateString}</p>
         </div>
 
-        {/* VIEW: DASHBOARD */}
         {activeTab === 'dashboard' && (
           <div className="space-y-8">
             <div className="grid grid-cols-5 gap-6">
@@ -737,7 +764,6 @@ Total Members:,${stats.total}
                ))}
             </div>
 
-            {/* THE RESTORED HEATMAP! */}
             <ProListCard title="Peak Hours Activity Heatmap">
                <div className="flex items-end justify-between h-48 mt-8 gap-2">
                  {heatmapData.map((count, i) => {
@@ -790,7 +816,6 @@ Total Members:,${stats.total}
           </div>
         )}
 
-        {/* VIEW: MEMBERS */}
         {activeTab === 'members' && (
           <div className="space-y-6">
              <div className="flex justify-between items-center mb-8">
@@ -858,7 +883,6 @@ Total Members:,${stats.total}
           </div>
         )}
 
-        {/* VIEW: REPORTS */}
         {activeTab === 'reports' && (
           <div className="space-y-6">
              <div className="flex justify-between items-center mb-8">
@@ -906,7 +930,6 @@ Total Members:,${stats.total}
           </div>
         )}
 
-        {/* VIEW: NOTIFICATIONS */}
         {activeTab === 'notif' && (
           <div className="space-y-6">
              <div className="flex justify-between items-center mb-8">
