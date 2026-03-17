@@ -6,7 +6,7 @@ import {
   Users, Search, QrCode, CreditCard, X, CheckCircle, 
   AlertCircle, TrendingUp, Calendar, MapPin, Mail, LogOut, 
   ShieldCheck, Phone, Activity, ChevronRight, LayoutDashboard,
-  Filter, Download, Bell, FileText, Plus, Smartphone, Clock, Camera, UserCircle, Lock, Printer
+  Filter, Download, Bell, FileText, Plus, Smartphone, Clock, Camera, UserCircle, Lock, Printer, Trash2
 } from 'lucide-react';
 
 const QRCode = ({ data, size = 160, darkColor = '#001f3f' }) => {
@@ -78,6 +78,9 @@ export default function WellnessHub() {
   
   const [showAddModal, setShowAddModal] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  
+  // NEW: State for deleting a member
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [kioskMessage, setKioskMessage] = useState({text: '', type: '', subtext: ''});
   const [kioskInput, setKioskInput] = useState('');
@@ -256,6 +259,34 @@ export default function WellnessHub() {
     setIsAdding(false);
   };
 
+  // NEW: Handle deleting a member
+  const handleDeleteMember = async () => {
+    if (!window.confirm(`Are you sure you want to permanently delete ${selectedMember.firstName} ${selectedMember.lastName}? This cannot be undone.`)) {
+        return;
+    }
+    
+    setIsDeleting(true);
+    try {
+        const res = await fetch('/api/delete-member', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ airtableId: selectedMember.airtableId })
+        });
+        const result = await res.json();
+        
+        if (result.success) {
+            // Remove them from the local screen so we don't have to refresh
+            setMembers(prev => prev.filter(m => m.airtableId !== selectedMember.airtableId));
+            setSelectedMember(null);
+        } else {
+            alert('Error deleting member: ' + result.error);
+        }
+    } catch (err) {
+        alert('Network error while deleting. Please try again.');
+    }
+    setIsDeleting(false);
+  };
+
   const getStoplight = (member) => {
     if (!member.nextPayment) return 'green'; 
     const due = new Date(member.nextPayment);
@@ -387,7 +418,6 @@ Total Members:,${stats.total}
     </div>
   );
 
-  // NEW: Updated ProListCard specifically with Print formatting!
   const ProListCard = ({ title, children, actions }) => (
     <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 h-full print:p-4 print:shadow-none print:border-slate-300 print:break-inside-avoid">
       <div className="flex justify-between items-center mb-6 print:mb-2">
@@ -1207,8 +1237,12 @@ Total Members:,${stats.total}
                     </div>
                  </div>
 
+                 {/* NEW: THE DELETE BUTTON IS NOW HERE! */}
                  <div className="mt-14 flex gap-4">
                     <button onClick={() => { processCheckIn(selectedMember.id, "Director Override"); setSelectedMember(null); }} className="flex-1 bg-[#001f3f] text-white py-4 rounded-xl font-bold shadow-xl shadow-blue-900/20 active:scale-95 transition-all text-sm">Force Manual Check-In</button>
+                    <button onClick={handleDeleteMember} disabled={isDeleting} className="px-6 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex items-center justify-center">
+                       {isDeleting ? '...' : <Trash2 size={20} />}
+                    </button>
                  </div>
               </div>
            </div>
