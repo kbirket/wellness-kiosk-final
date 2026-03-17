@@ -27,19 +27,19 @@ const DonutChart = ({ data, totalLabel }) => {
   }).join(', ');
   
   return (
-     <div className="flex items-center justify-center gap-8">
-       <div className="relative w-48 h-48 rounded-full shadow-sm" style={{ background: stops ? `conic-gradient(${stops})` : '#e2e8f0', printColorAdjust: 'exact' }}>
-          <div className="absolute inset-5 bg-white rounded-full flex flex-col items-center justify-center shadow-inner">
-             <span className="text-3xl font-black text-[#001f3f] leading-none">{total === 1 && data.every(d => d.value === 0) ? 0 : data.reduce((s,d)=>s+d.value,0)}</span>
-             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{totalLabel}</span>
+     <div className="flex items-center justify-center gap-8 print:gap-4">
+       <div className="relative w-48 h-48 print:w-36 print:h-36 rounded-full shadow-sm" style={{ background: stops ? `conic-gradient(${stops})` : '#e2e8f0', printColorAdjust: 'exact' }}>
+          <div className="absolute inset-5 print:inset-4 bg-white rounded-full flex flex-col items-center justify-center shadow-inner">
+             <span className="text-3xl print:text-2xl font-black text-[#001f3f] leading-none">{total === 1 && data.every(d => d.value === 0) ? 0 : data.reduce((s,d)=>s+d.value,0)}</span>
+             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest print:text-[7px]">{totalLabel}</span>
           </div>
        </div>
-       <div className="space-y-2 flex-1">
+       <div className="space-y-2 flex-1 print:space-y-1">
          {data.filter(d => d.value > 0).map((d, i) => (
-           <div key={i} className="flex justify-between items-center text-sm border-b border-slate-50 last:border-0 pb-1">
-             <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: d.color, printColorAdjust: 'exact' }}></span>
-                <span className="font-bold text-slate-600">{d.label}</span>
+           <div key={i} className="flex justify-between items-center text-sm print:text-xs border-b border-slate-50 print:border-slate-200 last:border-0 pb-1">
+             <div className="flex items-center gap-2 print:gap-1">
+                <span className="w-3 h-3 print:w-2 print:h-2 rounded-full" style={{ backgroundColor: d.color, printColorAdjust: 'exact' }}></span>
+                <span className="font-bold text-slate-600 print:text-black">{d.label}</span>
              </div>
              <span className="font-black text-[#001f3f]">{d.value}</span>
            </div>
@@ -387,10 +387,11 @@ Total Members:,${stats.total}
     </div>
   );
 
+  // NEW: Updated ProListCard specifically with Print formatting!
   const ProListCard = ({ title, children, actions }) => (
-    <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 h-full">
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-lg font-bold text-[#001f3f]">{title}</h3>
+    <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 h-full print:p-4 print:shadow-none print:border-slate-300 print:break-inside-avoid">
+      <div className="flex justify-between items-center mb-6 print:mb-2">
+        <h3 className="text-lg font-bold text-[#001f3f] print:text-base">{title}</h3>
         {actions}
       </div>
       {children}
@@ -800,7 +801,6 @@ Total Members:,${stats.total}
                ))}
             </div>
 
-            {/* MOVED TO TOP: NEEDS ATTENTION & TODAY'S CHECKINS */}
             <div className="grid grid-cols-2 gap-8">
                <ProListCard title="Needs Attention">
                  <div className="space-y-4">
@@ -934,15 +934,14 @@ Total Members:,${stats.total}
           </div>
         )}
 
-        {/* VIEW: REPORTS UPGRADED */}
+        {/* VIEW: REPORTS UPGRADED TO ONE-PAGE PRINT */}
         {activeTab === 'reports' && (
-          <div className="space-y-6 print:m-0 print:p-0">
+          <div className="space-y-6 print:space-y-3 print:m-0 print:p-0">
              
              {/* WEB HEADER */}
              <div className="flex justify-between items-center mb-8 print:hidden">
                 <div><h2 className="text-3xl font-bold text-[#001f3f] tracking-tight">Monthly Summary Report</h2></div>
                 <div className="flex gap-3">
-                   {/* NEW PRINT PDF BUTTON */}
                    <button onClick={() => window.print()} className="bg-white border border-slate-200 text-[#001f3f] px-6 py-3 rounded-xl font-bold text-sm shadow-sm flex items-center gap-2 hover:bg-slate-50 transition-all">
                      <Printer size={16} /> Print Visual Report
                    </button>
@@ -952,52 +951,51 @@ Total Members:,${stats.total}
                 </div>
              </div>
 
-             {/* PRINT HEADER (ONLY VISIBLE ON PDF EXPORT) */}
-             <div className="hidden print:block mb-8 text-center border-b-4 border-[#001f3f] pb-8">
-                 <img src={LOGO_URL} alt="Logo" className="h-16 mx-auto mb-4 invert grayscale" />
-                 <h1 className="text-4xl font-black text-[#001f3f] tracking-tighter">{viewingCenter === 'both' ? 'System-Wide' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1)} Wellness Center</h1>
-                 <p className="text-lg font-bold text-slate-500 uppercase tracking-widest mt-2">Executive Summary • {currentDateString}</p>
+             {/* PRINT HEADER */}
+             <div className="hidden print:block mb-8 print:mb-4 text-center border-b-4 border-[#001f3f] pb-8 print:pb-4">
+                 <img src={LOGO_URL} alt="Logo" className="h-16 print:h-12 mx-auto mb-4 print:mb-2 invert grayscale" />
+                 <h1 className="text-4xl print:text-2xl font-black text-[#001f3f] tracking-tighter">{viewingCenter === 'both' ? 'System-Wide' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1)} Wellness Center</h1>
+                 <p className="text-lg print:text-sm font-bold text-slate-500 uppercase tracking-widest mt-2 print:mt-1">Executive Summary • {currentDateString}</p>
              </div>
 
-             {/* DONUT CHART (NOW IN REPORTS!) */}
-             <div className="mb-8">
+             <div className="mb-8 print:mb-4">
                 <ProListCard title="Current Membership Breakdown">
-                   <div className="py-6">
+                   <div className="py-6 print:py-2">
                       <DonutChart data={planChartData} totalLabel="Members" />
                    </div>
                 </ProListCard>
              </div>
              
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 print:grid-cols-2">
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 print:gap-4 print:grid-cols-2">
                <ProListCard title="Standard Memberships">
-                 <table className="w-full text-sm">
+                 <table className="w-full text-sm print:text-xs">
                    <tbody>
-                     <tr className="border-b"><td className="py-3 font-medium text-slate-600">Single:</td><td className="py-3 font-bold text-right">{reportStats.single}</td></tr>
-                     <tr className="border-b"><td className="py-3 font-medium text-slate-600">Family:</td><td className="py-3 font-bold text-right">{reportStats.family}</td></tr>
-                     <tr className="border-b"><td className="py-3 font-medium text-slate-600">Senior Citizen:</td><td className="py-3 font-bold text-right">{reportStats.seniorCitizen}</td></tr>
-                     <tr className="border-b"><td className="py-3 font-medium text-slate-600">Senior Family:</td><td className="py-3 font-bold text-right">{reportStats.seniorFamily}</td></tr>
-                     <tr><td className="py-3 font-medium text-slate-600">Student (14-22):</td><td className="py-3 font-bold text-right">{reportStats.student}</td></tr>
+                     <tr className="border-b print:border-slate-200"><td className="py-3 print:py-1.5 font-medium text-slate-600 print:text-black">Single:</td><td className="py-3 print:py-1.5 font-bold text-right print:text-[#001f3f]">{reportStats.single}</td></tr>
+                     <tr className="border-b print:border-slate-200"><td className="py-3 print:py-1.5 font-medium text-slate-600 print:text-black">Family:</td><td className="py-3 print:py-1.5 font-bold text-right print:text-[#001f3f]">{reportStats.family}</td></tr>
+                     <tr className="border-b print:border-slate-200"><td className="py-3 print:py-1.5 font-medium text-slate-600 print:text-black">Senior Citizen:</td><td className="py-3 print:py-1.5 font-bold text-right print:text-[#001f3f]">{reportStats.seniorCitizen}</td></tr>
+                     <tr className="border-b print:border-slate-200"><td className="py-3 print:py-1.5 font-medium text-slate-600 print:text-black">Senior Family:</td><td className="py-3 print:py-1.5 font-bold text-right print:text-[#001f3f]">{reportStats.seniorFamily}</td></tr>
+                     <tr><td className="py-3 print:py-1.5 font-medium text-slate-600 print:text-black">Student (14-22):</td><td className="py-3 print:py-1.5 font-bold text-right print:text-[#001f3f]">{reportStats.student}</td></tr>
                    </tbody>
                  </table>
                </ProListCard>
 
-               <div className="space-y-8">
+               <div className="space-y-8 print:space-y-4">
                  <ProListCard title="Corporate, Staff & Military">
-                   <table className="w-full text-sm">
+                   <table className="w-full text-sm print:text-xs">
                      <tbody>
-                       <tr className="border-b"><td className="py-2 font-medium text-slate-600">Corporate:</td><td className="py-2 font-bold text-right">{reportStats.corporate}</td></tr>
-                       <tr className="border-b"><td className="py-2 font-medium text-slate-600">Corporate Family:</td><td className="py-2 font-bold text-right">{reportStats.corporateFamily}</td></tr>
-                       <tr className="border-b"><td className="py-2 font-medium text-slate-600">HD6/HCHF (Staff):</td><td className="py-2 font-bold text-right">{reportStats.staff}</td></tr>
-                       <tr><td className="py-2 font-medium text-slate-600">Active Military (Free):</td><td className="py-2 font-bold text-right">{reportStats.military}</td></tr>
+                       <tr className="border-b print:border-slate-200"><td className="py-2 print:py-1.5 font-medium text-slate-600 print:text-black">Corporate:</td><td className="py-2 print:py-1.5 font-bold text-right print:text-[#001f3f]">{reportStats.corporate}</td></tr>
+                       <tr className="border-b print:border-slate-200"><td className="py-2 print:py-1.5 font-medium text-slate-600 print:text-black">Corporate Family:</td><td className="py-2 print:py-1.5 font-bold text-right print:text-[#001f3f]">{reportStats.corporateFamily}</td></tr>
+                       <tr className="border-b print:border-slate-200"><td className="py-2 print:py-1.5 font-medium text-slate-600 print:text-black">HD6/HCHF (Staff):</td><td className="py-2 print:py-1.5 font-bold text-right print:text-[#001f3f]">{reportStats.staff}</td></tr>
+                       <tr><td className="py-2 print:py-1.5 font-medium text-slate-600 print:text-black">Active Military (Free):</td><td className="py-2 print:py-1.5 font-bold text-right print:text-[#001f3f]">{reportStats.military}</td></tr>
                      </tbody>
                    </table>
                  </ProListCard>
                  
                  <ProListCard title="Other & Totals">
-                   <table className="w-full text-sm">
+                   <table className="w-full text-sm print:text-xs">
                      <tbody>
-                       <tr className="border-b"><td className="py-2 font-medium text-slate-600">Day Passes:</td><td className="py-2 font-bold text-right">{reportStats.dayPass}</td></tr>
-                       <tr className="bg-slate-50"><td className="py-3 px-2 font-bold text-[#001f3f] text-lg">Total Members:</td><td className="py-3 px-2 font-black text-right text-[#001f3f] text-lg">{stats.total}</td></tr>
+                       <tr className="border-b print:border-slate-200"><td className="py-2 print:py-1 font-medium text-slate-600 print:text-black">Day Passes:</td><td className="py-2 print:py-1 font-bold text-right print:text-[#001f3f]">{reportStats.dayPass}</td></tr>
+                       <tr className="bg-slate-50 print:bg-transparent print:border-t-2 print:border-[#001f3f]"><td className="py-3 print:py-2 px-2 print:px-0 font-bold text-[#001f3f] text-lg print:text-base">Total Members:</td><td className="py-3 print:py-2 px-2 print:px-0 font-black text-right text-[#001f3f] text-lg print:text-base">{stats.total}</td></tr>
                      </tbody>
                    </table>
                  </ProListCard>
