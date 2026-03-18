@@ -30,6 +30,7 @@ export async function POST(request) {
       "Home Center": body.center,
       "Password": newPIN,
       "Membership Status": "ACTIVE",
+      'Billing Method': 'Month-to-Month',
     };
 
     // Add corporate sponsor if provided
