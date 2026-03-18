@@ -180,7 +180,7 @@ const mappedMembers = data.records.filter(r => r.fields['First Name'] && r.field
       } catch (err) { alert('Network error. Please try again.'); }
     } else {
       try {
-        const res = await fetch('/api/add-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName, lastName, email, phone, plan, center, corporateSponsor: sponsor, needsOrientation }) });
+        const res = await fetch('/api/add-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName, lastName, email, phone, plan, center, address, city, state: mstate, zip: mzip, billingMethod: billing, corporateSponsor: sponsor, needsOrientation }) });
         const result = await res.json();
         if (result.success) { setNewMemberPin({ name: `${firstName} ${lastName}`, pin: result.pin || '1111' }); }
         else { alert('Error: ' + result.error); }
