@@ -99,6 +99,10 @@ export default function WellnessHub() {
           pin: r.fields['PIN'] || '',
           orientationComplete: !!r.fields['Orientation Complete'],
           totalVisits: r.fields['Total Visits'] || 0,
+          address: r.fields['Street Address'] || '',
+city: r.fields['City'] || '',
+state: r.fields['State'] || '',
+zip: r.fields['Zip'] || '',
           notes: r.fields['Notes'] || '',
         })));
       }
@@ -435,6 +439,7 @@ export default function WellnessHub() {
               <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Purchase Date</p><p className="text-lg font-bold text-slate-800">{selectedVisitor.purchaseDate ? new Date(selectedVisitor.purchaseDate + 'T00:00:00').toLocaleDateString('en-US', {month:'long',day:'numeric',year:'numeric'}) : 'N/A'}</p></div>
               <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Expiration Date</p><p className={`text-lg font-bold ${new Date(selectedVisitor.expirationDate + 'T23:59:59') < new Date() ? 'text-red-500' : 'text-slate-800'}`}>{selectedVisitor.expirationDate ? new Date(selectedVisitor.expirationDate + 'T00:00:00').toLocaleDateString('en-US', {month:'long',day:'numeric',year:'numeric'}) : 'N/A'}</p></div>
               <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Center</p><p className="text-lg font-bold text-slate-800">{selectedVisitor.center}</p></div>
+{(selectedVisitor.address || selectedVisitor.city) && (<div className="col-span-2"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Address</p><p className="text-lg font-bold text-slate-800">{[selectedVisitor.address, selectedVisitor.city, selectedVisitor.state, selectedVisitor.zip].filter(Boolean).join(', ')}</p></div>)}
               <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Visits</p><p className="text-lg font-bold text-[#1080ad]">{selectedVisitor.totalVisits}</p></div>
               <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Orientation</p><p className="text-lg font-bold text-slate-800">{selectedVisitor.orientationComplete ? 'Complete' : 'Pending'}</p></div>
               <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">PIN</p><p className="text-lg font-bold font-mono text-slate-800">{selectedVisitor.pin}</p></div>
