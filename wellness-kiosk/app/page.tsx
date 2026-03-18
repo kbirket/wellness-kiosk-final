@@ -166,7 +166,7 @@ const mappedMembers = data.records.filter(r => r.fields['First Name'] && r.field
 
     if (isFamily && !familyFlow) {
       try {
-        const res = await fetch('/api/add-family-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName, lastName, email, phone, plan, center, corporateSponsor: sponsor, needsOrientation }) });
+        const res = await fetch('/api/add-family-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName, lastName, email, phone, plan, center, address, city, state: mstate, zip: mzip, billingMethod: billing,corporateSponsor: sponsor, needsOrientation }) });
         const result = await res.json();
         if (result.success) { setFamilyFlow({ familyRecordId: result.familyRecordId, familyName: result.familyName, lastName, plan, center, email, phone, corporateSponsor: sponsor, addedMembers: [{ name: `${firstName} ${lastName}`, pin: result.pin, isPrimary: true }] }); setNewMemberPin({ name: `${firstName} ${lastName}`, pin: result.pin }); }
         else { alert('Error: ' + result.error); }
