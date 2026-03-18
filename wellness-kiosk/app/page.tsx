@@ -2,7 +2,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
-import { Users, Search, QrCode, CreditCard, X, CheckCircle, AlertCircle, TrendingUp, Calendar, MapPin, Mail, LogOut, ShieldCheck, Phone, Activity, ChevronRight, LayoutDashboard, Filter, Download, Bell, FileText, Plus, Smartphone, Clock, Camera, UserCircle, Lock, Printer, Trash2, Briefcase, KeyRound } from 'lucide-react';
+import { Users, Search, QrCode, CreditCard, X, CheckCircle, AlertCircle, TrendingUp, Calendar, MapPin, Mail, LogOut, ShieldCheck, Phone, Activity, ChevronRight, LayoutDashboard, Filter, Download, Bell, FileText, Plus, Smartphone, Clock, Camera, UserCircle, Lock, Printer, Trash2, Briefcase, KeyRound, Eye } from 'lucide-react';
 
 const QRCode = ({ data, size = 160, darkColor = '#001f3f' }) => { const hexColor = darkColor.replace('#', ''); const safeData = encodeURIComponent(data || "WC-000"); const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${safeData}&color=${hexColor}&bgcolor=ffffff`; return <img src={qrUrl} alt="QR Code" style={{ width: size, height: size, display: 'block' }} />; };
 
@@ -44,6 +44,8 @@ export default function WellnessHub() {
   const [kioskInput, setKioskInput] = useState('');
   const [pinModal, setPinModal] = useState(null);
   const [pinInput, setPinInput] = useState('');
+  const [visitors, setVisitors] = useState([]);
+  const [showAddVisitorModal, setShowAddVisitorModal] = useState(false);
 
   const membersRef = useRef(members);
   useEffect(() => { membersRef.current = members; }, [members]);
@@ -78,6 +80,27 @@ export default function WellnessHub() {
     fetch('/api/members').then(res => res.json()).then(data => { /* handled below */ });
         fetch('/api/get-corporate-partners').then(res => res.json()).then(data => {
       if (data.records) { setCorporatePartners(data.records.map(r => ({ name: r.fields['Company Name'] || '', sponsorMatch: r.fields['Sponsor Match'] || r.fields['Company Name'] || '', contactName: r.fields['Contact Name'] || '', contactEmail: r.fields['Contact Email'] || '' })).filter(p => p.name).sort((a,b) => a.name.localeCompare(b.name))); }
+    }).catch(() => {});
+        fetch('/api/get-visitors').then(res => res.json()).then(data => {
+      if (data.records) {
+        setVisitors(data.records.map(r => ({
+          airtableId: r.id,
+          firstName: r.fields['First Name'] || '',
+          lastName: r.fields['Last Name'] || '',
+          email: r.fields['Email'] || '',
+          phone: r.fields['Phone'] || '',
+          passType: r.fields['Pass Type'] || '',
+          amountPaid: r.fields['Amount Paid'] || 0,
+          referringProvider: r.fields['Referring Provider'] || '',
+          purchaseDate: r.fields['Purchase Date'] || '',
+          expirationDate: r.fields['Expiration Date'] || '',
+          center: r.fields['Center'] || '',
+          pin: r.fields['PIN'] || '',
+          orientationComplete: !!r.fields['Orientation Complete'],
+          totalVisits: r.fields['Total Visits'] || 0,
+          notes: r.fields['Notes'] || '',
+        })));
+      }
     }).catch(() => {});
   }, []);
 
