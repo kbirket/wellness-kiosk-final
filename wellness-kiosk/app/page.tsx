@@ -46,6 +46,7 @@ export default function WellnessHub() {
   const [pinInput, setPinInput] = useState('');
   const [visitors, setVisitors] = useState([]);
   const [showAddVisitorModal, setShowAddVisitorModal] = useState(false);
+  const [selectedVisitor, setSelectedVisitor] = useState(null);
 
   const membersRef = useRef(members);
   useEffect(() => { membersRef.current = members; }, [members]);
@@ -317,7 +318,7 @@ export default function WellnessHub() {
                   return (
                     <tr key={v.airtableId} className="border-b hover:bg-slate-50/80">
                       <td className="px-6 py-4">
-                        <p className="font-bold text-slate-800">{v.firstName} {v.lastName}</p>
+                        <p className="font-bold text-slate-800 cursor-pointer hover:text-[#1080ad]" onClick={() => setSelectedVisitor(v)}>{v.firstName} {v.lastName}</p>
                         <p className="text-[11px] text-slate-400">{v.email || v.phone || 'No contact info'}
                           {!v.orientationComplete && <span className="ml-2 px-2 py-0.5 rounded text-[9px] font-black bg-blue-100 text-blue-700 uppercase">Needs Orientation</span>}
                         </p>
@@ -419,7 +420,43 @@ export default function WellnessHub() {
 
         {activeTab === 'badge' && (<div className="space-y-6"><div className="mb-8"><h2 className="text-3xl font-bold text-[#001f3f] tracking-tight mb-1">Staff Check-In</h2><p className="text-slate-400 font-medium">Log a check-in manually or via scanner.</p></div><div className="flex gap-8"><div className="bg-white p-12 rounded-3xl shadow-sm border border-slate-200 flex-1 text-center"><p className="text-sm font-bold text-slate-400 mb-4">Enter Name or ID:</p><div className="relative w-full max-w-sm mx-auto mb-10"><div className="flex gap-4"><input className="flex-1 p-4 border rounded-xl outline-none text-xl text-center bg-slate-100 focus:border-[#1080ad] focus:bg-white transition-colors" placeholder="e.g. Smith" value={kioskInput} onChange={(e) => setKioskInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { processCheckIn(kioskInput, "Staff Scan/Entry"); setKioskInput(''); } }} /><button onClick={() => { processCheckIn(kioskInput, "Staff Scan/Entry"); setKioskInput(''); }} className="bg-[#001f3f] text-white px-8 rounded-xl font-bold hover:bg-blue-900 transition-colors shadow-sm">Check In</button></div>{kioskMatches.length > 0 && (<div className="absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 overflow-hidden text-left">{kioskMatches.map(m => (<button key={m.id} onClick={() => { processCheckIn(m.id, "Staff Override Entry"); setKioskInput(''); }} className="w-full p-4 border-b border-slate-100 last:border-0 hover:bg-blue-50 transition-colors flex justify-between items-center group"><div><p className="font-bold text-[#001f3f] text-lg">{m.firstName} {m.lastName}</p><p className="text-[10px] text-slate-400 uppercase tracking-widest">{m.phone||'No Phone'}</p></div><div className="bg-[#1080ad] text-white px-3 py-1 rounded-lg text-xs font-bold shadow-sm group-hover:scale-105 transition-transform">Select</div></button>))}</div>)}</div>{kioskMessage.text && (<div className={`mt-8 p-4 rounded-xl text-center font-bold text-lg ${kioskMessage.type==='success'?'bg-green-100 text-green-700':kioskMessage.type==='warning'?'bg-yellow-100 text-yellow-700':'bg-red-100 text-red-700'}`}>{kioskMessage.text}{kioskMessage.subtext && <p className="text-sm mt-1">{kioskMessage.subtext}</p>}</div>)}</div></div></div>)}
       </main>
-
+{/* VISITOR DETAIL MODAL */}
+      {selectedVisitor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#001f3f]/90 backdrop-blur-md">
+          <div className="bg-white rounded-[2rem] w-full max-w-2xl p-12 relative shadow-2xl max-h-[90vh] overflow-y-auto">
+            <button onClick={() => setSelectedVisitor(null)} className="absolute top-6 right-6 text-slate-300 hover:text-red-500 transition-all"><X size={24}/></button>
+            <span className={`px-4 py-1 rounded-full text-[10px] font-black tracking-widest ${new Date(selectedVisitor.expirationDate + 'T23:59:59') < new Date() ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>{new Date(selectedVisitor.expirationDate + 'T23:59:59') < new Date() ? 'EXPIRED' : 'ACTIVE PASS'}</span>
+            <h2 className="text-5xl font-black text-slate-900 mt-6 mb-10 tracking-tighter leading-none">{selectedVisitor.firstName}<br/>{selectedVisitor.lastName}</h2>
+            <div className="grid grid-cols-2 gap-8 gap-x-12">
+              <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Pass Type</p><p className="text-lg font-bold text-[#8b5cf6]">{selectedVisitor.passType}</p></div>
+              <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Amount Paid</p><p className="text-lg font-bold text-slate-800">{selectedVisitor.amountPaid > 0 ? `$${selectedVisitor.amountPaid}` : 'Courtesy — Free'}</p></div>
+              <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Contact</p><p className="text-sm font-bold text-slate-800">{selectedVisitor.email || 'No email'}<br/>{selectedVisitor.phone || 'No phone'}</p></div>
+              <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Referring Provider</p><p className="text-lg font-bold text-[#dd6d22]">{selectedVisitor.referringProvider || 'N/A'}</p></div>
+              <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Purchase Date</p><p className="text-lg font-bold text-slate-800">{selectedVisitor.purchaseDate ? new Date(selectedVisitor.purchaseDate + 'T00:00:00').toLocaleDateString('en-US', {month:'long',day:'numeric',year:'numeric'}) : 'N/A'}</p></div>
+              <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Expiration Date</p><p className={`text-lg font-bold ${new Date(selectedVisitor.expirationDate + 'T23:59:59') < new Date() ? 'text-red-500' : 'text-slate-800'}`}>{selectedVisitor.expirationDate ? new Date(selectedVisitor.expirationDate + 'T00:00:00').toLocaleDateString('en-US', {month:'long',day:'numeric',year:'numeric'}) : 'N/A'}</p></div>
+              <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Center</p><p className="text-lg font-bold text-slate-800">{selectedVisitor.center}</p></div>
+              <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Visits</p><p className="text-lg font-bold text-[#1080ad]">{selectedVisitor.totalVisits}</p></div>
+              <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Orientation</p><p className="text-lg font-bold text-slate-800">{selectedVisitor.orientationComplete ? 'Complete' : 'Pending'}</p></div>
+              <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">PIN</p><p className="text-lg font-bold font-mono text-slate-800">{selectedVisitor.pin}</p></div>
+            </div>
+            {selectedVisitor.notes && (<div className="mt-8"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Notes</p><p className="text-sm text-slate-600 bg-slate-50 p-4 rounded-xl border border-slate-100">{selectedVisitor.notes}</p></div>)}
+            <div className="mt-10 flex gap-4">
+              {!selectedVisitor.orientationComplete && (
+                <button onClick={async () => {
+                  try {
+                    const res = await fetch('/api/update-visitor-orientation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visitorAirtableId: selectedVisitor.airtableId }) });
+                    const result = await res.json();
+                    if (result.success) { setVisitors(prev => prev.map(v => v.airtableId === selectedVisitor.airtableId ? {...v, orientationComplete: true} : v)); setSelectedVisitor({...selectedVisitor, orientationComplete: true}); }
+                    else { alert('Error: ' + result.error); }
+                  } catch (err) { alert('Network error.'); }
+                }} className="flex-1 bg-blue-600 text-white py-4 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-colors text-sm">Mark Orientation Complete</button>
+              )}
+              <button onClick={() => setSelectedVisitor(null)} className="flex-1 bg-slate-100 text-[#001f3f] py-4 rounded-xl font-bold text-sm hover:bg-slate-200 transition-colors">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* ADD VISITOR MODAL */}
       {showAddVisitorModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#001f3f]/90 backdrop-blur-md">
