@@ -127,7 +127,12 @@ export default function WellnessHub() {
   const scopedMembers = members.filter(m => viewingCenter === 'both' || (m.center && m.center.toLowerCase().includes(viewingCenter)));
   const filteredMembers = scopedMembers.filter(m => `${m.firstName} ${m.lastName} ${m.id}`.toLowerCase().includes(searchQuery.toLowerCase()));
   const filteredVisits = visits.filter(v => viewingCenter === 'both' || (v.center && v.center.toLowerCase().includes(viewingCenter)));
-  const kioskMatches = kioskInput.length >= 2 ? members.filter(m => (m.firstName + ' ' + m.lastName).toLowerCase().includes(kioskInput.toLowerCase()) || m.id.toLowerCase().includes(kioskInput.toLowerCase())).slice(0, 5) : [];
+    const memberMatches = kioskInput.length >= 2 ? members.filter(m => (m.firstName + ' ' + m.lastName).toLowerCase().includes(kioskInput.toLowerCase()) || m.id.toLowerCase().includes(kioskInput.toLowerCase())).slice(0, 4) : [];
+  const visitorMatches = kioskInput.length >= 2 ? visitors.filter(v => {
+    const today = new Date(); const exp = new Date(v.expirationDate + 'T23:59:59');
+    return exp >= today && v.orientationComplete && (v.firstName + ' ' + v.lastName).toLowerCase().includes(kioskInput.toLowerCase());
+  }).slice(0, 2) : [];
+  const kioskMatches = [...memberMatches.map(m => ({...m, _type: 'member'})), ...visitorMatches.map(v => ({...v, id: 'VISITOR', _type: 'visitor'}))];
   const heatmapData = Array(15).fill(0); filteredVisits.forEach(v => { const hour = new Date(v.time).getHours(); if (hour >= 6 && hour <= 20) heatmapData[hour - 6]++; }); const maxVisits = Math.max(...heatmapData, 1);
   const stats = { total: scopedMembers.length, active: scopedMembers.filter(m => m.status === 'ACTIVE').length, overdue: scopedMembers.filter(m => m.status === 'OVERDUE').length, expiring: scopedMembers.filter(m => m.status === 'EXPIRING').length, today: filteredVisits.filter(v => new Date(v.time).toDateString() === new Date().toDateString()).length };
   const reportStats = { single: scopedMembers.filter(m => m.type === 'SINGLE').length, family: scopedMembers.filter(m => m.type === 'FAMILY').length, seniorCitizen: scopedMembers.filter(m => m.type === 'SENIOR CITIZEN').length, seniorFamily: scopedMembers.filter(m => m.type === 'SENIOR FAMILY').length, student: scopedMembers.filter(m => m.type.includes('STUDENT')).length, corporate: scopedMembers.filter(m => m.type === 'CORPORATE').length, corporateFamily: scopedMembers.filter(m => m.type === 'CORPORATE FAMILY').length, dayPass: scopedMembers.filter(m => m.type.includes('DAY PASS')).length, staff: scopedMembers.filter(m => m.type.includes('HD6') || m.type.includes('HCHF')).length, military: scopedMembers.filter(m => m.type.includes('MILITARY')).length };
@@ -197,7 +202,40 @@ export default function WellnessHub() {
 
   if (view === 'corp_portal' && activeCorp) { const corpMembers = members.filter(m => m.sponsorName.toLowerCase() === activeCorp.companyName.toLowerCase()); const totalCorpVisits = corpMembers.reduce((sum, m) => sum + m.visits, 0); const singlePlans = corpMembers.filter(m => m.type.includes('SINGLE')).length; const familyPlans = corpMembers.filter(m => m.type.includes('FAMILY')).length; return (<div className="min-h-screen bg-[#f0f2f5] font-sans print:bg-white"><nav className="bg-[#001f3f] text-white p-4 shadow-md flex justify-between items-center sticky top-0 z-10 print:hidden"><div className="flex items-center gap-3"><img src={LOGO_URL} alt="Logo" className="h-6" /><span className="font-bold tracking-tight border-l border-white/20 pl-3">Corporate Partner Portal</span></div><button onClick={handleLogout} className="bg-red-500/20 text-red-100 hover:bg-red-500 hover:text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold transition-all"><LogOut size={16}/> Logout</button></nav><main className="max-w-5xl mx-auto p-8 space-y-8 mt-4 print:p-0 print:m-0 print:max-w-none print:mt-0"><div className="flex justify-between items-end print:hidden"><div><h1 className="text-4xl font-black text-[#001f3f] tracking-tight mb-1">{activeCorp.companyName} Wellness Roster</h1><p className="text-slate-500 font-medium">Review your enrolled employees and gym utilization.</p></div><button onClick={() => window.print()} className="bg-white border border-slate-200 text-[#001f3f] px-6 py-3 rounded-xl font-bold text-sm shadow-sm flex items-center gap-2 hover:bg-slate-50 transition-all"><Printer size={16} /> Print Roster</button></div><div className="hidden print:block mb-6 border-b-4 border-[#001f3f] pb-6 text-center"><img src={LOGO_URL} alt="Logo" className="h-12 mx-auto mb-4 invert grayscale" /><h1 className="text-3xl font-black text-[#001f3f] tracking-tight">{activeCorp.companyName} Wellness Roster</h1><p className="text-slate-500 font-bold uppercase tracking-widest mt-2">{currentDateString}</p></div><div className="grid grid-cols-1 md:grid-cols-4 gap-6 print:grid-cols-4 print:gap-4"><ProStatCard value={corpMembers.length} label="Total Enrolled" color="#001f3f" /><ProStatCard value={totalCorpVisits} label="Total Visits" color="#1080ad" /><ProStatCard value={singlePlans} label="Individual Plans" color="#16a34a" /><ProStatCard value={familyPlans} label="Family Plans" color="#f59e0b" /></div><div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden print:border-slate-300 print:shadow-none print:rounded-none"><div className="p-6 border-b border-slate-100 bg-slate-50 print:bg-white print:p-4"><h3 className="text-lg font-bold text-[#001f3f]">Employee Directory</h3></div><table className="w-full text-left border-collapse print:text-sm"><thead className="bg-white text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 print:border-b-2 print:border-slate-800"><tr><th className="px-8 py-4 print:py-2">Employee Name</th><th className="px-8 py-4 print:py-2">Member ID</th><th className="px-8 py-4 print:py-2">Plan Type</th><th className="px-8 py-4 print:py-2 text-right">Lifetime Visits</th></tr></thead><tbody className="text-sm">{corpMembers.length === 0 ? (<tr><td colSpan="4" className="text-center py-12 text-slate-400 font-medium italic">No employees currently enrolled.</td></tr>) : (corpMembers.map(m => (<tr key={m.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors print:border-slate-200"><td className="px-8 py-5 print:py-2 font-bold text-slate-800">{m.firstName} {m.lastName}</td><td className="px-8 py-5 print:py-2 font-mono text-slate-400">{m.id}</td><td className="px-8 py-5 print:py-2"><span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 print:bg-transparent print:px-0 print:text-black text-[10px] font-black tracking-tight">{m.type}</span></td><td className="px-8 py-5 print:py-2 text-right font-black text-[#1080ad] print:text-black text-lg print:text-base">{m.visits}</td></tr>)))}</tbody></table></div></main></div>); }
 
-  if (view === 'kiosk') { return (<div className="min-h-screen bg-[#f0f2f5] flex flex-col items-center justify-center p-6 font-sans relative overflow-hidden"><button onClick={() => {setView('landing');}} className="absolute top-6 left-6 text-slate-400 hover:text-[#001f3f] flex items-center gap-2 font-bold z-10"><LogOut size={20}/> Staff Exit</button>{kioskMessage.text && (<div className="absolute inset-0 z-50 flex items-center justify-center bg-[#001f3f]/40 backdrop-blur-sm p-4"><div className={`bg-white rounded-3xl shadow-2xl p-10 w-full max-w-md text-center border-t-8 ${kioskMessage.type === 'success' ? 'border-[#16a34a]' : kioskMessage.type === 'warning' ? 'border-[#eab308]' : 'border-red-600'}`}>{kioskMessage.type === 'success' ? (<CheckCircle size={72} className="text-[#16a34a] mx-auto mb-6" />) : (<AlertCircle size={72} className={`mx-auto mb-6 ${kioskMessage.type === 'warning' ? 'text-[#eab308]' : 'text-red-600'}`} />)}<h1 className="text-3xl font-black text-[#001f3f] tracking-tight mb-2">{kioskMessage.text}</h1>{kioskMessage.subtext && <p className="text-slate-500 font-medium text-lg">{kioskMessage.subtext}</p>}</div></div>)}{pinModal && (<div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-[#001f3f]/90 backdrop-blur-sm p-4"><div className="bg-white p-12 rounded-[3rem] text-center max-w-sm w-full relative shadow-2xl"><button onClick={() => {setPinModal(null); setPinInput('');}} className="absolute top-6 right-6 text-slate-300 hover:text-red-500"><X size={24}/></button><Lock size={48} className="text-[#1080ad] mx-auto mb-6" /><h3 className="text-3xl font-black text-[#001f3f] mb-2 tracking-tight">Security PIN</h3><p className="text-slate-500 font-medium mb-8">Enter your 4-digit security PIN</p><input type="password" maxLength={4} value={pinInput} onChange={e => setPinInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') document.getElementById('btn_submit_pin').click(); }} className="w-full p-6 text-center text-4xl tracking-[0.5em] border-2 rounded-2xl mb-8 outline-none focus:border-[#1080ad] bg-slate-50" autoFocus /><button id="btn_submit_pin" onClick={() => { if (!pinModal.password || pinInput === pinModal.password) { processCheckIn(pinModal.id, "Kiosk Search & PIN"); setPinModal(null); setPinInput(''); } else { alert("Incorrect PIN."); } }} className="w-full bg-[#1080ad] text-white p-5 rounded-2xl font-bold text-xl shadow-lg hover:bg-blue-800 transition-colors">Verify</button></div></div>)}<div className="bg-white rounded-[3rem] shadow-2xl p-12 w-full max-w-2xl border-t-8 border-[#1080ad] text-center relative z-0"><h2 className="text-5xl font-black text-[#001f3f] mb-4 tracking-tight">Check-In</h2><p className="text-slate-500 mb-12 text-lg font-medium">Type your last name to check in.</p><div className="relative w-full max-w-md mx-auto mb-10"><div className="flex gap-4"><input className="flex-1 p-6 border-2 rounded-2xl outline-none focus:border-[#1080ad] font-sans text-2xl text-center bg-slate-50" placeholder="e.g. Smith" value={kioskInput} onChange={(e) => setKioskInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { processCheckIn(kioskInput, "Manual ID Entry"); setKioskInput(''); } }} /><button onClick={() => { processCheckIn(kioskInput, "Manual ID Entry"); setKioskInput(''); }} className="bg-[#001f3f] text-white px-10 rounded-2xl font-bold text-xl hover:bg-blue-900 transition-colors shadow-lg">Go</button></div>{kioskMatches.length > 0 && (<div className="absolute bottom-[115%] left-0 w-full mb-2 bg-white border-2 border-[#1080ad] rounded-2xl shadow-2xl z-30 overflow-hidden text-left flex flex-col-reverse">{kioskMatches.map(m => (<button key={m.id} onClick={() => { setPinModal(m); setKioskInput(''); }} className="w-full p-5 border-b border-slate-100 hover:bg-blue-50 transition-colors flex justify-between items-center group"><div><p className="font-bold text-[#001f3f] text-xl">{m.firstName} {m.lastName}</p><p className="text-xs text-slate-400 font-mono tracking-widest">{m.id}</p></div><div className="bg-[#1080ad] text-white px-4 py-2 rounded-xl text-sm font-bold shadow-md group-hover:scale-105 transition-transform">Tap to Check In</div></button>))}</div>)}</div><img src={LOGO_URL} alt="Logo" className="h-10 mx-auto opacity-30 invert grayscale" /></div></div>); }
+  if (view === 'kiosk') { return (<div className="min-h-screen bg-[#f0f2f5] flex flex-col items-center justify-center p-6 font-sans relative overflow-hidden"><button onClick={() => {setView('landing');}} className="absolute top-6 left-6 text-slate-400 hover:text-[#001f3f] flex items-center gap-2 font-bold z-10"><LogOut size={20}/> Staff Exit</button>{kioskMessage.text && (<div className="absolute inset-0 z-50 flex items-center justify-center bg-[#001f3f]/40 backdrop-blur-sm p-4"><div className={`bg-white rounded-3xl shadow-2xl p-10 w-full max-w-md text-center border-t-8 ${kioskMessage.type === 'success' ? 'border-[#16a34a]' : kioskMessage.type === 'warning' ? 'border-[#eab308]' : 'border-red-600'}`}>{kioskMessage.type === 'success' ? (<CheckCircle size={72} className="text-[#16a34a] mx-auto mb-6" />) : (<AlertCircle size={72} className={`mx-auto mb-6 ${kioskMessage.type === 'warning' ? 'text-[#eab308]' : 'text-red-600'}`} />)}<h1 className="text-3xl font-black text-[#001f3f] tracking-tight mb-2">{kioskMessage.text}</h1>{kioskMessage.subtext && <p className="text-slate-500 font-medium text-lg">{kioskMessage.subtext}</p>}</div></div>)}{pinModal && (<div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-[#001f3f]/90 backdrop-blur-sm p-4"><div className="bg-white p-12 rounded-[3rem] text-center max-w-sm w-full relative shadow-2xl"><button onClick={() => {setPinModal(null); setPinInput('');}} className="absolute top-6 right-6 text-slate-300 hover:text-red-500"><X size={24}/></button><Lock size={48} className="text-[#1080ad] mx-auto mb-6" /><h3 className="text-3xl font-black text-[#001f3f] mb-2 tracking-tight">Security PIN</h3><p className="text-slate-500 font-medium mb-8">Enter your 4-digit security PIN</p><input type="password" maxLength={4} value={pinInput} onChange={e => setPinInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') document.getElementById('btn_submit_pin').click(); }} className="w-full p-6 text-center text-4xl tracking-[0.5em] border-2 rounded-2xl mb-8 outline-none focus:border-[#1080ad] bg-slate-50" autoFocus /><button id="btn_submit_pin"onClick={() => {
+  if (pinModal.isVisitor) {
+    // Visitor PIN check
+    if (pinInput === pinModal.pin) {
+      fetch('/api/visitor-checkin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visitorAirtableId: pinModal.airtableId, pin: pinInput, center: centerRef.current === 'both' ? pinModal.center : centerRef.current }) })
+      .then(res => res.json()).then(result => {
+        if (result.success) {
+          setKioskMessage({ text: `Welcome, ${pinModal.firstName}!`, type: 'success', subtext: '' });
+          setVisitors(prev => prev.map(v => v.airtableId === pinModal.airtableId ? {...v, totalVisits: v.totalVisits + 1} : v));
+        } else if (result.error === 'pass_expired') {
+          setKioskMessage({ text: 'Pass Expired', type: 'error', subtext: 'Please see the front desk.' });
+        } else {
+          setKioskMessage({ text: 'Error', type: 'error', subtext: result.message || 'Please see front desk.' });
+        }
+        setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 3500);
+      }).catch(() => {
+        setKioskMessage({ text: 'Network Error', type: 'error', subtext: 'Please try again.' });
+        setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4000);
+      });
+      setPinModal(null); setPinInput('');
+    } else {
+      alert("Incorrect PIN.");
+    }
+  } else {
+    // Regular member PIN check
+    if (!pinModal.password || pinInput === pinModal.password) {
+      processCheckIn(pinModal.id, "Kiosk Search & PIN");
+      setPinModal(null); setPinInput('');
+    } else {
+      alert("Incorrect PIN.");
+    }
+  }
+}}
+  className="w-full bg-[#1080ad] text-white p-5 rounded-2xl font-bold text-xl shadow-lg hover:bg-blue-800 transition-colors">Verify</button></div></div>)}<div className="bg-white rounded-[3rem] shadow-2xl p-12 w-full max-w-2xl border-t-8 border-[#1080ad] text-center relative z-0"><h2 className="text-5xl font-black text-[#001f3f] mb-4 tracking-tight">Check-In</h2><p className="text-slate-500 mb-12 text-lg font-medium">Type your last name to check in.</p><div className="relative w-full max-w-md mx-auto mb-10"><div className="flex gap-4"><input className="flex-1 p-6 border-2 rounded-2xl outline-none focus:border-[#1080ad] font-sans text-2xl text-center bg-slate-50" placeholder="e.g. Smith" value={kioskInput} onChange={(e) => setKioskInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { processCheckIn(kioskInput, "Manual ID Entry"); setKioskInput(''); } }} /><button onClick={() => { processCheckIn(kioskInput, "Manual ID Entry"); setKioskInput(''); }} className="bg-[#001f3f] text-white px-10 rounded-2xl font-bold text-xl hover:bg-blue-900 transition-colors shadow-lg">Go</button></div>{kioskMatches.length > 0 && (<div className="absolute bottom-[115%] left-0 w-full mb-2 bg-white border-2 border-[#1080ad] rounded-2xl shadow-2xl z-30 overflow-hidden text-left flex flex-col-reverse">{kioskMatches.map(m => (<button key={m._type + (m.airtableId || m.id)} onClick={() => { if (m._type === 'visitor') { setPinModal({...m, isVisitor: true}); } else { setPinModal(m); } setKioskInput(''); }} className="w-full p-5 border-b border-slate-100 hover:bg-blue-50 transition-colors flex justify-between items-center group"><div><p className="font-bold text-[#001f3f] text-xl">{m.firstName} {m.lastName}</p><p className="text-xs text-slate-400 font-mono tracking-widest">{m._type === 'visitor' ? <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded font-black text-[9px] uppercase tracking-widest">Visitor · {m.passType}</span> : m.id}</p></div><div className="bg-[#1080ad] text-white px-4 py-2 rounded-xl text-sm font-bold shadow-md group-hover:scale-105 transition-transform">Tap to Check In</div></button>))}</div>)}
 
   if (view === 'secret_scanner') { return (<div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 font-sans relative"><button onClick={() => {setView('landing'); setScannerActive(false);}} className="absolute top-6 left-6 text-white/50 hover:text-white flex items-center gap-2 font-bold z-10"><LogOut size={20}/> Exit Scanner</button>{kioskMessage.text && (<div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"><div className={`bg-white rounded-3xl shadow-2xl p-10 w-full max-w-md text-center border-t-8 ${kioskMessage.type === 'success' ? 'border-[#16a34a]' : kioskMessage.type === 'warning' ? 'border-[#eab308]' : 'border-red-600'}`}>{kioskMessage.type === 'success' ? (<CheckCircle size={72} className="text-[#16a34a] mx-auto mb-6" />) : (<AlertCircle size={72} className={`mx-auto mb-6 ${kioskMessage.type === 'warning' ? 'text-[#eab308]' : 'text-red-600'}`} />)}<h1 className="text-3xl font-black text-[#001f3f] tracking-tight mb-2">{kioskMessage.text}</h1>{kioskMessage.subtext && <p className="text-slate-500 font-medium text-lg">{kioskMessage.subtext}</p>}</div></div>)}<div className="w-full max-w-lg mx-auto bg-slate-900 border-4 border-slate-800 rounded-3xl overflow-hidden min-h-[400px] flex flex-col items-center justify-center">{!scannerActive ? (<button onClick={() => setScannerActive(true)} className="bg-[#1080ad] text-white px-8 py-4 rounded-xl font-bold text-lg flex items-center gap-2">Turn On Camera</button>) : (<div id="reader" className="w-full h-full"></div>)}</div></div>); }
 
@@ -214,7 +252,7 @@ export default function WellnessHub() {
         <div className="p-8 border-b border-white/10 flex justify-center"><img src={LOGO_URL} alt="Logo" className="h-10 opacity-90 drop-shadow-md" /></div>
         <div className="p-6"><div className="flex items-center gap-3 mb-4"><div className="w-10 h-10 rounded-lg bg-[#f59e0b] flex items-center justify-center font-bold text-lg text-[#001f3f]">{user?.name.charAt(0)}</div><div><p className="text-sm font-bold leading-none">{user?.name}</p><p className="text-[11px] text-white/50">@{user?.username}</p></div></div><button onClick={handleLogout} className="flex items-center gap-2 text-xs text-white/40 hover:text-white transition-colors"><LogOut size={14} /> Sign Out</button></div>
         <div className="px-4 mb-8"><p className="px-2 text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3">Viewing</p><div className="space-y-1">{[{k:'both',c:'#ffffff'},{k:'harper',c:'#f59e0b'},{k:'anthony',c:'#1080ad'}].map(item => (<button key={item.k} onClick={() => { setViewingCenter(item.k); localStorage.setItem('wellnessCenter', item.k); }} className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all ${viewingCenter === item.k ? 'bg-white/20 font-bold' : 'text-white/60 hover:bg-white/5'}`}><span className="w-1.5 h-6 rounded-full" style={{ backgroundColor: item.c }} />{item.k === 'both' ? 'Both Centers' : `${item.k.charAt(0).toUpperCase() + item.k.slice(1)}`}</button>))}</div></div>
-        <nav className="flex-1 px-4 space-y-1">{[{id:'dashboard',label:'Dashboard',icon:<LayoutDashboard size={18}/>},{id:'members',label:'Members',icon:<Users size={18}/>},{id:'badge',label:'Staff Check-In',icon:<QrCode size={18}/>},{id:'notif',label:'Notifications',icon:<Bell size={18}/>},{id:'reports',label:'Reports',icon:<FileText size={18}/>}].map(item => (<button key={item.id} onClick={() => { setActiveTab(item.id); setKioskInput(''); }} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all ${activeTab === item.id ? 'bg-[#1080ad] text-white font-bold' : 'text-white/60 hover:bg-white/5'}`}>{item.icon} {item.label}{item.id === 'notif' && stats.overdue > 0 && <span className="ml-auto w-5 h-5 rounded-full bg-red-500 text-[10px] flex items-center justify-center font-bold tracking-tight">{stats.overdue}</span>}</button>))}</nav>
+        <nav className="flex-1 px-4 space-y-1">{[{id:'dashboard',label:'Dashboard',icon:<LayoutDashboard size={18}/>},{id:'members',label:'Members',icon:<Users size={18}/>},{id:'badge',label:'Staff Check-In',icon:<QrCode size={18}/>},{id:'notif',label:'Notifications',icon:<Bell size={18}/>}, {id:'visitors',label:'Visitors',icon:<Eye size={18}/>},{id:'reports',label:'Reports',icon:<FileText size={18}/>},].map(item => (<button key={item.id} onClick={() => { setActiveTab(item.id); setKioskInput(''); }} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all ${activeTab === item.id ? 'bg-[#1080ad] text-white font-bold' : 'text-white/60 hover:bg-white/5'}`}>{item.icon} {item.label}{item.id === 'notif' && stats.overdue > 0 && <span className="ml-auto w-5 h-5 rounded-full bg-red-500 text-[10px] flex items-center justify-center font-bold tracking-tight">{stats.overdue}</span>}</button>))}</nav>
       </aside>
 
       <main className="flex-1 p-10 h-screen overflow-y-auto relative print:m-0 print:p-0 print:h-auto print:overflow-visible">
@@ -243,6 +281,104 @@ export default function WellnessHub() {
         {/* MEMBERS TABLE — now shows family name and sponsor */}
         {activeTab === 'members' && (<div className="space-y-6"><div className="flex justify-between items-center mb-8"><div><h2 className="text-3xl font-bold text-[#001f3f] tracking-tight">Members</h2></div><div className="flex gap-3"><button onClick={handleExportCSV} className="bg-white border border-slate-200 text-[#001f3f] px-6 py-2 rounded-xl font-bold text-sm shadow-sm flex items-center gap-2 hover:bg-slate-50 transition-all"><Download size={16}/> Export CSV</button><button onClick={() => { setShowAddModal(true); setNewMemberPin(null); setFamilyFlow(null); setSelectedSponsor(''); setCustomSponsor(''); }} className="bg-[#001f3f] text-white px-6 py-2 rounded-xl font-bold text-sm shadow-xl shadow-blue-900/10 flex items-center gap-2 hover:bg-blue-900 transition-colors"><Plus size={16}/> Add Member</button></div></div><div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex gap-4 items-center"><div className="relative flex-1"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} /><input className="pl-12 pr-4 py-2 border rounded-xl text-sm w-full outline-none" placeholder="Search..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} /></div></div>{loading ? (<div className="text-center py-20 text-slate-300 font-medium italic">Syncing Airtable...</div>) : apiError ? (<div className="bg-red-50 border-2 border-red-200 text-red-700 p-10 rounded-2xl text-center shadow-sm"><AlertCircle size={48} className="mx-auto mb-4 text-red-500" /><h3 className="text-2xl font-black mb-2">Airtable Refused Connection</h3><p className="font-mono text-sm bg-white p-4 rounded-lg border border-red-100 max-w-2xl mx-auto">{apiError}</p></div>) : (<div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden"><table className="w-full text-left border-collapse"><thead className="bg-slate-50 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b"><tr><th className="px-6 py-4 w-56">Member</th><th className="px-4 py-4">ID</th><th className="px-4 py-4 w-36">Type</th><th className="px-4 py-4 w-28">Status</th><th className="px-4 py-4 w-28">Payment</th><th className="px-4 py-4 w-24">Info</th></tr></thead><tbody className="text-sm">{filteredMembers.map(m => { const light = getStoplight(m); return (<tr key={m.id} className="border-b hover:bg-slate-50/80 cursor-pointer" onClick={() => setSelectedMember(m)}><td className="px-6 py-4"><p className="font-bold text-slate-800">{m.firstName} {m.lastName}</p><p className="text-[11px] text-slate-400">{m.email}{m.needsOrientation && <span className="ml-2 px-2 py-0.5 rounded text-[9px] font-black bg-blue-100 text-blue-700 uppercase">Orientation</span>}{m.familyName && <span className="ml-2 px-2 py-0.5 rounded text-[9px] font-black bg-purple-100 text-purple-700 uppercase">{m.familyName}</span>}{m.sponsorName && <span className="ml-2 px-2 py-0.5 rounded text-[9px] font-black bg-orange-100 text-orange-700 uppercase">{m.sponsorName}</span>}</p></td><td className="px-4 py-4 font-mono text-slate-400 text-xs">{m.id}</td><td className="px-4 py-4"><span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black tracking-tight">{m.type}</span></td><td className="px-4 py-4"><span className={`px-3 py-1 rounded-full text-[10px] font-black ${light==='green'?'bg-green-100 text-green-600':light==='yellow'?'bg-yellow-100 text-yellow-600':'bg-red-100 text-red-600'}`}>{light==='green'?'ACTIVE':light==='yellow'?'GRACE':'LOCKED'}</span></td><td className="px-4 py-4 text-slate-600 text-xs">{m.nextPayment||'N/A'}</td><td className="px-4 py-4"><button className="p-2 bg-[#1080ad] text-white rounded-lg shadow-md"><QrCode size={16}/></button></td></tr>);})}</tbody></table></div>)}</div>)}
 
+        {activeTab === 'visitors' && (<div className="space-y-6">
+          <div className="flex justify-between items-center mb-8">
+            <div><h2 className="text-3xl font-bold text-[#001f3f] tracking-tight">Visitors</h2><p className="text-slate-400 font-medium">Day passes, courtesy passes & referrals</p></div>
+            <button onClick={() => setShowAddVisitorModal(true)} className="bg-[#001f3f] text-white px-6 py-2 rounded-xl font-bold text-sm shadow-xl shadow-blue-900/10 flex items-center gap-2 hover:bg-blue-900 transition-colors"><Plus size={16}/> Add Visitor</button>
+          </div>
+ 
+          {/* Visitor Stats */}
+          <div className="grid grid-cols-4 gap-6">
+            <ProStatCard value={visitors.filter(v => { const exp = new Date(v.expirationDate + 'T23:59:59'); return exp >= new Date(); }).length} label="Active Passes" color="#16a34a" />
+            <ProStatCard value={visitors.filter(v => { const exp = new Date(v.expirationDate + 'T23:59:59'); return exp < new Date(); }).length} label="Expired" color="#dc2626" />
+            <ProStatCard value={visitors.filter(v => v.passType === 'Day Pass').length} label="Day Passes" color="#1080ad" />
+            <ProStatCard value={visitors.filter(v => v.passType !== 'Day Pass').length} label="Courtesy Passes" color="#8b5cf6" />
+          </div>
+ 
+          {/* Visitors Table */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <table className="w-full text-left border-collapse">
+              <thead className="bg-slate-50 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b">
+                <tr>
+                  <th className="px-6 py-4">Visitor</th>
+                  <th className="px-4 py-4">Pass Type</th>
+                  <th className="px-4 py-4">Referring Provider</th>
+                  <th className="px-4 py-4">Expires</th>
+                  <th className="px-4 py-4">Status</th>
+                  <th className="px-4 py-4">Visits</th>
+                  <th className="px-4 py-4">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="text-sm">
+                {visitors.length === 0 ? (
+                  <tr><td colSpan="7" className="text-center py-12 text-slate-400 font-medium italic">No visitors yet.</td></tr>
+                ) : visitors.map(v => {
+                  const expired = new Date(v.expirationDate + 'T23:59:59') < new Date();
+                  return (
+                    <tr key={v.airtableId} className="border-b hover:bg-slate-50/80">
+                      <td className="px-6 py-4">
+                        <p className="font-bold text-slate-800">{v.firstName} {v.lastName}</p>
+                        <p className="text-[11px] text-slate-400">{v.email || v.phone || 'No contact info'}
+                          {!v.orientationComplete && <span className="ml-2 px-2 py-0.5 rounded text-[9px] font-black bg-blue-100 text-blue-700 uppercase">Needs Orientation</span>}
+                        </p>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-black ${v.passType === 'Day Pass' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>{v.passType}</span>
+                      </td>
+                      <td className="px-4 py-4 text-slate-600 text-xs">{v.referringProvider || '—'}</td>
+                      <td className="px-4 py-4 text-xs">
+                        <span className={expired ? 'text-red-500 font-bold' : 'text-slate-600'}>
+                          {v.expirationDate ? new Date(v.expirationDate + 'T00:00:00').toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'}) : 'N/A'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-black ${expired ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>{expired ? 'EXPIRED' : 'ACTIVE'}</span>
+                      </td>
+                      <td className="px-4 py-4 font-black text-[#1080ad]">{v.totalVisits}</td>
+                      <td className="px-4 py-4 flex gap-2">
+                        {!v.orientationComplete && (
+                          <button onClick={async () => {
+                            try {
+                              const res = await fetch('/api/update-visitor-orientation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visitorAirtableId: v.airtableId }) });
+                              const result = await res.json();
+                              if (result.success) { setVisitors(prev => prev.map(vis => vis.airtableId === v.airtableId ? {...vis, orientationComplete: true} : vis)); }
+                              else { alert('Error: ' + result.error); }
+                            } catch (err) { alert('Network error.'); }
+                          }} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-bold hover:bg-blue-700 transition-colors" title="Mark Orientation Complete">
+                            Orient
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+ 
+          {/* Conversion Leads - expired visitors with contact info */}
+          {visitors.filter(v => new Date(v.expirationDate + 'T23:59:59') < new Date() && (v.email || v.phone)).length > 0 && (
+            <ProListCard title="Conversion Leads — Expired Passes with Contact Info">
+              <p className="text-sm text-slate-400 mb-4">These visitors had passes that expired. They have contact info and could be converted to full members.</p>
+              <div className="space-y-3">
+                {visitors.filter(v => new Date(v.expirationDate + 'T23:59:59') < new Date() && (v.email || v.phone)).map(v => (
+                  <div key={v.airtableId} className="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-100">
+                    <div>
+                      <p className="font-bold text-slate-800">{v.firstName} {v.lastName}</p>
+                      <p className="text-[11px] text-slate-400">{v.email} {v.phone ? `· ${v.phone}` : ''}</p>
+                      <p className="text-[10px] text-purple-500 font-bold">{v.passType} · Referred by {v.referringProvider || 'N/A'} · {v.totalVisits} visit{v.totalVisits !== 1 ? 's' : ''}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button className="p-2 bg-[#1080ad] text-white rounded-lg shadow-md" title="Email"><Mail size={16}/></button>
+                      <button className="p-2 bg-[#dd6d22] text-white rounded-lg shadow-md" title="Call"><Phone size={16}/></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ProListCard>
+          )}
+        </div>)}
+        
         {activeTab === 'reports' && (<div className="space-y-6 print:space-y-3 print:m-0 print:p-0"><div className="flex justify-between items-center mb-8 print:hidden"><div><h2 className="text-3xl font-bold text-[#001f3f] tracking-tight">Monthly Summary Report</h2></div><div className="flex gap-3"><button onClick={() => window.print()} className="bg-white border border-slate-200 text-[#001f3f] px-6 py-3 rounded-xl font-bold text-sm shadow-sm flex items-center gap-2 hover:bg-slate-50 transition-all"><Printer size={16}/> Print</button><button onClick={handleMonthlySummary} className="bg-[#1080ad] text-white px-6 py-3 rounded-xl font-bold text-sm shadow-xl flex items-center gap-2 hover:bg-blue-600 transition-all"><FileText size={16}/> Download CSV</button></div></div><div className="hidden print:block mb-8 print:mb-4 text-center border-b-4 border-[#001f3f] pb-8 print:pb-4"><img src={LOGO_URL} alt="Logo" className="h-16 print:h-12 mx-auto mb-4 print:mb-2 invert grayscale" /><h1 className="text-4xl print:text-2xl font-black text-[#001f3f] tracking-tighter">{viewingCenter === 'both' ? 'System-Wide' : viewingCenter.charAt(0).toUpperCase()+viewingCenter.slice(1)} Wellness Center</h1><p className="text-lg print:text-sm font-bold text-slate-500 uppercase tracking-widest mt-2 print:mt-1">Executive Summary • {currentDateString}</p></div><div className="mb-8 print:mb-4"><ProListCard title="Current Membership Breakdown"><div className="py-6 print:py-2"><DonutChart data={planChartData} totalLabel="Members" /></div></ProListCard></div><div className="grid grid-cols-1 md:grid-cols-2 gap-8 print:gap-4 print:grid-cols-2"><ProListCard title="Standard Memberships"><table className="w-full text-sm print:text-xs"><tbody><tr className="border-b print:border-slate-200"><td className="py-3 print:py-1.5 font-medium text-slate-600">Single:</td><td className="py-3 print:py-1.5 font-bold text-right">{reportStats.single}</td></tr><tr className="border-b print:border-slate-200"><td className="py-3 print:py-1.5 font-medium text-slate-600">Family:</td><td className="py-3 print:py-1.5 font-bold text-right">{reportStats.family}</td></tr><tr className="border-b print:border-slate-200"><td className="py-3 print:py-1.5 font-medium text-slate-600">Senior Citizen:</td><td className="py-3 print:py-1.5 font-bold text-right">{reportStats.seniorCitizen}</td></tr><tr className="border-b print:border-slate-200"><td className="py-3 print:py-1.5 font-medium text-slate-600">Senior Family:</td><td className="py-3 print:py-1.5 font-bold text-right">{reportStats.seniorFamily}</td></tr><tr><td className="py-3 print:py-1.5 font-medium text-slate-600">Student (14-22):</td><td className="py-3 print:py-1.5 font-bold text-right">{reportStats.student}</td></tr></tbody></table></ProListCard><div className="space-y-8 print:space-y-4"><ProListCard title="Corporate, Staff & Military"><table className="w-full text-sm print:text-xs"><tbody><tr className="border-b print:border-slate-200"><td className="py-2 print:py-1.5 font-medium text-slate-600">Corporate:</td><td className="py-2 print:py-1.5 font-bold text-right">{reportStats.corporate}</td></tr><tr className="border-b print:border-slate-200"><td className="py-2 print:py-1.5 font-medium text-slate-600">Corporate Family:</td><td className="py-2 print:py-1.5 font-bold text-right">{reportStats.corporateFamily}</td></tr><tr className="border-b print:border-slate-200"><td className="py-2 print:py-1.5 font-medium text-slate-600">HD6/HCHF (Staff):</td><td className="py-2 print:py-1.5 font-bold text-right">{reportStats.staff}</td></tr><tr><td className="py-2 print:py-1.5 font-medium text-slate-600">Active Military:</td><td className="py-2 print:py-1.5 font-bold text-right">{reportStats.military}</td></tr></tbody></table></ProListCard><ProListCard title="Other & Totals"><table className="w-full text-sm print:text-xs"><tbody><tr className="border-b print:border-slate-200"><td className="py-2 print:py-1 font-medium text-slate-600">Day Passes:</td><td className="py-2 print:py-1 font-bold text-right">{reportStats.dayPass}</td></tr><tr className="bg-slate-50 print:bg-transparent print:border-t-2 print:border-[#001f3f]"><td className="py-3 print:py-2 px-2 print:px-0 font-bold text-[#001f3f] text-lg print:text-base">Total:</td><td className="py-3 print:py-2 px-2 print:px-0 font-black text-right text-[#001f3f] text-lg print:text-base">{stats.total}</td></tr></tbody></table></ProListCard></div></div><div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mt-8 print:hidden">
               <h3 className="text-lg font-bold text-[#001f3f] mb-4">Corporate Billing Letters</h3>
               <p className="text-sm text-slate-400 mb-4">Generate a payment letter for a corporate partner showing their sponsored employees and total amount due.</p>
@@ -284,6 +420,67 @@ export default function WellnessHub() {
         {activeTab === 'badge' && (<div className="space-y-6"><div className="mb-8"><h2 className="text-3xl font-bold text-[#001f3f] tracking-tight mb-1">Staff Check-In</h2><p className="text-slate-400 font-medium">Log a check-in manually or via scanner.</p></div><div className="flex gap-8"><div className="bg-white p-12 rounded-3xl shadow-sm border border-slate-200 flex-1 text-center"><p className="text-sm font-bold text-slate-400 mb-4">Enter Name or ID:</p><div className="relative w-full max-w-sm mx-auto mb-10"><div className="flex gap-4"><input className="flex-1 p-4 border rounded-xl outline-none text-xl text-center bg-slate-100 focus:border-[#1080ad] focus:bg-white transition-colors" placeholder="e.g. Smith" value={kioskInput} onChange={(e) => setKioskInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { processCheckIn(kioskInput, "Staff Scan/Entry"); setKioskInput(''); } }} /><button onClick={() => { processCheckIn(kioskInput, "Staff Scan/Entry"); setKioskInput(''); }} className="bg-[#001f3f] text-white px-8 rounded-xl font-bold hover:bg-blue-900 transition-colors shadow-sm">Check In</button></div>{kioskMatches.length > 0 && (<div className="absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 overflow-hidden text-left">{kioskMatches.map(m => (<button key={m.id} onClick={() => { processCheckIn(m.id, "Staff Override Entry"); setKioskInput(''); }} className="w-full p-4 border-b border-slate-100 last:border-0 hover:bg-blue-50 transition-colors flex justify-between items-center group"><div><p className="font-bold text-[#001f3f] text-lg">{m.firstName} {m.lastName}</p><p className="text-[10px] text-slate-400 uppercase tracking-widest">{m.phone||'No Phone'}</p></div><div className="bg-[#1080ad] text-white px-3 py-1 rounded-lg text-xs font-bold shadow-sm group-hover:scale-105 transition-transform">Select</div></button>))}</div>)}</div>{kioskMessage.text && (<div className={`mt-8 p-4 rounded-xl text-center font-bold text-lg ${kioskMessage.type==='success'?'bg-green-100 text-green-700':kioskMessage.type==='warning'?'bg-yellow-100 text-yellow-700':'bg-red-100 text-red-700'}`}>{kioskMessage.text}{kioskMessage.subtext && <p className="text-sm mt-1">{kioskMessage.subtext}</p>}</div>)}</div></div></div>)}
       </main>
 
+      {/* ADD VISITOR MODAL */}
+      {showAddVisitorModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#001f3f]/90 backdrop-blur-md">
+          <div className="bg-white rounded-3xl w-full max-w-xl p-10 relative shadow-2xl max-h-[90vh] overflow-y-auto">
+            <button onClick={() => setShowAddVisitorModal(false)} className="absolute top-6 right-6 text-slate-300 hover:text-red-500 transition-all z-10"><X size={24}/></button>
+            <h3 className="text-3xl font-black text-[#001f3f] mb-2 tracking-tight">Add Visitor</h3>
+            <p className="text-slate-500 font-medium mb-8">Register a day pass or courtesy pass visitor.</p>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              const formData = { firstName: e.target.vfname.value, lastName: e.target.vlname.value, email: e.target.vemail.value, phone: e.target.vphone.value, passType: e.target.vpass.value, center: e.target.vcenter.value, referringProvider: e.target.vprovider.value, notes: e.target.vnotes.value };
+              try {
+                const res = await fetch('/api/add-visitor', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData) });
+                const result = await res.json();
+                if (result.success) {
+                  alert(`Visitor added!\n\nPIN: ${result.pin}\nExpires: ${new Date(result.expirationDate + 'T00:00:00').toLocaleDateString('en-US', {month:'long',day:'numeric',year:'numeric'})}${result.amountPaid > 0 ? `\nAmount: $${result.amountPaid}` : '\nCourtesy pass — no charge'}\n\nGive this PIN to the visitor for kiosk check-in after their first visit.`);
+                  setShowAddVisitorModal(false);
+                  // Refresh visitors
+                  fetch('/api/get-visitors').then(r => r.json()).then(data => {
+                    if (data.records) { setVisitors(data.records.map(r => ({ airtableId: r.id, firstName: r.fields['First Name'] || '', lastName: r.fields['Last Name'] || '', email: r.fields['Email'] || '', phone: r.fields['Phone'] || '', passType: r.fields['Pass Type'] || '', amountPaid: r.fields['Amount Paid'] || 0, referringProvider: r.fields['Referring Provider'] || '', purchaseDate: r.fields['Purchase Date'] || '', expirationDate: r.fields['Expiration Date'] || '', center: r.fields['Center'] || '', pin: r.fields['PIN'] || '', orientationComplete: !!r.fields['Orientation Complete'], totalVisits: r.fields['Total Visits'] || 0, notes: r.fields['Notes'] || '' }))); }
+                  });
+                } else { alert('Error: ' + result.error); }
+              } catch (err) { alert('Network error. Please try again.'); }
+            }} className="space-y-5">
+              <div className="grid grid-cols-2 gap-5">
+                <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">First Name</label><input id="vfname" required className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div>
+                <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Last Name</label><input id="vlname" required className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-5">
+                <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Email</label><input type="email" id="vemail" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div>
+                <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Phone</label><input id="vphone" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-5">
+                <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Pass Type</label>
+                  <select id="vpass" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors font-bold text-slate-700">
+                    <option value="Day Pass">Day Pass ($5)</option>
+                    <option value="2-Week Courtesy">2-Week Courtesy (Free)</option>
+                    <option value="Month Courtesy">Month Courtesy (Free)</option>
+                  </select>
+                </div>
+                <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Home Center</label>
+                  <select id="vcenter" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors font-bold text-slate-700">
+                    <option value="Anthony Wellness Center">Anthony</option>
+                    <option value="Harper Wellness Center">Harper</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Referring Provider / Department</label>
+                <input id="vprovider" placeholder="e.g. Dr. Smith, PT Department, Patterson Clinic" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Notes</label>
+                <input id="vnotes" placeholder="Optional notes" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" />
+              </div>
+              <button type="submit" className="w-full bg-[#8b5cf6] text-white p-5 rounded-xl font-bold mt-4 shadow-lg hover:bg-purple-700 transition-colors text-lg flex items-center justify-center gap-2"><Plus size={18}/> Add Visitor</button>
+            </form>
+          </div>
+        </div>
+      )}
+ 
+      
       {/* ADD MEMBER MODAL — with family flow, corporate sponsor, orientation checkbox */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#001f3f]/90 backdrop-blur-md">
