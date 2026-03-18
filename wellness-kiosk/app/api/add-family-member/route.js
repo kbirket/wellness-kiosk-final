@@ -34,8 +34,9 @@ export async function POST(request) {
             "Membership Type": body.plan,
             "Home Center": body.center,
             "Password": newPIN,
-            "Membership Status": "ACTIVE",
+           "Membership Status": "ACTIVE",
             ...(body.corporateSponsor ? { "Corporate Sponsor": body.corporateSponsor } : {}),
+            ...(body.familyRecordId ? {} : { "Billing Method": "Month-to-Month" }),
           }
         }],
         typecast: true
