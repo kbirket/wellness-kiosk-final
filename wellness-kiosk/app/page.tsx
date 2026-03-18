@@ -235,7 +235,7 @@ export default function WellnessHub() {
                   const sponsorMatch = sel.value;
                   const partner = corporatePartners.find(p => p.sponsorMatch === sponsorMatch);
                   if (!partner) return;
-                  const corpMembers = members.filter(m => m.sponsorName === sponsorMatch);
+                  const corpMembers = members.filter(m => m.sponsorName === sponsorMatch && !m.type.includes('HD6') && !m.type.includes('HCHF'));
                   const totalDue = corpMembers.reduce((sum, m) => {
                     const rate = parseFloat(String(m.monthlyRate || '0').replace(/[^0-9.]/g, ''));
                     return sum + (isNaN(rate) ? 0 : rate);
