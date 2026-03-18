@@ -429,7 +429,7 @@ export default function WellnessHub() {
             <p className="text-slate-500 font-medium mb-8">Register a day pass or courtesy pass visitor.</p>
             <form onSubmit={async (e) => {
               e.preventDefault();
-              const formData = { firstName: e.target.vfname.value, lastName: e.target.vlname.value, email: e.target.vemail.value, phone: e.target.vphone.value, passType: e.target.vpass.value, center: e.target.vcenter.value, referringProvider: e.target.vprovider.value, notes: e.target.vnotes.value };
+              const formData = { firstName: e.target.vfname.value, lastName: e.target.vlname.value, address: e.target.vaddress.value, city: e.target.vcity.value, state: e.target.vstate.value, zip: e.target.vzip.value, email: e.target.vemail.value, phone: e.target.vphone.value, passType: e.target.vpass.value, center: e.target.vcenter.value, referringProvider: e.target.vprovider.value, notes: e.target.vnotes.value };
               try {
                 const res = await fetch('/api/add-visitor', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData) });
                 const result = await res.json();
@@ -467,6 +467,14 @@ export default function WellnessHub() {
                 </div>
               </div>
               <div>
+                <div className="grid grid-cols-2 gap-5">
+                <div className="col-span-2"><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Street Address</label><input id="vaddress" placeholder="123 Main St" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div>
+                <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">City</label><input id="vcity" placeholder="Harper" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">State</label><input id="vstate" defaultValue="KS" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div>
+                  <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Zip</label><input id="vzip" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div>
+                </div>
+              </div>
                 <label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Referring Provider / Department</label>
                 <input id="vprovider" placeholder="e.g. Dr. Smith, PT Department, Patterson Clinic" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" />
               </div>
