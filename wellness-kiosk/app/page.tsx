@@ -157,6 +157,11 @@ const mappedMembers = data.records.filter(r => r.fields['First Name'] && r.field
     const needsOrientation = e.target.orientation?.checked || false;
     const isFamily = plan.includes('FAMILY');
     const isCorporate = plan.includes('CORPORATE') || plan.includes('HD6') || plan.includes('HCHF');
+    const address = e.target.address?.value || '';
+    const city = e.target.city?.value || '';
+    const mstate = e.target.mstate?.value || 'KS';
+    const mzip = e.target.mzip?.value || '';
+    const billing = e.target.billing?.value || 'Month-to-Month';
     const sponsor = isCorporate ? (selectedSponsor === '__other__' ? customSponsor : selectedSponsor) : '';
 
     if (isFamily && !familyFlow) {
@@ -575,6 +580,14 @@ const mappedMembers = data.records.filter(r => r.fields['First Name'] && r.field
                          <div className="grid grid-cols-2 gap-5">
                             <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Plan Type</label><select id="plan" onChange={e => { const v = e.target.value; if (!v.includes('CORPORATE') && !v.includes('HD6') && !v.includes('HCHF')) { setSelectedSponsor(''); setCustomSponsor(''); } }} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors font-bold text-slate-700"><option value="SINGLE">Single</option><option value="FAMILY">Family</option><option value="SENIOR CITIZEN">Senior Citizen</option><option value="SENIOR FAMILY">Senior Family</option><option value="STUDENT">Student (14-22)</option><option value="CORPORATE">Corporate</option><option value="CORPORATE FAMILY">Corporate Family</option><option value="MILITARY">Military</option><option value="HD6">Staff (HD6)</option><option value="HCHF">Staff (HCHF)</option></select></div>
                             <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Home Center</label><select id="center" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors font-bold text-slate-700"><option value="Anthony Wellness Center">Anthony</option><option value="Harper Wellness Center">Harper</option></select></div>
+                         </div>
+<div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Billing Method</label>
+                           <select id="billing" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors font-bold text-slate-700">
+                             <option value="Month-to-Month">Month-to-Month</option>
+                             <option value="Auto-Draft">Auto-Draft</option>
+                             <option value="6-Month Prepay">6-Month Prepay</option>
+                             <option value="12-Month Prepay">12-Month Prepay</option>
+                           </select>
                          </div>
                          {/* Corporate sponsor dropdown — only shows for corporate plans */}
                          <div id="sponsor-section">
