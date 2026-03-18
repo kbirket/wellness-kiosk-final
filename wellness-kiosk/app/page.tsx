@@ -361,4 +361,7 @@ export default function WellnessHub() {
             <button onClick={() => setPaymentModal(null)} className="w-full text-slate-400 text-sm font-bold hover:text-slate-600">Cancel</button>
           </div>
         </div>
-     )}
+         )}
+    </div>
+  );
+}
