@@ -33,6 +33,8 @@ export async function POST(request) {
 "State": body.state || 'KS',
 "Zip": body.zip || '',
 "Billing Method": body.billingMethod || 'Month-to-Month',
+      "24/7 Access": body.access247 || false,
+"Badge Number": body.badgeNumber || '',
       "Password": newPIN,
       "Membership Status": "ACTIVE",
       'Billing Method': 'Month-to-Month',
