@@ -268,8 +268,7 @@ export default function WellnessHub() {
             </ProListCard>
           )}
         </div>)}
-
-       {activeTab === 'reports' && (() => {
+{activeTab === 'reports' && (() => {
           const now = new Date();
           const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
           const currentMonthVisits = filteredVisits.filter(v => new Date(v.time) >= startOfMonth);
