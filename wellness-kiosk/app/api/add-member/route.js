@@ -1,6 +1,3 @@
-// /app/api/add-member/route.js
-// REPLACE your existing add-member route with this version
-// Adds support for: corporate sponsor, needs orientation
 import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
@@ -21,30 +18,26 @@ export async function POST(request) {
     const body = await request.json();
     const newPIN = generatePIN();
 
-fields: {
-            "First Name": body.firstName,
-            "Last Name": body.lastName,
-            "Email": body.email || '',
-            "Phone": body.phone || '',
-            "Membership Type": body.plan,
-            "Home Center": body.center,
-            "Street Address": body.address || '',
-            "City": body.city || '',
-            "State": body.state || 'KS',
-            "Zip": body.zip || '',
-            "24/7 Access": body.access247 || false,
-            "Badge Number": body.badgeNumber || '',
-            ...(body.familyRecordId ? {} : { "Billing Method": body.billingMethod || "Month-to-Month" }),
-            "Password": newPIN,
-            "Membership Status": "ACTIVE",
-            "Needs Orientation": body.needsOrientation, 
-            ...(body.corporateSponsor ? { "Corporate Sponsor": body.corporateSponsor } : {}),
-          }
-
-    // Add needs orientation (defaults to true for new members)
-    if (body.needsOrientation !== undefined) {
-      fields["Needs Orientation"] = body.needsOrientation;
-    }
+    // FIX: Properly declare 'fields' as a variable
+    const fields = {
+      "First Name": body.firstName,
+      "Last Name": body.lastName,
+      "Email": body.email || '',
+      "Phone": body.phone || '',
+      "Membership Type": body.plan,
+      "Home Center": body.center,
+      "Street Address": body.address || '',
+      "City": body.city || '',
+      "State": body.state || 'KS',
+      "Zip": body.zip || '',
+      "24/7 Access": body.access247 || false,
+      "Badge Number": body.badgeNumber || '',
+      "Billing Method": body.billingMethod || "Month-to-Month",
+      "Password": newPIN,
+      "Membership Status": "ACTIVE",
+      "Needs Orientation": body.needsOrientation, 
+      ...(body.corporateSponsor ? { "Corporate Sponsor": body.corporateSponsor } : {}),
+    };
 
     const response = await fetch(`https://api.airtable.com/v0/${baseId}/${tableName}`, {
       method: 'POST',
