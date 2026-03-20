@@ -37,6 +37,8 @@ export async function POST(request) {
 "City": body.city || '',
 "State": body.state || 'KS',
 "Zip": body.zip || '',
+            "24/7 Access": body.access247 || false,
+"Badge Number": body.badgeNumber || '',
 ...(body.familyRecordId ? {} : { "Billing Method": body.billingMethod || "Month-to-Month" }),
             "Password": newPIN,
            "Membership Status": "ACTIVE",
