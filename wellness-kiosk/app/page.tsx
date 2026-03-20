@@ -162,6 +162,8 @@ const mappedMembers = data.records.filter(r => r.fields['First Name'] && r.field
     const mstate = e.target.mstate?.value || 'KS';
     const mzip = e.target.mzip?.value || '';
     const billing = e.target.billing?.value || 'Month-to-Month';
+    const access247 = e.target.access247?.checked || false;
+    const badgeNumber = e.target.badgenum?.value || '';
     const sponsor = isCorporate ? (selectedSponsor === '__other__' ? customSponsor : selectedSponsor) : '';
 
     if (isFamily && !familyFlow) {
@@ -598,6 +600,14 @@ const mappedMembers = data.records.filter(r => r.fields['First Name'] && r.field
                              <option value="__other__">Other (type below)</option>
                            </select>
                            {selectedSponsor === '__other__' && (<input placeholder="Enter company name" value={customSponsor} onChange={e => setCustomSponsor(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors mt-3" />)}
+                         </div>
+<label className="flex items-center gap-3 bg-amber-50 border border-amber-100 rounded-xl p-4 cursor-pointer hover:bg-amber-100 transition-colors">
+                           <input type="checkbox" id="access247" className="w-5 h-5 rounded border-slate-300 text-[#f59e0b] focus:ring-[#f59e0b]" />
+                           <div><p className="text-sm font-bold text-amber-800">24/7 Badge Access</p><p className="text-[10px] text-amber-500">Member has a key fob or badge for after-hours access</p></div>
+                         </label>
+                         <div id="badge-number-section">
+                           <label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">24/7 Badge Number</label>
+                           <input id="badgenum" placeholder="e.g. 1042" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" />
                          </div>
                          {/* Needs Orientation checkbox */}
                          <label className="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-xl p-4 cursor-pointer hover:bg-blue-100 transition-colors">
