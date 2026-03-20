@@ -34,18 +34,16 @@ export async function POST(request) {
             "Membership Type": body.plan,
             "Home Center": body.center,
             "Street Address": body.address || '',
-"City": body.city || '',
-"State": body.state || 'KS',
-"Zip": body.zip || '',
+            "City": body.city || '',
+            "State": body.state || 'KS',
+            "Zip": body.zip || '',
             "24/7 Access": body.access247 || false,
-"Badge Number": body.badgeNumber || '',
-...(body.familyRecordId ? {} : { "Billing Method": body.billingMethod || "Month-to-Month" }),
+            "Badge Number": body.badgeNumber || '',
+            ...(body.familyRecordId ? {} : { "Billing Method": body.billingMethod || "Month-to-Month" }),
             "Password": newPIN,
-           "Membership Status": "ACTIVE",
-            "Needs Orientation": body.needsOrientation,
-
+            "Membership Status": "ACTIVE",
+            "Needs Orientation": body.needsOrientation, // <--- ADD THIS EXACT LINE
             ...(body.corporateSponsor ? { "Corporate Sponsor": body.corporateSponsor } : {}),
-            ...(body.familyRecordId ? {} : { "Billing Method": "Month-to-Month" }),
           }
         }],
         typecast: true
