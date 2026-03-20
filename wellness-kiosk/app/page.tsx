@@ -608,6 +608,12 @@ export default function WellnessHub() {
                     {selectedMember.familyName && (<div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Family Group</p><p className="text-lg font-bold text-[#8b5cf6]">{selectedMember.familyName}</p></div>)}
                     {selectedMember.access247 && (<div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">24/7 Access</p><p className="text-lg font-bold text-[#f59e0b]">Badge #{selectedMember.badgeNumber || 'N/A'}</p></div>)}
                  </div>
+{selectedMember.notes && (
+                      <div className="col-span-2 mt-6">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Director Notes</p>
+                        <p className="text-sm text-slate-600 bg-slate-50 p-4 rounded-xl border border-slate-100 whitespace-pre-wrap">{selectedMember.notes}</p>
+                      </div>
+                    )}
                  </>) : (<>
                  <div className="space-y-4 mb-8">
                     <div className="grid grid-cols-2 gap-4">
@@ -638,14 +644,20 @@ export default function WellnessHub() {
                       <label className="flex items-center gap-3 bg-amber-50 border border-amber-100 rounded-xl p-3 cursor-pointer"><input type="checkbox" id="ed_247" defaultChecked={selectedMember.access247} className="w-4 h-4 rounded" /><span className="text-sm font-bold text-amber-800">24/7 Access</span></label>
                       <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Badge Number</label><input id="ed_badge" defaultValue={selectedMember.badgeNumber} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]" /></div>
                     </div>
-                    <div className="flex gap-3 mt-4">
+<div className="col-span-2 mt-2 mb-4">
+                      <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Director Notes</label>
+                      <textarea id="ed_notes" defaultValue={selectedMember.notes || ''} placeholder="Add private notes about this member..." className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad] min-h-[100px]"></textarea>
+                    </div>
+                   <div className="flex gap-3 mt-4">
                       <button onClick={async () => {
-                        const updates = { airtableId: selectedMember.airtableId, firstName: document.getElementById('ed_fname').value, lastName: document.getElementById('ed_lname').value, email: document.getElementById('ed_email').value, phone: document.getElementById('ed_phone').value, plan: document.getElementById('ed_plan').value, billingMethod: document.getElementById('ed_billing').value, center: document.getElementById('ed_center').value, sponsor: document.getElementById('ed_sponsor').value, access247: document.getElementById('ed_247').checked, badgeNumber: document.getElementById('ed_badge').value };
+
+  
+ const updates = { airtableId: selectedMember.airtableId, firstName: document.getElementById('ed_fname').value, lastName: document.getElementById('ed_lname').value, email: document.getElementById('ed_email').value, phone: document.getElementById('ed_phone').value, plan: document.getElementById('ed_plan').value, billingMethod: document.getElementById('ed_billing').value, center: document.getElementById('ed_center').value, sponsor: document.getElementById('ed_sponsor').value, access247: document.getElementById('ed_247').checked, badgeNumber: document.getElementById('ed_badge').value, notes: document.getElementById('ed_notes').value };
                         try {
                           const res = await fetch('/api/update-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates) });
                           const result = await res.json();
                           if (result.success || res.ok) {
-                            const updated = { ...selectedMember, firstName: updates.firstName, lastName: updates.lastName, email: updates.email, phone: updates.phone, type: updates.plan, billingMethod: updates.billingMethod, center: updates.center, sponsorName: updates.sponsor, access247: updates.access247, badgeNumber: updates.badgeNumber };
+                            const updated = { ...selectedMember, firstName: updates.firstName, lastName: updates.lastName, email: updates.email, phone: updates.phone, type: updates.plan, billingMethod: updates.billingMethod, center: updates.center, sponsorName: updates.sponsor, access247: updates.access247, badgeNumber: updates.badgeNumber, notes: updates.notes };
                             setSelectedMember(updated); setMembers(prev => prev.map(m => m.airtableId === selectedMember.airtableId ? updated : m)); setEditMode(false);
                           } else { alert('Error saving changes.'); }
                         } catch (err) { alert('Network error.'); }
