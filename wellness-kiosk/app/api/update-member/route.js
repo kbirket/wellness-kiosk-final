@@ -9,6 +9,20 @@ export async function POST(request) {
   try {
     const body = await request.json();
     
+    // Dynamically build the fields object so we don't send empty strings to strict Airtable columns
+    const fields = {};
+    if (body.firstName) fields["First Name"] = body.firstName;
+    if (body.lastName) fields["Last Name"] = body.lastName;
+    if (body.email !== undefined) fields["Email"] = body.email;
+    if (body.phone !== undefined) fields["Phone"] = body.phone;
+    if (body.plan) fields["Membership Type"] = body.plan;
+    if (body.billingMethod) fields["Billing Method"] = body.billingMethod;
+    if (body.center) fields["Home Center"] = body.center;
+    if (body.sponsor) fields["Corporate Sponsor"] = body.sponsor;
+    if (body.access247 !== undefined) fields["24/7 Access"] = body.access247;
+    if (body.badgeNumber) fields["Badge Number"] = body.badgeNumber;
+    if (body.notes !== undefined) fields["Notes"] = body.notes;
+
     // We use PATCH to only update the specific fields provided
     const response = await fetch(`https://api.airtable.com/v0/${baseId}/${tableName}/${body.airtableId}`, {
       method: 'PATCH',
@@ -16,21 +30,7 @@ export async function POST(request) {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        fields: {
-          "First Name": body.firstName,
-          "Last Name": body.lastName,
-          "Email": body.email,
-          "Phone": body.phone, // <--- The missing comma was here!
-          "Membership Type": body.plan,
-          "Billing Method": body.billingMethod,
-          "Home Center": body.center,
-          "Corporate Sponsor": body.sponsor || '',
-          "24/7 Access": body.access247,
-          "Badge Number": body.badgeNumber,
-          "Notes": body.notes
-        }
-      })
+      body: JSON.stringify({ fields })
     });
 
     const data = await response.json();
