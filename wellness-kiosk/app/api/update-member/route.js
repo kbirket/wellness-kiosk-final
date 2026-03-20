@@ -4,12 +4,12 @@ export const dynamic = 'force-dynamic';
 export async function POST(request) {
   const baseId = process.env.AIRTABLE_BASE_ID;
   const token = process.env.AIRTABLE_PAT;
-  const tableName = 'Members'; // Make sure this matches your main Airtable tab name!
+  const tableName = 'Members';
 
   try {
     const body = await request.json();
     
-    // Dynamically build the fields object so we don't send empty strings to strict Airtable columns
+    // Dynamically build the fields object
     const fields = {};
     if (body.firstName) fields["First Name"] = body.firstName;
     if (body.lastName) fields["Last Name"] = body.lastName;
@@ -30,7 +30,8 @@ export async function POST(request) {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ fields })
+      // THIS IS THE FIX: Added typecast: true so Airtable auto-matches text to dropdowns/records
+      body: JSON.stringify({ fields, typecast: true }) 
     });
 
     const data = await response.json();
