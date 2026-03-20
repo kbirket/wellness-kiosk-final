@@ -291,103 +291,151 @@ const startDate = document.getElementById('startDate').value;
             </ProListCard>
           )}
         </div>)}
-{activeTab === 'reports' && (
-  <div className="max-w-6xl mx-auto space-y-6">
-    
-    {/* --- REPORT CONTROLS --- */}
-    <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex justify-between items-center">
-      <div>
-        <h2 className="text-2xl font-black text-[#001f3f]">Facility Reports</h2>
-        <p className="text-sm text-slate-500">Select a month to view KPIs and activity.</p>
-      </div>
-      <input 
-        type="month" 
-        value={reportMonth} 
-        onChange={(e) => setReportMonth(e.target.value)} 
-        className="p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] font-bold text-slate-700"
-      />
-    </div>
+{activeTab === 'reports' && (() => {
+  // 1. DYNAMIC DATE MATH
+  const [year, month] = reportMonth.split('-');
+  const y = parseInt(year);
+  const m = parseInt(month) - 1; 
 
-    {/* --- CALCULATIONS --- */}
-    {(() => {
-      const [year, month] = reportMonth.split('-');
-      const y = parseInt(year);
-      const m = parseInt(month) - 1; 
+  // Filter Visits for the selected month
+  const monthlyVisits = visits.filter(v => {
+    if (!v.timestamp) return false;
+    const d = new Date(v.timestamp);
+    return d.getFullYear() === y && d.getMonth() === m;
+  });
+
+  // Filter New Members for the selected month
+  const newMembersThisMonth = members.filter(mem => {
+    if (!mem.startDate) return false;
+    const d = new Date(mem.startDate);
+    return d.getFullYear() === y && d.getMonth() === m;
+  });
+
+  // Calculate Member of the Month (Most visits this month)
+  const visitCounts = monthlyVisits.reduce((acc, v) => {
+    const name = `${v.firstName} ${v.lastName}`;
+    acc[name] = (acc[name] || 0) + 1;
+    return acc;
+  }, {});
+  const topMembers = Object.entries(visitCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+  // Slipping Away (No visits in 21 days)
+  const twentyOneDaysAgo = new Date();
+  twentyOneDaysAgo.setDate(twentyOneDaysAgo.getDate() - 21);
+  const slippingAway = members.filter(m => {
+    const memberVisits = visits.filter(v => v.email === m.email || v.badgeNumber === m.badgeNumber);
+    if (memberVisits.length === 0) return true; 
+    const lastVisit = new Date(Math.max(...memberVisits.map(v => new Date(v.timestamp))));
+    return lastVisit < twentyOneDaysAgo;
+  }).slice(0, 5);
+
+  // Group monthly visits by plan (What Deanna and Patrick asked for!)
+  const visitsByPlan = monthlyVisits.reduce((acc, v) => {
+    acc[v.type] = (acc[v.type] || 0) + 1;
+    return acc;
+  }, {});
+
+  return (
+    <div className="max-w-7xl mx-auto space-y-6">
       
-      const monthlyVisits = visits.filter(v => {
-        const d = new Date(v.timestamp);
-        return d.getFullYear() === y && d.getMonth() === m;
-      });
+      {/* HEADER WITH NEW DROPDOWN */}
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h2 className="text-2xl font-black text-[#001f3f]">Monthly Summary Report</h2>
+          <p className="text-sm text-slate-500">Filter your facility data by month.</p>
+        </div>
+        <div className="flex gap-4">
+          <select 
+            value={reportMonth} 
+            onChange={(e) => setReportMonth(e.target.value)} 
+            className="p-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] font-bold text-slate-700 cursor-pointer shadow-sm"
+          >
+            <option value="2026-01">January 2026</option>
+            <option value="2026-02">February 2026</option>
+            <option value="2026-03">March 2026</option>
+            <option value="2026-04">April 2026</option>
+            <option value="2026-05">May 2026</option>
+          </select>
+          <button onClick={() => window.print()} className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-slate-50">🖨️ Print Dashboard</button>
+        </div>
+      </div>
 
-      const newMembersThisMonth = members.filter(mem => {
-        if (!mem.startDate) return false;
-        const d = new Date(mem.startDate);
-        return d.getFullYear() === y && d.getMonth() === m;
-      });
+      {/* NEW KPI CARDS */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-2">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-blue-500">
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Visits</p>
+          <p className="text-4xl font-black text-slate-800">{monthlyVisits.length}</p>
+        </div>
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-green-500">
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">New Sign-Ups</p>
+          <p className="text-4xl font-black text-slate-800">{newMembersThisMonth.length}</p>
+        </div>
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-amber-500">
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">24/7 Passes (New)</p>
+          <p className="text-4xl font-black text-slate-800">{newMembersThisMonth.filter(m => m.access247).length}</p>
+        </div>
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-purple-500">
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Orientations</p>
+          <p className="text-4xl font-black text-slate-800">{newMembersThisMonth.filter(m => m.needsOrientation).length}</p>
+        </div>
+      </div>
 
-      const visitsByPlan = monthlyVisits.reduce((acc, v) => {
-        acc[v.type] = (acc[v.type] || 0) + 1;
-        return acc;
-      }, {});
-
-      const new247 = newMembersThisMonth.filter(mem => mem.access247).length;
-      const total247 = members.filter(mem => mem.access247).length;
-      const orientations = newMembersThisMonth.filter(mem => mem.needsOrientation).length; 
-
-      return (
-        <>
-          {/* --- KPI CARDS --- */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 border-l-4 border-l-blue-500">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Visits</p>
-              <p className="text-4xl font-black text-slate-800">{monthlyVisits.length}</p>
+      {/* RESTORED TOP ROW: Member of Month & Slipping Away */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+          <h3 className="text-md font-black text-[#001f3f] mb-4 flex items-center gap-2">🏆 Top Visitors ({reportMonth})</h3>
+          {topMembers.length > 0 ? topMembers.map(([name, count], index) => (
+            <div key={name} className="flex justify-between items-center bg-slate-50 p-3 rounded-xl mb-2">
+              <div className="flex items-center gap-3">
+                <span className="w-6 h-6 rounded-full bg-amber-400 text-white flex items-center justify-center text-xs font-bold">{index + 1}</span>
+                <span className="font-bold text-slate-700">{name}</span>
+              </div>
+              <span className="text-sm font-bold text-blue-600">{count} visits</span>
             </div>
-            
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 border-l-4 border-l-green-500">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">New Sign-Ups</p>
-              <p className="text-4xl font-black text-slate-800">{newMembersThisMonth.length}</p>
-            </div>
+          )) : <p className="text-sm text-slate-400">No visits recorded yet.</p>}
+        </div>
 
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 border-l-4 border-l-amber-500">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">New 24/7 Passes</p>
-              <p className="text-4xl font-black text-slate-800">{new247} <span className="text-sm text-slate-400 font-normal">/ {total247} Total</span></p>
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+          <h3 className="text-md font-black text-[#001f3f] mb-4 flex items-center gap-2">⚠️ Slipping Away (21+ Days)</h3>
+          {slippingAway.length > 0 ? slippingAway.map(m => (
+            <div key={m.email} className="flex justify-between items-center bg-red-50 p-3 rounded-xl mb-2">
+              <span className="font-bold text-slate-700">{m.firstName} {m.lastName}</span>
+              <span className="text-xs font-bold text-red-600 uppercase">Needs Check-in</span>
             </div>
+          )) : <p className="text-sm text-slate-400">All active members have visited recently!</p>}
+        </div>
+      </div>
 
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 border-l-4 border-l-purple-500">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Orientations</p>
-              <p className="text-4xl font-black text-slate-800">{orientations}</p>
-            </div>
+      {/* RESTORED BOTTOM ROW: Category Breakdowns (Now shows VISITS instead of just member count, per Director request) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+          <h3 className="text-md font-black text-[#001f3f] mb-4">Standard Membership Visits</h3>
+          <div className="space-y-3">
+            {['SINGLE', 'FAMILY', 'SENIOR CITIZEN', 'STUDENT'].map(plan => (
+              <div key={plan} className="flex justify-between items-center border-b border-slate-50 pb-2">
+                <span className="text-sm font-semibold text-slate-600">{plan}</span>
+                <span className="font-black text-slate-800">{visitsByPlan[plan] || 0}</span>
+              </div>
+            ))}
           </div>
+        </div>
 
-          {/* --- VISIT BREAKDOWN & BOTTOM ROW --- */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-            
-            {/* Category Breakdown Box */}
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-              <h3 className="text-lg font-bold text-[#001f3f] mb-4">Visits by Category</h3>
-              {Object.keys(visitsByPlan).length === 0 ? (
-                <p className="text-sm text-slate-400">No visits recorded for this month.</p>
-              ) : (
-                <div className="space-y-3">
-                  {Object.entries(visitsByPlan).sort((a, b) => b[1] - a[1]).map(([plan, count]) => (
-                    <div key={plan} className="flex justify-between items-center border-b border-slate-50 pb-2 last:border-0">
-                      <span className="text-sm font-semibold text-slate-600">{plan}</span>
-                      <span className="text-sm font-black bg-slate-100 text-slate-800 px-3 py-1 rounded-full">{count}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* REMINDER: Your Corporate Billing Box goes here if you had one in the old reports tab! */}
-            
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+          <h3 className="text-md font-black text-[#001f3f] mb-4">Corporate & Military Visits</h3>
+          <div className="space-y-3">
+            {['CORPORATE', 'CORPORATE FAMILY', 'ACTIVE MILITARY'].map(plan => (
+              <div key={plan} className="flex justify-between items-center border-b border-slate-50 pb-2">
+                <span className="text-sm font-semibold text-slate-600">{plan}</span>
+                <span className="font-black text-slate-800">{visitsByPlan[plan] || 0}</span>
+              </div>
+            ))}
           </div>
-        </>
-      );
-    })()}
-  </div>
-)}
+        </div>
+      </div>
 
+    </div>
+  );
+})()}
         {activeTab === 'notif' && (<div className="space-y-6"><div className="flex justify-between items-center mb-8"><div><h2 className="text-3xl font-bold text-[#001f3f] tracking-tight">Notifications</h2><p className="text-slate-400 font-medium">Payment reminders</p></div><button className="bg-[#dd6d22] text-white px-8 py-3 rounded-xl font-bold shadow-lg flex items-center gap-2"><Bell size={20}/> Send All Due</button></div><ProListCard title="Due for Reminder"><div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mt-4"><table className="w-full text-left border-collapse"><thead className="bg-slate-50 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b"><tr><th className="px-8 py-4 w-64">Member</th><th className="px-8 py-4 w-40">Type</th><th className="px-8 py-4 w-32">Status</th><th className="px-8 py-4 w-32">Due</th><th className="px-8 py-4 w-24">Actions</th></tr></thead><tbody className="text-sm">{scopedMembers.filter(m => m.status !== 'ACTIVE').map(m => (<tr key={m.id} className="border-b"><td className="px-8 py-5"><p className="font-bold text-slate-800">{m.firstName} {m.lastName}</p><p className="text-[11px] text-slate-400">{m.email}</p></td><td className="px-8 py-5"><span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black">{m.type}</span></td><td className="px-8 py-5"><span className={`px-3 py-1 rounded-full text-[10px] font-black ${m.status==='OVERDUE'?'bg-red-100 text-red-600':'bg-amber-100 text-amber-600'}`}>{m.status}</span></td><td className="px-8 py-5 text-slate-600 font-medium">{m.nextPayment}</td><td className="px-8 py-5 flex gap-2"><button className="p-2 bg-[#1080ad] text-white rounded-lg shadow-md"><Mail size={16}/></button><button className="p-2 bg-[#dd6d22] text-white rounded-lg shadow-md"><Phone size={16}/></button></td></tr>))}</tbody></table></div></ProListCard></div>)}
 
         {activeTab === 'badge' && (<div className="space-y-6"><div className="mb-8"><h2 className="text-3xl font-bold text-[#001f3f] tracking-tight mb-1">Staff Check-In</h2><p className="text-slate-400 font-medium">Log a check-in manually or via scanner.</p></div><div className="flex gap-8"><div className="bg-white p-12 rounded-3xl shadow-sm border border-slate-200 flex-1 text-center"><p className="text-sm font-bold text-slate-400 mb-4">Enter Name or ID:</p><div className="relative w-full max-w-sm mx-auto mb-10"><div className="flex gap-4"><input className="flex-1 p-4 border rounded-xl outline-none text-xl text-center bg-slate-100 focus:border-[#1080ad] focus:bg-white transition-colors" placeholder="e.g. Smith" value={kioskInput} onChange={(e) => setKioskInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { processCheckIn(kioskInput, "Staff Scan/Entry"); setKioskInput(''); } }} /><button onClick={() => { processCheckIn(kioskInput, "Staff Scan/Entry"); setKioskInput(''); }} className="bg-[#001f3f] text-white px-8 rounded-xl font-bold hover:bg-blue-900 transition-colors shadow-sm">Check In</button></div>{kioskMatches.length > 0 && (<div className="absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 overflow-hidden text-left">{kioskMatches.map(m => (<button key={m._type + (m.airtableId || m.id)} onClick={() => { processCheckIn(m.id, "Staff Override Entry"); setKioskInput(''); }} className="w-full p-4 border-b border-slate-100 last:border-0 hover:bg-blue-50 transition-colors flex justify-between items-center group"><div><p className="font-bold text-[#001f3f] text-lg">{m.firstName} {m.lastName}</p><p className="text-[10px] text-slate-400 uppercase tracking-widest">{m.phone||'No Phone'}</p></div><div className="bg-[#1080ad] text-white px-3 py-1 rounded-lg text-xs font-bold shadow-sm group-hover:scale-105 transition-transform">Select</div></button>))}</div>)}</div>{kioskMessage.text && (<div className={`mt-8 p-4 rounded-xl text-center font-bold text-lg ${kioskMessage.type==='success'?'bg-green-100 text-green-700':kioskMessage.type==='warning'?'bg-yellow-100 text-yellow-700':'bg-red-100 text-red-700'}`}>{kioskMessage.text}{kioskMessage.subtext && <p className="text-sm mt-1">{kioskMessage.subtext}</p>}</div>)}</div></div></div>)}
