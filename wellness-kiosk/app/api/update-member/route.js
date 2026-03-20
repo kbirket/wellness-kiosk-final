@@ -19,6 +19,7 @@ export async function POST(request) {
         fields: {
           "Email": body.email,
           "Phone": body.phone
+          "Notes": body.notes
         }
       })
     });
