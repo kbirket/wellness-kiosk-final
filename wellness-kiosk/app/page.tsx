@@ -267,18 +267,15 @@ export default function WellnessHub() {
                   <ProListCard title="Other & Totals"><table className="w-full text-sm print:text-xs"><tbody><tr className="border-b print:border-slate-200"><td className="py-2 print:py-1 font-medium text-slate-600">Day Passes:</td><td className="py-2 print:py-1 font-bold text-right">{reportStats.dayPass}</td></tr><tr className="bg-slate-50 print:bg-transparent print:border-t-2 print:border-[#001f3f]"><td className="py-3 print:py-2 px-2 print:px-0 font-bold text-[#001f3f] text-lg print:text-base">Total:</td><td className="py-3 print:py-2 px-2 print:px-0 font-black text-right text-[#001f3f] text-lg print:text-base">{stats.total}</td></tr></tbody></table></ProListCard>
                 </div>
               </div>
-        {activeTab === 'reports' && (() => {
-          // --- WOW FACTOR CALCULATIONS ---
+        {{activeTab === 'reports' && (() => {
           const now = new Date();
           const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
           const currentMonthVisits = filteredVisits.filter(v => new Date(v.time) >= startOfMonth);
           
-          // 1. Leaderboard Logic
           const visitCounts = {};
           currentMonthVisits.forEach(v => { visitCounts[v.name] = (visitCounts[v.name] || 0) + 1; });
           const leaderboard = Object.entries(visitCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
-          // 2. Churn Risk Logic
           const twentyOneDaysAgo = new Date(now.getTime() - 21 * 24 * 60 * 60 * 1000);
           const churnRisk = scopedMembers
               .filter(m => m.status === 'ACTIVE')
@@ -290,7 +287,7 @@ export default function WellnessHub() {
               })
               .filter(m => m.lastVisit && m.lastVisit < twentyOneDaysAgo)
               .sort((a, b) => a.lastVisit - b.lastVisit)
-              .slice(0, 8); // Show top 8 at risk
+              .slice(0, 8);
 
           return (
             <div className="space-y-6 print:space-y-3 print:m-0 print:p-0">
@@ -308,9 +305,7 @@ export default function WellnessHub() {
                 <p className="text-lg print:text-sm font-bold text-slate-500 uppercase tracking-widest mt-2 print:mt-1">Executive Summary • {currentDateString}</p>
               </div>
 
-              {/* WOW FEATURES GRID */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 print:hidden mb-8">
-                  {/* Leaderboard Card */}
                   <ProListCard title="🏆 Member of the Month (Current Month)">
                       <div className="space-y-3 mt-2">
                           {leaderboard.length === 0 ? <p className="text-sm text-slate-400">No visits yet this month.</p> :
@@ -326,7 +321,6 @@ export default function WellnessHub() {
                       </div>
                   </ProListCard>
 
-                  {/* Churn Risk Card */}
                   <ProListCard title="⚠️ Slipping Away (No visits in 21+ days)">
                         <div className="space-y-3 mt-2 max-h-[300px] overflow-y-auto pr-2">
                           {churnRisk.length === 0 ? <p className="text-sm text-slate-400">All active members have visited recently!</p> :
@@ -350,7 +344,7 @@ export default function WellnessHub() {
 
               <div className="mb-8 print:mb-4"><ProListCard title="Current Membership Breakdown"><div className="py-6 print:py-2"><DonutChart data={planChartData} totalLabel="Members" /></div></ProListCard></div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 print:gap-4 print:grid-cols-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 print:gap-4 print:grid-cols-2 print:items-start">
                 <ProListCard title="Standard Memberships"><table className="w-full text-sm print:text-xs"><tbody><tr className="border-b print:border-slate-200"><td className="py-3 print:py-1.5 font-medium text-slate-600">Single:</td><td className="py-3 print:py-1.5 font-bold text-right">{reportStats.single}</td></tr><tr className="border-b print:border-slate-200"><td className="py-3 print:py-1.5 font-medium text-slate-600">Family:</td><td className="py-3 print:py-1.5 font-bold text-right">{reportStats.family}</td></tr><tr className="border-b print:border-slate-200"><td className="py-3 print:py-1.5 font-medium text-slate-600">Senior Citizen:</td><td className="py-3 print:py-1.5 font-bold text-right">{reportStats.seniorCitizen}</td></tr><tr className="border-b print:border-slate-200"><td className="py-3 print:py-1.5 font-medium text-slate-600">Senior Family:</td><td className="py-3 print:py-1.5 font-bold text-right">{reportStats.seniorFamily}</td></tr><tr><td className="py-3 print:py-1.5 font-medium text-slate-600">Student (14-22):</td><td className="py-3 print:py-1.5 font-bold text-right">{reportStats.student}</td></tr></tbody></table></ProListCard>
                 <div className="space-y-8 print:space-y-4">
                   <ProListCard title="Corporate, Staff & Military"><table className="w-full text-sm print:text-xs"><tbody><tr className="border-b print:border-slate-200"><td className="py-2 print:py-1.5 font-medium text-slate-600">Corporate:</td><td className="py-2 print:py-1.5 font-bold text-right">{reportStats.corporate}</td></tr><tr className="border-b print:border-slate-200"><td className="py-2 print:py-1.5 font-medium text-slate-600">Corporate Family:</td><td className="py-2 print:py-1.5 font-bold text-right">{reportStats.corporateFamily}</td></tr><tr className="border-b print:border-slate-200"><td className="py-2 print:py-1.5 font-medium text-slate-600">HD6/HCHF (Staff):</td><td className="py-2 print:py-1.5 font-bold text-right">{reportStats.staff}</td></tr><tr><td className="py-2 print:py-1.5 font-medium text-slate-600">Active Military:</td><td className="py-2 print:py-1.5 font-bold text-right">{reportStats.military}</td></tr></tbody></table></ProListCard>
@@ -358,7 +352,6 @@ export default function WellnessHub() {
                 </div>
               </div>
 
-              {/* UPDATED CORPORATE ROI BILLING */}
               <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mt-8 print:hidden">
                 <h3 className="text-lg font-bold text-[#001f3f] mb-2">Corporate ROI & Billing Generator</h3>
                 <p className="text-sm text-slate-400 mb-6">Generate an impact and payment letter for a corporate partner showing their sponsored employees, monthly facility utilization, and total amount due.</p>
@@ -374,14 +367,10 @@ export default function WellnessHub() {
                     const sponsorMatch = sel.value;
                     const partner = corporatePartners.find(p => p.sponsorMatch === sponsorMatch);
                     if (!partner) return;
-                    
                     const corpMembers = members.filter(m => m.sponsorName === sponsorMatch && !m.type.includes('HD6') && !m.type.includes('HCHF'));
                     const totalDue = corpMembers.reduce((sum, m) => { const rate = parseFloat(String(m.monthlyRate || '0').replace(/[^0-9.]/g, '')); return sum + (isNaN(rate) ? 0 : rate); }, 0);
-                    
-                    // ROI Calculation
                     const corpMemberNames = corpMembers.map(m => (m.firstName + ' ' + m.lastName).toLowerCase());
                     const corpVisitsThisMonth = currentMonthVisits.filter(v => corpMemberNames.includes(v.name.toLowerCase())).length;
-
                     const isHarper = viewingCenter === 'harper';
                     const centerName = viewingCenter === 'harper' ? 'Harper Wellness Center' : viewingCenter === 'anthony' ? 'Anthony Wellness Center' : 'Harper & Anthony Wellness Centers';
                     const centerAddr = isHarper ? '615 W 12th St, Harper, KS 67058' : '309 W Main St, Anthony, KS 67003';
