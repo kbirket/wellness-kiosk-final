@@ -16,6 +16,7 @@ export async function POST(request) {
 
   try {
     const body = await request.json();
+    const today = new Date().toISOString().split('T')[0];
     const newPIN = generatePIN();
 
     // FIX: Properly declare 'fields' as a variable
@@ -35,6 +36,7 @@ export async function POST(request) {
       "Billing Method": body.billingMethod || "Month-to-Month",
       "Password": newPIN,
       "Membership Status": "ACTIVE",
+      "Start Date": body.startDate || today,
       "Needs Orientation": body.needsOrientation, 
       ...(body.corporateSponsor ? { "Corporate Sponsor": body.corporateSponsor } : {}),
     };
