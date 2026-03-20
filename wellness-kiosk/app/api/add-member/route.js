@@ -37,9 +37,9 @@ export async function POST(request) {
 "Badge Number": body.badgeNumber || '',
       "Password": newPIN,
       "Membership Status": "ACTIVE",
-      'Billing Method': 'Month-to-Month',
+            'Billing Method': 'Month-to-Month',
     };
-
+"Needs Orientation": body.needsOrientation,
     // Add corporate sponsor if provided
     if (body.corporateSponsor) {
       fields["Corporate Sponsor"] = body.corporateSponsor;
