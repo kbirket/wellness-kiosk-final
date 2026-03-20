@@ -143,11 +143,12 @@ export default function WellnessHub() {
     const mzip = e.target.mzip?.value || '';
     const billing = e.target.billing?.value || 'Month-to-Month';
     const access247 = e.target.access247?.checked || false;
+const startDate = document.getElementById('startDate').value;
     const badgeNumber = e.target.badgenum?.value || '';
 
     if (isFamily && !familyFlow) {
       try {
-        const res = await fetch('/api/add-family-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName, lastName, email, phone, plan, center, corporateSponsor: sponsor, needsOrientation, address, city, state: mstate, zip: mzip, billingMethod: billing, access247, badgeNumber }) });
+        const res = await fetch('/api/add-family-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName, lastName, email, phone, plan, center, corporateSponsor: sponsor, needsOrientation, startDate, address, city, state: mstate, zip: mzip, billingMethod: billing, access247, badgeNumber }) });
         const result = await res.json();
         if (result.success) { setFamilyFlow({ familyRecordId: result.familyRecordId, familyName: result.familyName, lastName, plan, center, email, phone, corporateSponsor: sponsor, addedMembers: [{ name: `${firstName} ${lastName}`, pin: result.pin, isPrimary: true }] }); setNewMemberPin({ name: `${firstName} ${lastName}`, pin: result.pin }); }
         else { alert('Error: ' + result.error); }
@@ -531,6 +532,15 @@ export default function WellnessHub() {
                      <div className="grid grid-cols-2 gap-5">
                         <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Email</label><input type="email" id="email" defaultValue={familyFlow ? familyFlow.email : ''} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div>
                         <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Phone</label><input id="phone" defaultValue={familyFlow ? familyFlow.phone : ''} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div>
+<div>
+  <label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Start Date</label>
+  <input 
+    type="date" 
+    id="startDate" 
+    defaultValue={new Date().toISOString().split('T')[0]} 
+    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" 
+  />
+</div>
                      </div>
                      <div className="grid grid-cols-2 gap-5">
                         <div className="col-span-2"><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Street Address</label><input id="address" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div>
