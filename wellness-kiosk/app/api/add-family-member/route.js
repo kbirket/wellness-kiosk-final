@@ -42,7 +42,7 @@ export async function POST(request) {
             ...(body.familyRecordId ? {} : { "Billing Method": body.billingMethod || "Month-to-Month" }),
             "Password": newPIN,
             "Membership Status": "ACTIVE",
-            "Needs Orientation": body.needsOrientation,
+            "Needs Orientation": body.needsOrientation === true,
             ...(body.corporateSponsor ? { "Corporate Sponsor": body.corporateSponsor } : {}),
           }
         }],
