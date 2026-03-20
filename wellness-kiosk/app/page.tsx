@@ -508,7 +508,7 @@ export default function WellnessHub() {
                   <form onSubmit={handleAddMemberSubmit} className="space-y-5">
                      <div className="grid grid-cols-2 gap-5">
                         <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">First Name</label><input id="fname" required className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div>
-                        <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Last Name</label><input id="lname" required defaultValue={familyFlow ? familyFlow.lastName : ''} className={`w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors ${familyFlow ? 'bg-slate-100 text-slate-500' : ''}`} readOnly={!!familyFlow} /></div>
+                        <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Last Name</label><input id="lname" required defaultValue={familyFlow ? familyFlow.lastName : ''} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div>
                      </div>
                      <div className="grid grid-cols-2 gap-5">
                         <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Email</label><input type="email" id="email" defaultValue={familyFlow ? familyFlow.email : ''} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div>
