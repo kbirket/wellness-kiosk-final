@@ -21,29 +21,25 @@ export async function POST(request) {
     const body = await request.json();
     const newPIN = generatePIN();
 
-    const fields = {
-      "First Name": body.firstName,
-      "Last Name": body.lastName,
-      "Email": body.email || '',
-      "Phone": body.phone || '',
-      "Membership Type": body.plan,
-      "Home Center": body.center,
-      "Street Address": body.address || '',
-"City": body.city || '',
-"State": body.state || 'KS',
-"Zip": body.zip || '',
-"Billing Method": body.billingMethod || 'Month-to-Month',
-      "24/7 Access": body.access247 || false,
-"Badge Number": body.badgeNumber || '',
-      "Password": newPIN,
-      "Membership Status": "ACTIVE",
-            'Billing Method': 'Month-to-Month',
-    };
-"Needs Orientation": body.needsOrientation,
-    // Add corporate sponsor if provided
-    if (body.corporateSponsor) {
-      fields["Corporate Sponsor"] = body.corporateSponsor;
-    }
+fields: {
+            "First Name": body.firstName,
+            "Last Name": body.lastName,
+            "Email": body.email || '',
+            "Phone": body.phone || '',
+            "Membership Type": body.plan,
+            "Home Center": body.center,
+            "Street Address": body.address || '',
+            "City": body.city || '',
+            "State": body.state || 'KS',
+            "Zip": body.zip || '',
+            "24/7 Access": body.access247 || false,
+            "Badge Number": body.badgeNumber || '',
+            ...(body.familyRecordId ? {} : { "Billing Method": body.billingMethod || "Month-to-Month" }),
+            "Password": newPIN,
+            "Membership Status": "ACTIVE",
+            "Needs Orientation": body.needsOrientation, 
+            ...(body.corporateSponsor ? { "Corporate Sponsor": body.corporateSponsor } : {}),
+          }
 
     // Add needs orientation (defaults to true for new members)
     if (body.needsOrientation !== undefined) {
