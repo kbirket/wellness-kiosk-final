@@ -18,6 +18,7 @@ export async function POST(request) {
 
   try {
     const body = await request.json();
+    const today = new Date().toISOString().split('T')[0];
     const newPIN = generatePIN();
 
     // Step 1: Create the new member record
@@ -42,6 +43,7 @@ export async function POST(request) {
             ...(body.familyRecordId ? {} : { "Billing Method": body.billingMethod || "Month-to-Month" }),
             "Password": newPIN,
             "Membership Status": "ACTIVE",
+            "Start Date": body.startDate || today,
             "Needs Orientation": body.needsOrientation === true,
             ...(body.corporateSponsor ? { "Corporate Sponsor": body.corporateSponsor } : {}),
           }
