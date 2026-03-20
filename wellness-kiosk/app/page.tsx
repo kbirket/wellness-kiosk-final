@@ -291,11 +291,10 @@ const startDate = document.getElementById('startDate').value;
             </ProListCard>
           )}
         </div>)}
-{activeTab === 'reports' && (() => {
-       {activeTab === 'reports' && (
+{activeTab === 'reports' && (
   <div className="max-w-6xl mx-auto space-y-6">
     
-    {/* --- REPORT CONTROLS (THE MONTHLY SORT) --- */}
+    {/* --- REPORT CONTROLS --- */}
     <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex justify-between items-center">
       <div>
         <h2 className="text-2xl font-black text-[#001f3f]">Facility Reports</h2>
@@ -311,32 +310,28 @@ const startDate = document.getElementById('startDate').value;
 
     {/* --- CALCULATIONS --- */}
     {(() => {
-      // Break the selected month into Year and Month numbers
       const [year, month] = reportMonth.split('-');
       const y = parseInt(year);
-      const m = parseInt(month) - 1; // JavaScript months start at 0 (Jan = 0)
+      const m = parseInt(month) - 1; 
       
-      // 1. Filter Visits for the selected month
       const monthlyVisits = visits.filter(v => {
         const d = new Date(v.timestamp);
         return d.getFullYear() === y && d.getMonth() === m;
       });
 
-      // 2. Filter New Members who have a Start Date in the selected month
       const newMembersThisMonth = members.filter(mem => {
         if (!mem.startDate) return false;
         const d = new Date(mem.startDate);
         return d.getFullYear() === y && d.getMonth() === m;
       });
 
-      // 3. Breakdown Visits by Category
       const visitsByPlan = monthlyVisits.reduce((acc, v) => {
         acc[v.type] = (acc[v.type] || 0) + 1;
         return acc;
       }, {});
 
-      // 4. Calculate Orientations & 24/7 Passes for that month
       const new247 = newMembersThisMonth.filter(mem => mem.access247).length;
+      const total247 = members.filter(mem => mem.access247).length;
       const orientations = newMembersThisMonth.filter(mem => mem.needsOrientation).length; 
 
       return (
@@ -355,7 +350,7 @@ const startDate = document.getElementById('startDate').value;
 
             <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 border-l-4 border-l-amber-500">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">New 24/7 Passes</p>
-              <p className="text-4xl font-black text-slate-800">{new247}</p>
+              <p className="text-4xl font-black text-slate-800">{new247} <span className="text-sm text-slate-400 font-normal">/ {total247} Total</span></p>
             </div>
 
             <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 border-l-4 border-l-purple-500">
@@ -364,8 +359,10 @@ const startDate = document.getElementById('startDate').value;
             </div>
           </div>
 
-          {/* --- VISIT BREAKDOWN LIST --- */}
-          <div className="grid grid-cols-1 gap-6 mt-6">
+          {/* --- VISIT BREAKDOWN & BOTTOM ROW --- */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            
+            {/* Category Breakdown Box */}
             <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
               <h3 className="text-lg font-bold text-[#001f3f] mb-4">Visits by Category</h3>
               {Object.keys(visitsByPlan).length === 0 ? (
@@ -381,6 +378,9 @@ const startDate = document.getElementById('startDate').value;
                 </div>
               )}
             </div>
+
+            {/* REMINDER: Your Corporate Billing Box goes here if you had one in the old reports tab! */}
+            
           </div>
         </>
       );
