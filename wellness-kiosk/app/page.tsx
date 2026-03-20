@@ -659,7 +659,7 @@ export default function WellnessHub() {
                           if (result.success || res.ok) {
                             const updated = { ...selectedMember, firstName: updates.firstName, lastName: updates.lastName, email: updates.email, phone: updates.phone, type: updates.plan, billingMethod: updates.billingMethod, center: updates.center, sponsorName: updates.sponsor, access247: updates.access247, badgeNumber: updates.badgeNumber, notes: updates.notes };
                             setSelectedMember(updated); setMembers(prev => prev.map(m => m.airtableId === selectedMember.airtableId ? updated : m)); setEditMode(false);
-                          } else { alert('Error saving changes.'); }
+                          } else { alert('Airtable Error: ' + result.error); console.log(result); }
                         } catch (err) { alert('Network error.'); }
                       }} className="flex-1 bg-[#1080ad] text-white py-3 rounded-xl font-bold text-sm hover:bg-blue-700 transition-colors">Save Changes</button>
                       <button onClick={() => setEditMode(false)} className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold text-sm hover:bg-slate-200 transition-colors">Cancel</button>
