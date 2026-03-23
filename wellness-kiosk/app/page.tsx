@@ -283,9 +283,10 @@ export default function WellnessHub() {
         <div className="p-8 border-b border-white/10 flex justify-center"><img src={LOGO_URL} alt="Logo" className="h-10 opacity-90 drop-shadow-md" /></div>
         <div className="p-6"><div className="flex items-center gap-3 mb-4"><div className="w-10 h-10 rounded-lg bg-[#f59e0b] flex items-center justify-center font-bold text-lg text-[#001f3f]">{user?.name.charAt(0)}</div><div><p className="text-sm font-bold leading-none">{user?.name}</p><p className="text-[11px] text-white/50">@{user?.username}</p></div></div><button onClick={handleLogout} className="flex items-center gap-2 text-xs text-white/40 hover:text-white transition-colors"><LogOut size={14} /> Sign Out</button></div>
         <div className="px-4 mb-8"><p className="px-2 text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3">Viewing</p><div className="space-y-1">{[{k:'both',c:'#ffffff'},{k:'harper',c:'#f59e0b'},{k:'anthony',c:'#1080ad'}].map(item => (<button key={item.k} onClick={() => { setViewingCenter(item.k); localStorage.setItem('wellnessCenter', item.k); }} className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all ${viewingCenter === item.k ? 'bg-white/20 font-bold' : 'text-white/60 hover:bg-white/5'}`}><span className="w-1.5 h-6 rounded-full" style={{ backgroundColor: item.c }} />{item.k === 'both' ? 'Both Centers' : `${item.k.charAt(0).toUpperCase() + item.k.slice(1)}`}</button>))}</div></div>
-        <nav className="flex-1 px-4 space-y-1">{[{id:'dashboard',label:'Dashboard',icon:<LayoutDashboard size={18}/>},{id:'members',label:'Members',icon:<Users size={18}/>},{id:'classes',label:'Classes',icon:<Calendar size={18}/>},{id:'badge',label:'Staff Check-In',icon:<QrCode size={18}/>},{id:'notif',label:'Notifications',icon:<Bell size={18}/>},{id:'visitors',label:'Visitors',icon:<Eye size={18}/>},{id:'reports',label:'Reports',icon:<FileText size={18}/>}].map(item => (<button key={item.id} onClick={() => { setActiveTab(item.id); setKioskInput(''); }} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all ${activeTab === item.id ? 'bg-[#1080ad] text-white font-bold' : 'text-white/60 hover:bg-white/5'}`}>{item.icon} {item.label}{item.id === 'notif' && stats.overdue > 0 && <span className="ml-auto w-5 h-5 rounded-full bg-red-500 text-[10px] flex items-center justify-center font-bold tracking-tight">{stats.overdue}</span>}</button>))}</nav>
+       <nav className="flex-1 px-4 space-y-1">{[{id:'dashboard',label:'Dashboard',icon:<LayoutDashboard size={18}/>},{id:'members',label:'Members',icon:<Users size={18}/>},{id:'classes',label:'Classes',icon:<Calendar size={18}/>},{id:'badge',label:'Staff Check-In',icon:<QrCode size={18}/>},{id:'notif',label:'Notifications',icon:<Bell size={18}/>},{id:'visitors',label:'Visitors',icon:<Eye size={18}/>},{id:'corporate',label:'Corporate',icon:<Briefcase size={18}/>},{id:'reports',label:'Reports',icon:<FileText size={18}/>}].map(item => (<button key={item.id} onClick={() => { setActiveTab(item.id); setKioskInput(''); }} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all ${activeTab === item.id ? 'bg-[#1080ad] text-white font-bold' : 'text-white/60 hover:bg-white/5'}`}>{item.icon} {item.label}{item.id === 'notif' && stats.overdue > 0 && <span className="ml-auto w-5 h-5 rounded-full bg-red-500 text-[10px] flex items-center justify-center font-bold tracking-tight">{stats.overdue}</span>}</button>))}</nav>
       </aside>
 
+      
       <main className="flex-1 p-10 h-screen overflow-y-auto relative print:m-0 print:p-0 print:h-auto print:overflow-visible">
         <div className="mb-10 print:hidden"><h2 className="text-3xl font-bold text-[#001f3f] capitalize tracking-tight">{activeTab}</h2><p className="text-sm text-slate-400 font-medium">{viewingCenter === 'both' ? 'All Centers' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1) + ' Center'} · {currentDateString}</p></div>
 
@@ -591,7 +592,72 @@ export default function WellnessHub() {
             </ProListCard>
           )}
         </div>)}
+{activeTab === 'corporate' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center mb-8">
+              <div>
+                <h2 className="text-3xl font-bold text-[#001f3f] tracking-tight">Corporate Partners</h2>
+                <p className="text-slate-400 font-medium">Manage corporate sponsorships and billing rosters.</p>
+              </div>
+            </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {corporatePartners.map(corp => {
+                 // Find everyone attached to this specific company
+                 const corpMembers = members.filter(m => m.sponsorName === corp.sponsorMatch);
+                 const activeMembers = corpMembers.filter(m => m.status === 'ACTIVE');
+                 // Calculate the total monthly rate owed by this company
+                 const totalOwed = activeMembers.reduce((sum, m) => sum + (parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0), 0);
+                 const totalVisits = corpMembers.reduce((sum, m) => sum + m.visits, 0);
+
+                 // The 1-Click Export Function
+                 const downloadCSV = () => {
+                    if (corpMembers.length === 0) { alert('No employees enrolled for this partner.'); return; }
+                    const headers = ["Employee Name", "Member ID", "Plan Type", "Status", "Lifetime Visits", "Monthly Amount"];
+                    const rows = corpMembers.map(m => `"${m.firstName} ${m.lastName}","${m.id}","${m.type}","${m.status}","${m.visits}","$${parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0}"`);
+                    
+                    // Add a totally blank row, then the TOTAL row at the very bottom
+                    rows.push(`"","","","","",""`);
+                    rows.push(`"","","","","TOTAL DUE:","$${totalOwed.toFixed(2)}"`);
+                    
+                    const csv = [headers.join(','), ...rows].join('\n');
+                    const b = new Blob([csv],{type:'text/csv'}); const u = window.URL.createObjectURL(b); const a = document.createElement('a'); a.href=u; a.download=`${corp.name.replace(/\s+/g, '_')}_Invoice_${new Date().toISOString().slice(0,10)}.csv`; a.click(); window.URL.revokeObjectURL(u);
+                 };
+
+                 return (
+                   <div key={corp.name} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                     <div>
+                       <h3 className="font-black text-[#001f3f] text-xl mb-1">{corp.name}</h3>
+                       <p className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1 mb-4"><Mail size={12}/> {corp.contactEmail || 'No Email on file'}</p>
+                       
+                       <div className="space-y-2 mb-6">
+                         <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-100">
+                           <span className="text-xs font-bold text-slate-500 uppercase">Enrolled</span>
+                           <span className="text-lg font-black text-[#001f3f]">{corpMembers.length}</span>
+                         </div>
+                         <div className="flex justify-between items-center bg-blue-50 p-3 rounded-lg border border-blue-100">
+                           <span className="text-xs font-bold text-blue-600 uppercase">Total Visits</span>
+                           <span className="text-lg font-black text-[#1080ad]">{totalVisits}</span>
+                         </div>
+                         <div className="flex justify-between items-center bg-green-50 p-3 rounded-lg border border-green-100">
+                           <span className="text-xs font-bold text-green-600 uppercase">Total Owed</span>
+                           <span className="text-lg font-black text-[#16a34a]">${totalOwed.toFixed(2)}</span>
+                         </div>
+                       </div>
+                     </div>
+
+                     <div className="flex gap-2">
+                       <button onClick={downloadCSV} className="flex-1 bg-[#1080ad] text-white py-3 rounded-xl text-sm font-bold shadow-sm flex items-center justify-center gap-2 hover:bg-blue-800 transition-colors"><Download size={16}/> Invoice CSV</button>
+                       {corp.contactEmail && (
+                         <a href={`mailto:${corp.contactEmail}?subject=${corp.name} Wellness Roster & Invoice - ${new Date().toLocaleDateString()}&body=Hello ${corp.contactName || 'Partner'},\n\nPlease find attached your updated wellness center roster and invoice for this billing period.\n\nTotal Enrolled: ${corpMembers.length}\nTotal Due: $${totalOwed.toFixed(2)}\n\nThank you for partnering with us to keep your team healthy!\n\n- Patterson Health Center`} className="bg-slate-100 text-slate-600 p-3 rounded-xl hover:bg-slate-200 transition-colors flex items-center justify-center" title="Draft Email"><Mail size={20}/></a>
+                       )}
+                     </div>
+                   </div>
+                 );
+              })}
+            </div>
+          </div>
+        )}
         {activeTab === 'reports' && (() => {
           const [year, month] = reportMonth.split('-');
           const y = parseInt(year);
