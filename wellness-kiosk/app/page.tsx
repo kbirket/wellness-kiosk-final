@@ -601,7 +601,9 @@ const exportTodaysLog = () => { const tv = filteredVisits.filter(v => new Date(v
                   }} className="px-4 py-2 bg-[#16a34a] text-white rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-green-700"><Download size={16}/> Financials</button>
 
                   <button onClick={() => window.print()} className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-slate-50">🖨️ Print</button>
-
+                </div>
+              </div>
+                  
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-2">
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-blue-500">
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Visits</p>
