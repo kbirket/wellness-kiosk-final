@@ -47,9 +47,9 @@ export default function WellnessHub() {
   const [visitors, setVisitors] = useState([]);
   const [showAllCheckins, setShowAllCheckins] = useState(false);
   const [reportMonth, setReportMonth] = useState(() => {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-});
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
   const [showAddVisitorModal, setShowAddVisitorModal] = useState(false);
   const [selectedVisitor, setSelectedVisitor] = useState(null);
 
@@ -104,7 +104,7 @@ export default function WellnessHub() {
           let planText = r.fields['Plan Name'] ? (Array.isArray(r.fields['Plan Name']) ? r.fields['Plan Name'][0] : r.fields['Plan Name']) : 'UNKNOWN PLAN';
           let rawPassword = String(r.fields['Password'] || '').trim();
           let finalPassword = (rawPassword === '' || rawPassword.includes('ERROR')) ? '1111' : rawPassword;
-          return { airtableId: r.id, id: r.fields['Member ID'] || r.id, firstName: r.fields['First Name'] || 'Unknown', lastName: r.fields['Last Name'] || '', email: r.fields['Email'] || '', phone: r.fields['Phone'] || '', password: finalPassword, status: (r.fields['Membership Status'] || 'ACTIVE').toUpperCase(), type: String(planText).toUpperCase().trim(), center: r.fields['Home Center'] || 'Anthony', visits: Number(r.fields['Total Visits'] || 0), nextPayment: r.fields['Next Payment Due'] || null, sponsor: !!r.fields['Corporate Sponsor'], sponsorName: r.fields['Corporate Sponsor'] ? String(r.fields['Corporate Sponsor']).trim() : '', needsOrientation: !!r.fields['Needs Orientation'], familyName: r.fields['Family Name'] ? (Array.isArray(r.fields['Family Name']) ? r.fields['Family Name'][0] : r.fields['Family Name']) : '', billingMethod: r.fields['Billing Method'] || '', monthlyRate: r.fields['Monthly Rate'] || '', access247: !!r.fields['24/7 Access'], badgeNumber: r.fields['Badge Number'] || '' };
+          return { airtableId: r.id, id: r.fields['Member ID'] || r.id, firstName: r.fields['First Name'] || 'Unknown', lastName: r.fields['Last Name'] || '', email: r.fields['Email'] || '', phone: r.fields['Phone'] || '', password: finalPassword, status: (r.fields['Membership Status'] || 'ACTIVE').toUpperCase(), type: String(planText).toUpperCase().trim(), center: r.fields['Home Center'] || 'Anthony', visits: Number(r.fields['Total Visits'] || 0), nextPayment: r.fields['Next Payment Due'] || null, sponsor: !!r.fields['Corporate Sponsor'], sponsorName: r.fields['Corporate Sponsor'] ? String(r.fields['Corporate Sponsor']).trim() : '', needsOrientation: !!r.fields['Needs Orientation'], familyName: r.fields['Family Name'] ? (Array.isArray(r.fields['Family Name']) ? r.fields['Family Name'][0] : r.fields['Family Name']) : '', billingMethod: r.fields['Billing Method'] || '', monthlyRate: r.fields['Monthly Rate'] || '', access247: !!r.fields['24/7 Access'], badgeNumber: r.fields['Badge Number'] || '', startDate: r.fields['Start Date'] || null };
         });
         setMembers(mappedMembers); setApiError('');
         fetch('/api/get-visits').then(res => res.json()).then(visitData => {
@@ -148,7 +148,7 @@ export default function WellnessHub() {
     const mzip = e.target.mzip?.value || '';
     const billing = e.target.billing?.value || 'Month-to-Month';
     const access247 = e.target.access247?.checked || false;
-const startDate = document.getElementById('startDate').value;
+    const startDate = document.getElementById('startDate').value;
     const badgeNumber = e.target.badgenum?.value || '';
 
     if (isFamily && !familyFlow) {
@@ -167,7 +167,7 @@ const startDate = document.getElementById('startDate').value;
       } catch (err) { alert('Network error. Please try again.'); }
     } else {
       try {
-        const res = await fetch('/api/add-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName, lastName, email, phone, plan, center, corporateSponsor: sponsor, needsOrientation, address, city, state: mstate, zip: mzip, billingMethod: billing, access247, badgeNumber }) });
+        const res = await fetch('/api/add-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName, lastName, email, phone, plan, center, corporateSponsor: sponsor, needsOrientation, address, city, state: mstate, zip: mzip, billingMethod: billing, access247, badgeNumber, startDate }) });
         const result = await res.json();
         if (result.success) { setNewMemberPin({ name: `${firstName} ${lastName}`, pin: result.pin || '1111' }); }
         else { alert('Error: ' + result.error); }
@@ -188,7 +188,7 @@ const startDate = document.getElementById('startDate').value;
   const handleMonthlySummary = () => { const centerName = viewingCenter === 'both' ? 'System-Wide' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1); const csvContent = `${centerName} Wellness Center ${currentDateString} Summary\n\nSTANDARD MEMBERSHIPS\nSingle:,${reportStats.single}\nFamily:,${reportStats.family}\nSenior Citizen:,${reportStats.seniorCitizen}\nSenior Family:,${reportStats.seniorFamily}\nStudent (14-22):,${reportStats.student}\n\nCORPORATE, STAFF & MILITARY\nCorporate:,${reportStats.corporate}\nCorporate Family:,${reportStats.corporateFamily}\nHD6/HCHF (Staff):,${reportStats.staff}\nActive Military (Free):,${reportStats.military}\n\nOTHER INFORMATION\nDay Passes:,${reportStats.dayPass}\nTotal Members:,${stats.total}`; const blob = new Blob([csvContent.trim()], { type: 'text/csv' }); const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `${centerName}_Monthly_Summary.csv`; a.click(); window.URL.revokeObjectURL(url); };
 
   const ProStatCard = ({ value, label, color }) => (<div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 print:shadow-none print:border-slate-300" style={{ borderLeft: `6px solid ${color}` }}><p className="text-5xl font-extrabold mb-1 print:text-3xl" style={{ color }}>{value}</p><p className="text-xs font-bold text-[#001f3f] uppercase tracking-tight print:text-[10px]">{label}</p></div>);
- const ProListCard = ({ title, children, actions }) => (<div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 h-full print:h-auto print:p-4 print:shadow-none print:border-slate-300 print:break-inside-avoid"><div className="flex justify-between items-center mb-6 print:mb-2"><h3 className="text-lg font-bold text-[#001f3f] print:text-base">{title}</h3>{actions}</div>{children}</div>);
+  const ProListCard = ({ title, children, actions }) => (<div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 h-full print:h-auto print:p-4 print:shadow-none print:border-slate-300 print:break-inside-avoid"><div className="flex justify-between items-center mb-6 print:mb-2"><h3 className="text-lg font-bold text-[#001f3f] print:text-base">{title}</h3>{actions}</div>{children}</div>);
 
   if (!isMounted) return <div className="min-h-screen bg-[#001f3f]" />;
 
@@ -257,126 +257,106 @@ const startDate = document.getElementById('startDate').value;
           if (currentOccupancy > 15 && currentOccupancy <= 35) { occStatus = 'Steady'; occColor = '#f59e0b'; }
           else if (currentOccupancy > 35) { occStatus = 'Busy'; occColor = '#ef4444'; }
 
-          return (<div className="space-y-8">
-            <div className="bg-gradient-to-br from-[#001f3f] to-[#003d6b] rounded-3xl p-8 text-white relative overflow-hidden"><div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div><div className="relative z-10"><div className="flex justify-between items-start mb-6"><div><h2 className="text-2xl font-black tracking-tight">{greeting}, {user?.name?.split(' ')[0] || 'Director'}.</h2><p className="text-white/60 text-sm font-medium mt-1">{currentDateString} · {viewingCenter === 'both' ? 'All Centers' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1) + ' Center'}</p></div><div className="flex flex-col items-end gap-2"><div className="flex items-center gap-3 bg-white/10 px-4 py-2 rounded-xl"><Activity size={16} className="text-[#dba51f]" /><span className="text-sm font-bold">{stats.today} check-in{stats.today !== 1 ? 's' : ''} today</span></div><div className="flex items-center gap-3 bg-black/30 px-4 py-2 rounded-xl border border-white/10 shadow-inner"><span className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: occColor }}></span><span className="relative inline-flex rounded-full h-3 w-3" style={{ backgroundColor: occColor }}></span></span><span className="text-xs font-bold text-white/80 uppercase tracking-widest">Est. Occupancy: <span style={{ color: occColor, fontSize: '14px', marginLeft: '4px' }}>{currentOccupancy} ({occStatus})</span></span></div></div></div>{briefingItems.length === 0 ? (<div className="bg-white/10 rounded-2xl p-6 text-center"><CheckCircle size={32} className="mx-auto mb-2 text-green-400" /><p className="font-bold text-lg">All clear!</p><p className="text-white/50 text-sm">No members need attention right now.</p></div>) : (<div><p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-3">Needs Your Attention ({briefingItems.length})</p><div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[200px] overflow-y-auto pr-2">{briefingItems.slice(0,8).map((item,i) => (<button key={i} onClick={() => { const f = scopedMembers.find(m => m.id === item.id); if (f) setSelectedMember(f); }} className="flex items-center gap-3 bg-white/10 hover:bg-white/20 rounded-xl p-3 text-left transition-all group"><div className={`w-2 h-8 rounded-full flex-shrink-0 ${item.type==='overdue'?'bg-red-500':item.type==='due'?'bg-[#dd6d22]':item.type==='orientation'?'bg-[#1080ad]':'bg-[#dba51f]'}`}></div><div className="flex-1 min-w-0"><p className="font-bold text-sm truncate">{item.name}</p><p className="text-[11px] text-white/50">{item.detail}</p></div><ChevronRight size={14} className="text-white/30 group-hover:text-white/60 flex-shrink-0" /></button>))}</div>{briefingItems.length > 8 && <p className="text-xs text-white/40 mt-3 text-center">+ {briefingItems.length-8} more</p>}</div>)}</div></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 relative"><h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Search size={14}/> Quick Member Lookup</h3><div className="relative"><input className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] text-sm" placeholder="Type a name, ID, or email..." value={quickSearch} onChange={e => setQuickSearch(e.target.value)} />{quickResults.length > 0 && (<div className="absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 overflow-hidden">{quickResults.map(m => (<button key={m.id} onClick={() => { setSelectedMember(m); setQuickSearch(''); }} className="w-full p-4 border-b border-slate-50 last:border-0 hover:bg-blue-50 transition-colors flex justify-between items-center text-left"><div><p className="font-bold text-[#001f3f]">{m.firstName} {m.lastName}</p><p className="text-[10px] text-slate-400">{m.id} · {m.type}</p></div><span className={`px-2 py-1 rounded-full text-[9px] font-black ${getStoplight(m)==='green'?'bg-green-100 text-green-600':getStoplight(m)==='yellow'?'bg-yellow-100 text-yellow-600':'bg-red-100 text-red-600'}`}>{getStoplight(m)==='green'?'ACTIVE':getStoplight(m)==='yellow'?'GRACE':'LOCKED'}</span></button>))}</div>)}</div></div><div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between"><h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><FileText size={14}/> Quick Export</h3><div className="space-y-3"><button onClick={exportTodaysLog} className="w-full bg-[#1080ad] text-white py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors shadow-sm"><Download size={16}/> Export Today's Check-in Log</button><button onClick={handleExportCSV} className="w-full bg-slate-100 text-[#001f3f] py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-slate-200 transition-colors"><Download size={16}/> Export Full Member List</button></div></div></div>
-            <div className="grid grid-cols-2 gap-8">
-  
-  {/* CARD 1: TODAY'S CHECK-INS */}
-  <ProListCard title="Today's Check-ins">
-    {(() => {
-      const todayStr = new Date().toDateString();
-      const todayVisits = filteredVisits.filter(v => new Date(v.time).toDateString() === todayStr);
+          return (
+            <div className="space-y-8">
+              <div className="bg-gradient-to-br from-[#001f3f] to-[#003d6b] rounded-3xl p-8 text-white relative overflow-hidden"><div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div><div className="relative z-10"><div className="flex justify-between items-start mb-6"><div><h2 className="text-2xl font-black tracking-tight">{greeting}, {user?.name?.split(' ')[0] || 'Director'}.</h2><p className="text-white/60 text-sm font-medium mt-1">{currentDateString} · {viewingCenter === 'both' ? 'All Centers' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1) + ' Center'}</p></div><div className="flex flex-col items-end gap-2"><div className="flex items-center gap-3 bg-white/10 px-4 py-2 rounded-xl"><Activity size={16} className="text-[#dba51f]" /><span className="text-sm font-bold">{stats.today} check-in{stats.today !== 1 ? 's' : ''} today</span></div><div className="flex items-center gap-3 bg-black/30 px-4 py-2 rounded-xl border border-white/10 shadow-inner"><span className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: occColor }}></span><span className="relative inline-flex rounded-full h-3 w-3" style={{ backgroundColor: occColor }}></span></span><span className="text-xs font-bold text-white/80 uppercase tracking-widest">Est. Occupancy: <span style={{ color: occColor, fontSize: '14px', marginLeft: '4px' }}>{currentOccupancy} ({occStatus})</span></span></div></div></div>{briefingItems.length === 0 ? (<div className="bg-white/10 rounded-2xl p-6 text-center"><CheckCircle size={32} className="mx-auto mb-2 text-green-400" /><p className="font-bold text-lg">All clear!</p><p className="text-white/50 text-sm">No members need attention right now.</p></div>) : (<div><p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-3">Needs Your Attention ({briefingItems.length})</p><div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[200px] overflow-y-auto pr-2">{briefingItems.slice(0,8).map((item,i) => (<button key={i} onClick={() => { const f = scopedMembers.find(m => m.id === item.id); if (f) setSelectedMember(f); }} className="flex items-center gap-3 bg-white/10 hover:bg-white/20 rounded-xl p-3 text-left transition-all group"><div className={`w-2 h-8 rounded-full flex-shrink-0 ${item.type==='overdue'?'bg-red-500':item.type==='due'?'bg-[#dd6d22]':item.type==='orientation'?'bg-[#1080ad]':'bg-[#dba51f]'}`}></div><div className="flex-1 min-w-0"><p className="font-bold text-sm truncate">{item.name}</p><p className="text-[11px] text-white/50">{item.detail}</p></div><ChevronRight size={14} className="text-white/30 group-hover:text-white/60 flex-shrink-0" /></button>))}</div>{briefingItems.length > 8 && <p className="text-xs text-white/40 mt-3 text-center">+ {briefingItems.length-8} more</p>}</div>)}</div></div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 relative"><h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Search size={14}/> Quick Member Lookup</h3><div className="relative"><input className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] text-sm" placeholder="Type a name, ID, or email..." value={quickSearch} onChange={e => setQuickSearch(e.target.value)} />{quickResults.length > 0 && (<div className="absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 overflow-hidden">{quickResults.map(m => (<button key={m.id} onClick={() => { setSelectedMember(m); setQuickSearch(''); }} className="w-full p-4 border-b border-slate-50 last:border-0 hover:bg-blue-50 transition-colors flex justify-between items-center text-left"><div><p className="font-bold text-[#001f3f]">{m.firstName} {m.lastName}</p><p className="text-[10px] text-slate-400">{m.id} · {m.type}</p></div><span className={`px-2 py-1 rounded-full text-[9px] font-black ${getStoplight(m)==='green'?'bg-green-100 text-green-600':getStoplight(m)==='yellow'?'bg-yellow-100 text-yellow-600':'bg-red-100 text-red-600'}`}>{getStoplight(m)==='green'?'ACTIVE':getStoplight(m)==='yellow'?'GRACE':'LOCKED'}</span></button>))}</div>)}</div></div><div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between"><h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><FileText size={14}/> Quick Export</h3><div className="space-y-3"><button onClick={exportTodaysLog} className="w-full bg-[#1080ad] text-white py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors shadow-sm"><Download size={16}/> Export Today's Check-in Log</button><button onClick={handleExportCSV} className="w-full bg-slate-100 text-[#001f3f] py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-slate-200 transition-colors"><Download size={16}/> Export Full Member List</button></div></div></div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* CARD 1: TODAY'S CHECK-INS */}
+                <ProListCard title="Today's Check-ins">
+                  {(() => {
+                    const todayStr = new Date().toDateString();
+                    const todayVisits = filteredVisits.filter(v => new Date(v.time).toDateString() === todayStr);
 
-      const todayByPlan = todayVisits.reduce((acc, v) => {
-        acc[v.type] = (acc[v.type] || 0) + 1;
-        return acc;
-      }, {});
+                    const todayByPlan = todayVisits.reduce((acc, v) => {
+                      acc[v.type] = (acc[v.type] || 0) + 1;
+                      return acc;
+                    }, {});
 
-      const displayedVisits = showAllCheckins ? todayVisits : todayVisits.slice(0, 5);
+                    const displayedVisits = showAllCheckins ? todayVisits : todayVisits.slice(0, 5);
 
-      return (
-        <div className="space-y-6">
-          {Object.keys(todayByPlan).length > 0 && (
-            <div className="flex flex-wrap gap-2 pb-4 border-b border-slate-100">
-              {Object.entries(todayByPlan).sort((a,b) => b[1] - a[1]).map(([plan, count]) => (
-                <div key={plan} className="bg-slate-50 border border-slate-200 px-3 py-1 rounded-lg flex items-center gap-2">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase">{plan}</span>
-                  <span className="text-sm font-black text-[#001f3f]">{count}</span>
-                </div>
-              ))}
+                    return (
+                      <div className="space-y-6">
+                        {Object.keys(todayByPlan).length > 0 && (
+                          <div className="flex flex-wrap gap-2 pb-4 border-b border-slate-100">
+                            {Object.entries(todayByPlan).sort((a,b) => b[1] - a[1]).map(([plan, count]) => (
+                              <div key={plan} className="bg-slate-50 border border-slate-200 px-3 py-1 rounded-lg flex items-center gap-2">
+                                <span className="text-[10px] font-bold text-slate-500 uppercase">{plan}</span>
+                                <span className="text-sm font-black text-[#001f3f]">{count}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <div className="space-y-4">
+                          {todayVisits.length === 0 ? (
+                            <p className="text-slate-400 italic text-sm">Waiting for activity...</p>
+                          ) : (
+                            displayedVisits.map((v, i) => (
+                              <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                <div>
+                                  <p className="font-bold text-slate-800">{v.name}</p>
+                                  <p className="text-[11px] font-bold text-[#f59e0b] uppercase">
+                                    {v.center?.toLowerCase() === 'harper' ? 'Harper Wellness Center' : v.center?.toLowerCase() === 'anthony' ? 'Anthony Wellness Center' : v.center} • {v.type}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-2 text-slate-400 text-xs font-medium">
+                                  <Clock size={14}/> {new Date(v.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                        {todayVisits.length > 5 && (
+                          <button
+                            onClick={() => setShowAllCheckins(!showAllCheckins)}
+                            className="w-full py-2 mt-2 text-sm font-bold text-[#1080ad] hover:text-[#001f3f] transition-colors bg-blue-50/50 rounded-lg border border-blue-100 hover:bg-blue-50"
+                          >
+                            {showAllCheckins ? 'Collapse List ↑' : `See All ${todayVisits.length} Check-ins →`}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </ProListCard>
+
+                {/* CARD 2: ACCOUNT HEALTH */}
+                <ProListCard title="Account Health">
+                  <div className="py-4">
+                    <DonutChart data={statusChartData} totalLabel="Accounts" />
+                  </div>
+                </ProListCard>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <ProListCard title="Membership Breakdown">
+                  <div className="py-4">
+                    <DonutChart data={planChartData} totalLabel="Members" />
+                  </div>
+                </ProListCard>
+                <ProListCard title="Peak Hours Heatmap">
+                  <div className="flex items-end justify-between h-48 mt-8 gap-2">
+                    {heatmapData.map((count,i) => { 
+                      const hp = count===0?5:(count/maxVisits)*100; 
+                      const hl = (i+6)>12?`${(i+6)-12}P`:`${i+6}A`; 
+                      return (
+                        <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
+                          <div className="w-full bg-blue-100 rounded-t-md relative flex items-end justify-center group-hover:bg-blue-200 transition-colors" style={{height:'100%'}}>
+                            <div className="w-full bg-[#1080ad] rounded-t-md transition-all duration-500 relative" style={{height:`${hp}%`}}>
+                              <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold text-[#001f3f] opacity-0 group-hover:opacity-100 transition-opacity">{count}</span>
+                            </div>
+                          </div>
+                          <span className="text-[10px] font-bold text-slate-400">{hl}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ProListCard>
+              </div>
+
             </div>
-          )}
-          <div className="space-y-4">
-            {todayVisits.length === 0 ? (
-              <p className="text-slate-400 italic text-sm">Waiting for activity...</p>
-            ) : (
-              displayedVisits.map((v, i) => (
-                <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
-                  <div>
-                    <p className="font-bold text-slate-800">{v.name}</p>
-                    <p className="text-[11px] font-bold text-[#f59e0b] uppercase">
-                      {v.center?.toLowerCase() === 'harper' ? 'Harper Wellness Center' : v.center?.toLowerCase() === 'anthony' ? 'Anthony Wellness Center' : v.center} • {v.type}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 text-slate-400 text-xs font-medium">
-                    <Clock size={14}/> {new Date(v.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-          {todayVisits.length > 5 && (
-            <button
-              onClick={() => setShowAllCheckins(!showAllCheckins)}
-              className="w-full py-2 mt-2 text-sm font-bold text-[#1080ad] hover:text-[#001f3f] transition-colors bg-blue-50/50 rounded-lg border border-blue-100 hover:bg-blue-50"
-            >
-              {showAllCheckins ? 'Collapse List ↑' : `See All ${todayVisits.length} Check-ins →`}
-            </button>
-          )}
-        </div>
-      );
-    })()}
-  </ProListCard>
-
-  {/* CARD 2: ACCOUNT HEALTH (RESTORED!) */}
-  <ProListCard title="Account Health">
-    <div className="py-4">
-      <DonutChart data={statusChartData} totalLabel="Accounts" />
-    </div>
-  </ProListCard>
-
-</div>
-        
-        {/* 1. MEMBERSHIP BREAKDOWN */}
-        {Object.keys(todayByPlan).length > 0 && (
-          <div className="flex flex-wrap gap-2 pb-4 border-b border-slate-100">
-            {Object.entries(todayByPlan).sort((a,b) => b[1] - a[1]).map(([plan, count]) => (
-              <div key={plan} className="bg-slate-50 border border-slate-200 px-3 py-1 rounded-lg flex items-center gap-2">
-                <span className="text-[10px] font-bold text-slate-500 uppercase">{plan}</span>
-                <span className="text-sm font-black text-[#001f3f]">{count}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* 2. THE CHECK-IN LIST */}
-        <div className="space-y-4">
-          {todayVisits.length === 0 ? (
-            <p className="text-slate-400 italic text-sm">Waiting for activity...</p>
-          ) : (
-            displayedVisits.map((v, i) => (
-              <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
-                <div>
-                  <p className="font-bold text-slate-800">{v.name}</p>
-                  <p className="text-[11px] font-bold text-[#f59e0b] uppercase">
-                    {v.center?.toLowerCase() === 'harper' ? 'Harper Wellness Center' : v.center?.toLowerCase() === 'anthony' ? 'Anthony Wellness Center' : v.center} • {v.type}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 text-slate-400 text-xs font-medium">
-                  <Clock size={14}/> {new Date(v.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* 3. THE SEE MORE BUTTON */}
-        {todayVisits.length > 5 && (
-          <button
-            onClick={() => setShowAllCheckins(!showAllCheckins)}
-            className="w-full py-2 mt-2 text-sm font-bold text-[#1080ad] hover:text-[#001f3f] transition-colors bg-blue-50/50 rounded-lg border border-blue-100 hover:bg-blue-50"
-          >
-            {showAllCheckins ? 'Collapse List ↑' : `See All ${todayVisits.length} Check-ins →`}
-          </button>
-        )}
-
-      </div>
-    );
-  })()}
-</ProListCard>
-            <div className="grid grid-cols-2 gap-8"><ProListCard title="Membership Breakdown"><div className="py-4"><DonutChart data={planChartData} totalLabel="Members" /></div></ProListCard><ProListCard title="Peak Hours Heatmap"><div className="flex items-end justify-between h-48 mt-8 gap-2">{heatmapData.map((count,i) => { const hp = count===0?5:(count/maxVisits)*100; const hl = (i+6)>12?`${(i+6)-12}P`:`${i+6}A`; return (<div key={i} className="flex-1 flex flex-col items-center gap-2 group"><div className="w-full bg-blue-100 rounded-t-md relative flex items-end justify-center group-hover:bg-blue-200 transition-colors" style={{height:'100%'}}><div className="w-full bg-[#1080ad] rounded-t-md transition-all duration-500 relative" style={{height:`${hp}%`}}><span className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold text-[#001f3f] opacity-0 group-hover:opacity-100 transition-opacity">{count}</span></div></div><span className="text-[10px] font-bold text-slate-400">{hl}</span></div>);})}</div></ProListCard></div>
-          </div>);
+          );
         })()}
 
         {activeTab === 'members' && (<div className="space-y-6"><div className="flex justify-between items-center mb-8"><div><h2 className="text-3xl font-bold text-[#001f3f] tracking-tight">Members</h2></div><div className="flex gap-3"><button onClick={handleExportCSV} className="bg-white border border-slate-200 text-[#001f3f] px-6 py-2 rounded-xl font-bold text-sm shadow-sm flex items-center gap-2 hover:bg-slate-50 transition-all"><Download size={16}/> Export CSV</button><button onClick={() => { setShowAddModal(true); setNewMemberPin(null); setFamilyFlow(null); setSelectedSponsor(''); setCustomSponsor(''); }} className="bg-[#001f3f] text-white px-6 py-2 rounded-xl font-bold text-sm shadow-xl shadow-blue-900/10 flex items-center gap-2 hover:bg-blue-900 transition-colors"><Plus size={16}/> Add Member</button></div></div><div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex gap-4 items-center"><div className="relative flex-1"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} /><input className="pl-12 pr-4 py-2 border rounded-xl text-sm w-full outline-none" placeholder="Search..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} /></div></div>{loading ? (<div className="text-center py-20 text-slate-300 font-medium italic">Syncing Airtable...</div>) : apiError ? (<div className="bg-red-50 border-2 border-red-200 text-red-700 p-10 rounded-2xl text-center shadow-sm"><AlertCircle size={48} className="mx-auto mb-4 text-red-500" /><h3 className="text-2xl font-black mb-2">Airtable Refused Connection</h3><p className="font-mono text-sm bg-white p-4 rounded-lg border border-red-100 max-w-2xl mx-auto">{apiError}</p></div>) : (<div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden"><table className="w-full text-left border-collapse"><thead className="bg-slate-50 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b"><tr><th className="px-6 py-4 w-56">Member</th><th className="px-4 py-4">ID</th><th className="px-4 py-4 w-36">Type</th><th className="px-4 py-4 w-28">Status</th><th className="px-4 py-4 w-28">Payment</th><th className="px-4 py-4 w-24">Info</th></tr></thead><tbody className="text-sm">{filteredMembers.map(m => { const light = getStoplight(m); return (<tr key={m.id} className="border-b hover:bg-slate-50/80 cursor-pointer" onClick={() => setSelectedMember(m)}><td className="px-6 py-4"><p className="font-bold text-slate-800">{m.firstName} {m.lastName}</p><p className="text-[11px] text-slate-400">{m.email}{m.needsOrientation && <span className="ml-2 px-2 py-0.5 rounded text-[9px] font-black bg-blue-100 text-blue-700 uppercase">Orientation</span>}{m.familyName && <span className="ml-2 px-2 py-0.5 rounded text-[9px] font-black bg-purple-100 text-purple-700 uppercase">{m.familyName}</span>}{m.sponsorName && <span className="ml-2 px-2 py-0.5 rounded text-[9px] font-black bg-orange-100 text-orange-700 uppercase">{m.sponsorName}</span>}{m.access247 && <span className="ml-2 px-2 py-0.5 rounded text-[9px] font-black bg-amber-100 text-amber-700 uppercase">24/7</span>}</p>{m.notes && (<p className="mt-1.5 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-md truncate max-w-[220px]" title={m.notes}><strong>Note:</strong> {m.notes}</p>)}</td><td className="px-4 py-4 font-mono text-slate-400 text-xs">{m.id}</td><td className="px-4 py-4"><span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black tracking-tight">{m.type}</span></td><td className="px-4 py-4"><span className={`px-3 py-1 rounded-full text-[10px] font-black ${light==='green'?'bg-green-100 text-green-600':light==='yellow'?'bg-yellow-100 text-yellow-600':'bg-red-100 text-red-600'}`}>{light==='green'?'ACTIVE':light==='yellow'?'GRACE':'LOCKED'}</span></td><td className="px-4 py-4 text-slate-600 text-xs">{m.nextPayment||'N/A'}</td><td className="px-4 py-4"><button className="p-2 bg-[#1080ad] text-white rounded-lg shadow-md"><QrCode size={16}/></button></td></tr>);})}</tbody></table></div>)}</div>)}
@@ -405,151 +385,153 @@ const startDate = document.getElementById('startDate').value;
             </ProListCard>
           )}
         </div>)}
-{activeTab === 'reports' && (() => {
-  // 1. DYNAMIC DATE MATH
-  const [year, month] = reportMonth.split('-');
-  const y = parseInt(year);
-  const m = parseInt(month) - 1; 
 
-  // Filter Visits for the selected month
-  const monthlyVisits = visits.filter(v => {
-    if (!v.timestamp) return false;
-    const d = new Date(v.timestamp);
-    return d.getFullYear() === y && d.getMonth() === m;
-  });
+        {activeTab === 'reports' && (() => {
+          // 1. DYNAMIC DATE MATH
+          const [year, month] = reportMonth.split('-');
+          const y = parseInt(year);
+          const m = parseInt(month) - 1; 
 
-  // Filter New Members for the selected month
-  const newMembersThisMonth = members.filter(mem => {
-    if (!mem.startDate) return false;
-    const d = new Date(mem.startDate);
-    return d.getFullYear() === y && d.getMonth() === m;
-  });
+          // Filter Visits for the selected month
+          const monthlyVisits = visits.filter(v => {
+            if (!v.timestamp) return false;
+            const d = new Date(v.timestamp);
+            return d.getFullYear() === y && d.getMonth() === m;
+          });
 
-  // Calculate Member of the Month (Most visits this month)
-  const visitCounts = monthlyVisits.reduce((acc, v) => {
-    const name = `${v.firstName} ${v.lastName}`;
-    acc[name] = (acc[name] || 0) + 1;
-    return acc;
-  }, {});
-  const topMembers = Object.entries(visitCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+          // Filter New Members for the selected month
+          const newMembersThisMonth = members.filter(mem => {
+            if (!mem.startDate) return false;
+            const d = new Date(mem.startDate);
+            return d.getFullYear() === y && d.getMonth() === m;
+          });
 
-  // Slipping Away (No visits in 21 days)
-  const twentyOneDaysAgo = new Date();
-  twentyOneDaysAgo.setDate(twentyOneDaysAgo.getDate() - 21);
-  const slippingAway = members.filter(m => {
-    const memberVisits = visits.filter(v => v.email === m.email || v.badgeNumber === m.badgeNumber);
-    if (memberVisits.length === 0) return true; 
-    const lastVisit = new Date(Math.max(...memberVisits.map(v => new Date(v.timestamp))));
-    return lastVisit < twentyOneDaysAgo;
-  }).slice(0, 5);
+          // Calculate Member of the Month (Most visits this month)
+          const visitCounts = monthlyVisits.reduce((acc, v) => {
+            const name = `${v.firstName} ${v.lastName}`;
+            acc[name] = (acc[name] || 0) + 1;
+            return acc;
+          }, {});
+          const topMembers = Object.entries(visitCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
-  // Group monthly visits by plan (What Deanna and Patrick asked for!)
-  const visitsByPlan = monthlyVisits.reduce((acc, v) => {
-    acc[v.type] = (acc[v.type] || 0) + 1;
-    return acc;
-  }, {});
+          // Slipping Away (No visits in 21 days)
+          const twentyOneDaysAgo = new Date();
+          twentyOneDaysAgo.setDate(twentyOneDaysAgo.getDate() - 21);
+          const slippingAway = members.filter(m => {
+            const memberVisits = visits.filter(v => v.email === m.email || v.badgeNumber === m.badgeNumber);
+            if (memberVisits.length === 0) return true; 
+            const lastVisit = new Date(Math.max(...memberVisits.map(v => new Date(v.timestamp))));
+            return lastVisit < twentyOneDaysAgo;
+          }).slice(0, 5);
 
-  return (
-    <div className="max-w-7xl mx-auto space-y-6">
-      
-      {/* HEADER WITH NEW DROPDOWN */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h2 className="text-2xl font-black text-[#001f3f]">Monthly Summary Report</h2>
-          <p className="text-sm text-slate-500">Filter your facility data by month.</p>
-        </div>
-        <div className="flex gap-4">
-          <select 
-            value={reportMonth} 
-            onChange={(e) => setReportMonth(e.target.value)} 
-            className="p-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] font-bold text-slate-700 cursor-pointer shadow-sm"
-          >
-            <option value="2026-01">January 2026</option>
-            <option value="2026-02">February 2026</option>
-            <option value="2026-03">March 2026</option>
-            <option value="2026-04">April 2026</option>
-            <option value="2026-05">May 2026</option>
-          </select>
-          <button onClick={() => window.print()} className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-slate-50">🖨️ Print Dashboard</button>
-        </div>
-      </div>
+          // Group monthly visits by plan (What Deanna and Patrick asked for!)
+          const visitsByPlan = monthlyVisits.reduce((acc, v) => {
+            acc[v.type] = (acc[v.type] || 0) + 1;
+            return acc;
+          }, {});
 
-      {/* NEW KPI CARDS */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-2">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-blue-500">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Visits</p>
-          <p className="text-4xl font-black text-slate-800">{monthlyVisits.length}</p>
-        </div>
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-green-500">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">New Sign-Ups</p>
-          <p className="text-4xl font-black text-slate-800">{newMembersThisMonth.length}</p>
-        </div>
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-amber-500">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">24/7 Passes (New)</p>
-          <p className="text-4xl font-black text-slate-800">{newMembersThisMonth.filter(m => m.access247).length}</p>
-        </div>
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-purple-500">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Orientations</p>
-          <p className="text-4xl font-black text-slate-800">{newMembersThisMonth.filter(m => m.needsOrientation).length}</p>
-        </div>
-      </div>
-
-      {/* RESTORED TOP ROW: Member of Month & Slipping Away */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-          <h3 className="text-md font-black text-[#001f3f] mb-4 flex items-center gap-2">🏆 Top Visitors ({reportMonth})</h3>
-          {topMembers.length > 0 ? topMembers.map(([name, count], index) => (
-            <div key={name} className="flex justify-between items-center bg-slate-50 p-3 rounded-xl mb-2">
-              <div className="flex items-center gap-3">
-                <span className="w-6 h-6 rounded-full bg-amber-400 text-white flex items-center justify-center text-xs font-bold">{index + 1}</span>
-                <span className="font-bold text-slate-700">{name}</span>
+          return (
+            <div className="max-w-7xl mx-auto space-y-6">
+              
+              {/* HEADER WITH NEW DROPDOWN */}
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h2 className="text-2xl font-black text-[#001f3f]">Monthly Summary Report</h2>
+                  <p className="text-sm text-slate-500">Filter your facility data by month.</p>
+                </div>
+                <div className="flex gap-4">
+                  <select 
+                    value={reportMonth} 
+                    onChange={(e) => setReportMonth(e.target.value)} 
+                    className="p-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] font-bold text-slate-700 cursor-pointer shadow-sm"
+                  >
+                    <option value="2026-01">January 2026</option>
+                    <option value="2026-02">February 2026</option>
+                    <option value="2026-03">March 2026</option>
+                    <option value="2026-04">April 2026</option>
+                    <option value="2026-05">May 2026</option>
+                  </select>
+                  <button onClick={() => window.print()} className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-slate-50">🖨️ Print Dashboard</button>
+                </div>
               </div>
-              <span className="text-sm font-bold text-blue-600">{count} visits</span>
+
+              {/* NEW KPI CARDS */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-2">
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-blue-500">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Visits</p>
+                  <p className="text-4xl font-black text-slate-800">{monthlyVisits.length}</p>
+                </div>
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-green-500">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">New Sign-Ups</p>
+                  <p className="text-4xl font-black text-slate-800">{newMembersThisMonth.length}</p>
+                </div>
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-amber-500">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">24/7 Passes (New)</p>
+                  <p className="text-4xl font-black text-slate-800">{newMembersThisMonth.filter(m => m.access247).length}</p>
+                </div>
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-purple-500">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Orientations</p>
+                  <p className="text-4xl font-black text-slate-800">{newMembersThisMonth.filter(m => m.needsOrientation).length}</p>
+                </div>
+              </div>
+
+              {/* RESTORED TOP ROW: Member of Month & Slipping Away */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                  <h3 className="text-md font-black text-[#001f3f] mb-4 flex items-center gap-2">🏆 Top Visitors ({reportMonth})</h3>
+                  {topMembers.length > 0 ? topMembers.map(([name, count], index) => (
+                    <div key={name} className="flex justify-between items-center bg-slate-50 p-3 rounded-xl mb-2">
+                      <div className="flex items-center gap-3">
+                        <span className="w-6 h-6 rounded-full bg-amber-400 text-white flex items-center justify-center text-xs font-bold">{index + 1}</span>
+                        <span className="font-bold text-slate-700">{name}</span>
+                      </div>
+                      <span className="text-sm font-bold text-blue-600">{count} visits</span>
+                    </div>
+                  )) : <p className="text-sm text-slate-400">No visits recorded yet.</p>}
+                </div>
+
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                  <h3 className="text-md font-black text-[#001f3f] mb-4 flex items-center gap-2">⚠️ Slipping Away (21+ Days)</h3>
+                  {slippingAway.length > 0 ? slippingAway.map(m => (
+                    <div key={m.email} className="flex justify-between items-center bg-red-50 p-3 rounded-xl mb-2">
+                      <span className="font-bold text-slate-700">{m.firstName} {m.lastName}</span>
+                      <span className="text-xs font-bold text-red-600 uppercase">Needs Check-in</span>
+                    </div>
+                  )) : <p className="text-sm text-slate-400">All active members have visited recently!</p>}
+                </div>
+              </div>
+
+              {/* RESTORED BOTTOM ROW: Category Breakdowns (Now shows VISITS instead of just member count, per Director request) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                  <h3 className="text-md font-black text-[#001f3f] mb-4">Standard Membership Visits</h3>
+                  <div className="space-y-3">
+                    {['SINGLE', 'FAMILY', 'SENIOR CITIZEN', 'STUDENT'].map(plan => (
+                      <div key={plan} className="flex justify-between items-center border-b border-slate-50 pb-2">
+                        <span className="text-sm font-semibold text-slate-600">{plan}</span>
+                        <span className="font-black text-slate-800">{visitsByPlan[plan] || 0}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                  <h3 className="text-md font-black text-[#001f3f] mb-4">Corporate & Military Visits</h3>
+                  <div className="space-y-3">
+                    {['CORPORATE', 'CORPORATE FAMILY', 'ACTIVE MILITARY'].map(plan => (
+                      <div key={plan} className="flex justify-between items-center border-b border-slate-50 pb-2">
+                        <span className="text-sm font-semibold text-slate-600">{plan}</span>
+                        <span className="font-black text-slate-800">{visitsByPlan[plan] || 0}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
             </div>
-          )) : <p className="text-sm text-slate-400">No visits recorded yet.</p>}
-        </div>
+          );
+        })()}
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-          <h3 className="text-md font-black text-[#001f3f] mb-4 flex items-center gap-2">⚠️ Slipping Away (21+ Days)</h3>
-          {slippingAway.length > 0 ? slippingAway.map(m => (
-            <div key={m.email} className="flex justify-between items-center bg-red-50 p-3 rounded-xl mb-2">
-              <span className="font-bold text-slate-700">{m.firstName} {m.lastName}</span>
-              <span className="text-xs font-bold text-red-600 uppercase">Needs Check-in</span>
-            </div>
-          )) : <p className="text-sm text-slate-400">All active members have visited recently!</p>}
-        </div>
-      </div>
-
-      {/* RESTORED BOTTOM ROW: Category Breakdowns (Now shows VISITS instead of just member count, per Director request) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-          <h3 className="text-md font-black text-[#001f3f] mb-4">Standard Membership Visits</h3>
-          <div className="space-y-3">
-            {['SINGLE', 'FAMILY', 'SENIOR CITIZEN', 'STUDENT'].map(plan => (
-              <div key={plan} className="flex justify-between items-center border-b border-slate-50 pb-2">
-                <span className="text-sm font-semibold text-slate-600">{plan}</span>
-                <span className="font-black text-slate-800">{visitsByPlan[plan] || 0}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-          <h3 className="text-md font-black text-[#001f3f] mb-4">Corporate & Military Visits</h3>
-          <div className="space-y-3">
-            {['CORPORATE', 'CORPORATE FAMILY', 'ACTIVE MILITARY'].map(plan => (
-              <div key={plan} className="flex justify-between items-center border-b border-slate-50 pb-2">
-                <span className="text-sm font-semibold text-slate-600">{plan}</span>
-                <span className="font-black text-slate-800">{visitsByPlan[plan] || 0}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-    </div>
-  );
-})()}
         {activeTab === 'notif' && (<div className="space-y-6"><div className="flex justify-between items-center mb-8"><div><h2 className="text-3xl font-bold text-[#001f3f] tracking-tight">Notifications</h2><p className="text-slate-400 font-medium">Payment reminders</p></div><button className="bg-[#dd6d22] text-white px-8 py-3 rounded-xl font-bold shadow-lg flex items-center gap-2"><Bell size={20}/> Send All Due</button></div><ProListCard title="Due for Reminder"><div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mt-4"><table className="w-full text-left border-collapse"><thead className="bg-slate-50 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b"><tr><th className="px-8 py-4 w-64">Member</th><th className="px-8 py-4 w-40">Type</th><th className="px-8 py-4 w-32">Status</th><th className="px-8 py-4 w-32">Due</th><th className="px-8 py-4 w-24">Actions</th></tr></thead><tbody className="text-sm">{scopedMembers.filter(m => m.status !== 'ACTIVE').map(m => (<tr key={m.id} className="border-b"><td className="px-8 py-5"><p className="font-bold text-slate-800">{m.firstName} {m.lastName}</p><p className="text-[11px] text-slate-400">{m.email}</p></td><td className="px-8 py-5"><span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black">{m.type}</span></td><td className="px-8 py-5"><span className={`px-3 py-1 rounded-full text-[10px] font-black ${m.status==='OVERDUE'?'bg-red-100 text-red-600':'bg-amber-100 text-amber-600'}`}>{m.status}</span></td><td className="px-8 py-5 text-slate-600 font-medium">{m.nextPayment}</td><td className="px-8 py-5 flex gap-2"><button className="p-2 bg-[#1080ad] text-white rounded-lg shadow-md"><Mail size={16}/></button><button className="p-2 bg-[#dd6d22] text-white rounded-lg shadow-md"><Phone size={16}/></button></td></tr>))}</tbody></table></div></ProListCard></div>)}
 
         {activeTab === 'badge' && (<div className="space-y-6"><div className="mb-8"><h2 className="text-3xl font-bold text-[#001f3f] tracking-tight mb-1">Staff Check-In</h2><p className="text-slate-400 font-medium">Log a check-in manually or via scanner.</p></div><div className="flex gap-8"><div className="bg-white p-12 rounded-3xl shadow-sm border border-slate-200 flex-1 text-center"><p className="text-sm font-bold text-slate-400 mb-4">Enter Name or ID:</p><div className="relative w-full max-w-sm mx-auto mb-10"><div className="flex gap-4"><input className="flex-1 p-4 border rounded-xl outline-none text-xl text-center bg-slate-100 focus:border-[#1080ad] focus:bg-white transition-colors" placeholder="e.g. Smith" value={kioskInput} onChange={(e) => setKioskInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { processCheckIn(kioskInput, "Staff Scan/Entry"); setKioskInput(''); } }} /><button onClick={() => { processCheckIn(kioskInput, "Staff Scan/Entry"); setKioskInput(''); }} className="bg-[#001f3f] text-white px-8 rounded-xl font-bold hover:bg-blue-900 transition-colors shadow-sm">Check In</button></div>{kioskMatches.length > 0 && (<div className="absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 overflow-hidden text-left">{kioskMatches.map(m => (<button key={m._type + (m.airtableId || m.id)} onClick={() => { processCheckIn(m.id, "Staff Override Entry"); setKioskInput(''); }} className="w-full p-4 border-b border-slate-100 last:border-0 hover:bg-blue-50 transition-colors flex justify-between items-center group"><div><p className="font-bold text-[#001f3f] text-lg">{m.firstName} {m.lastName}</p><p className="text-[10px] text-slate-400 uppercase tracking-widest">{m.phone||'No Phone'}</p></div><div className="bg-[#1080ad] text-white px-3 py-1 rounded-lg text-xs font-bold shadow-sm group-hover:scale-105 transition-transform">Select</div></button>))}</div>)}</div>{kioskMessage.text && (<div className={`mt-8 p-4 rounded-xl text-center font-bold text-lg ${kioskMessage.type==='success'?'bg-green-100 text-green-700':kioskMessage.type==='warning'?'bg-yellow-100 text-yellow-700':'bg-red-100 text-red-700'}`}>{kioskMessage.text}{kioskMessage.subtext && <p className="text-sm mt-1">{kioskMessage.subtext}</p>}</div>)}</div></div></div>)}
