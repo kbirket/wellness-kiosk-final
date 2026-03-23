@@ -1,82 +1,50 @@
-// /app/api/log-payment/route.js
 import { NextResponse } from 'next/server';
-export const dynamic = 'force-dynamic';
 
 export async function POST(request) {
-  const baseId = process.env.AIRTABLE_BASE_ID;
-  const token = process.env.AIRTABLE_PAT;
-  const membersTable = process.env.AIRTABLE_TABLE_NAME || 'Members';
-  const paymentsTable = 'Payments';
-
   try {
-    const { airtableId, memberName, method, amount, currentDueDate } = await request.json();
+    const { airtableId, method, currentDueDate, amount } = await request.json();
+    const baseId = process.env.AIRTABLE_BASE_ID;
+    const token = process.env.AIRTABLE_PAT;
 
-    if (!airtableId) {
-      return NextResponse.json({ success: false, error: 'Missing member ID' }, { status: 400 });
+    // 1. Calculate the NEW due date (add 1 month to current, or if null, start from today)
+    let nextDate = new Date();
+    if (currentDueDate && currentDueDate !== 'N/A') {
+        nextDate = new Date(currentDueDate);
     }
+    nextDate.setMonth(nextDate.getMonth() + 1);
+    const nextPaymentDue = nextDate.toISOString().split('T')[0];
 
-    // Calculate the new Next Payment Due date (1 month from current due date, or 1 month from today)
-    let nextDate;
-    if (currentDueDate) {
-      const d = new Date(currentDueDate);
-      d.setMonth(d.getMonth() + 1);
-      nextDate = d.toISOString().split('T')[0]; // YYYY-MM-DD
-    } else {
-      const d = new Date();
-      d.setMonth(d.getMonth() + 1);
-      nextDate = d.toISOString().split('T')[0];
-    }
-
-    // Step 1: Update the member's status and next payment date
-    const memberRes = await fetch(`https://api.airtable.com/v0/${baseId}/${membersTable}/${airtableId}`, {
-      method: 'PATCH',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        fields: {
-          'Membership Status': 'Active',
-          'Next Payment Due': nextDate,
-        },
-      }),
-    });
-
-    const memberData = await memberRes.json();
-    if (memberData.error) {
-      return NextResponse.json({ success: false, error: memberData.error.message || 'Failed to update member' }, { status: 400 });
-    }
-
-    // Step 2: Create a payment record
-    const paymentRes = await fetch(`https://api.airtable.com/v0/${baseId}/${paymentsTable}`, {
+    // 2. Create the Payment Record in the "Payments" table
+    await fetch(`https://api.airtable.com/v0/${baseId}/Payments`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         records: [{
           fields: {
-            'Member': [airtableId],
-            'Amount': amount ? parseFloat(amount) : 0,
-            'Payment Date': new Date().toISOString().split('T')[0],
-            'Payment Method': method || 'Cash',
-            'Status': 'Completed',
-            'Notes': `Logged by staff via Wellness Hub`,
-          },
-        }],
-        typecast: true,
-      }),
+            "Member": [airtableId],
+            "Amount": Number(amount),
+            "Payment Date": new Date().toISOString().split('T')[0],
+            "Payment Method": method,
+            "Status": "Completed",
+            "Notes": "Logged by staff via Wellness Hub"
+          }
+        }]
+      })
     });
 
-    const paymentData = await paymentRes.json();
-
-    return NextResponse.json({
-      success: true,
-      nextPaymentDue: nextDate,
-      paymentError: paymentData.error ? paymentData.error.message : null,
+    // 3. Update the Member's Next Payment Due date in the "Members" table
+    await fetch(`https://api.airtable.com/v0/${baseId}/Members/${airtableId}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fields: {
+          "Next Payment Due": nextPaymentDue,
+          "Membership Status": "Active"
+        }
+      })
     });
 
+    return NextResponse.json({ success: true, nextPaymentDue });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
