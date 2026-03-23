@@ -49,6 +49,7 @@ export default function WellnessHub() {
   const [activeClass, setActiveClass] = useState(null);
   const [kioskMode, setKioskMode] = useState('Gym');
   
+  // FIX: Sets default report month to MM-YYYY instead of YYYY-MM
   const [reportMonth, setReportMonth] = useState(() => {
     const now = new Date();
     return `${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
@@ -62,8 +63,7 @@ export default function WellnessHub() {
     const r = {
       'SINGLE': { 'Month-to-Month': 35, 'Auto-Draft': 32, '6-Month Prepay': 200, '12-Month Prepay': 378 },
       'FAMILY': { 'Month-to-Month': 55, 'Auto-Draft': 50, '6-Month Prepay': 313, '12-Month Prepay': 594 },
-      'SENIOR': { 'Month-to-Month': 22, 'Auto-Draft': 20, '6-Month Prepay': 125, '12-Month Prepay': 238 },
-      'SENIOR CITIZEN': { 'Month-to-Month': 22, 'Auto-Draft': 20, '6-Month Prepay': 125, '12-Month Prepay': 238 }, // Fallback for old records
+      'SENIOR CITIZEN': { 'Month-to-Month': 22, 'Auto-Draft': 20, '6-Month Prepay': 125, '12-Month Prepay': 238 },
       'SENIOR FAMILY': { 'Month-to-Month': 40, 'Auto-Draft': 36, '6-Month Prepay': 228, '12-Month Prepay': 432 },
       'STUDENT': { 'Month-to-Month': 20, 'Auto-Draft': 18, '6-Month Prepay': 114, '12-Month Prepay': 216 }
     };
@@ -143,59 +143,13 @@ export default function WellnessHub() {
   const kioskMatches = [...memberMatches.map(m => ({...m, _type: 'member'})), ...visitorMatches.map(v => ({...v, id: 'VISITOR', _type: 'visitor'}))];
   const heatmapData = Array(15).fill(0); filteredVisits.forEach(v => { const hour = new Date(v.time).getHours(); if (hour >= 6 && hour <= 20) heatmapData[hour - 6]++; }); const maxVisits = Math.max(...heatmapData, 1);
   const stats = { total: scopedMembers.length, active: scopedMembers.filter(m => m.status === 'ACTIVE').length, overdue: scopedMembers.filter(m => m.status === 'OVERDUE').length, expiring: scopedMembers.filter(m => m.status === 'EXPIRING').length, today: filteredVisits.filter(v => new Date(v.time).toDateString() === new Date().toDateString()).length };
-  
-  const reportStats = { 
-      single: scopedMembers.filter(m => m.type === 'SINGLE').length, 
-      family: scopedMembers.filter(m => m.type === 'FAMILY').length, 
-      // Merges the new "SENIOR" and the old "SENIOR CITIZEN" into one stat
-      senior: scopedMembers.filter(m => m.type === 'SENIOR' || m.type === 'SENIOR CITIZEN').length, 
-      seniorFamily: scopedMembers.filter(m => m.type === 'SENIOR FAMILY').length, 
-      student: scopedMembers.filter(m => m.type.includes('STUDENT')).length, 
-      corporate: scopedMembers.filter(m => m.type === 'CORPORATE').length, 
-      corporateFamily: scopedMembers.filter(m => m.type === 'CORPORATE FAMILY').length, 
-      dayPass: scopedMembers.filter(m => m.type.includes('DAY PASS')).length, 
-      staff: scopedMembers.filter(m => m.type.includes('HD6') || m.type.includes('HCHF')).length, 
-      military: scopedMembers.filter(m => m.type.includes('MILITARY')).length 
-  };
-  
-  const planChartData = [{label:'Single',value:reportStats.single,color:'#1080ad'},{label:'Family',value:reportStats.family,color:'#f59e0b'},{label:'Senior',value:reportStats.senior+reportStats.seniorFamily,color:'#16a34a'},{label:'Student',value:reportStats.student,color:'#8b5cf6'},{label:'Corporate',value:reportStats.corporate+reportStats.corporateFamily,color:'#ef4444'},{label:'Other (Staff/Mil/Pass)',value:reportStats.staff+reportStats.military+reportStats.dayPass,color:'#64748b'}];
+  const reportStats = { single: scopedMembers.filter(m => m.type === 'SINGLE').length, family: scopedMembers.filter(m => m.type === 'FAMILY').length, seniorCitizen: scopedMembers.filter(m => m.type === 'SENIOR CITIZEN').length, seniorFamily: scopedMembers.filter(m => m.type === 'SENIOR FAMILY').length, student: scopedMembers.filter(m => m.type.includes('STUDENT')).length, corporate: scopedMembers.filter(m => m.type === 'CORPORATE').length, corporateFamily: scopedMembers.filter(m => m.type === 'CORPORATE FAMILY').length, dayPass: scopedMembers.filter(m => m.type.includes('DAY PASS')).length, staff: scopedMembers.filter(m => m.type.includes('HD6') || m.type.includes('HCHF')).length, military: scopedMembers.filter(m => m.type.includes('MILITARY')).length };
+  const planChartData = [{label:'Single',value:reportStats.single,color:'#1080ad'},{label:'Family',value:reportStats.family,color:'#f59e0b'},{label:'Senior',value:reportStats.seniorCitizen+reportStats.seniorFamily,color:'#16a34a'},{label:'Student',value:reportStats.student,color:'#8b5cf6'},{label:'Corporate',value:reportStats.corporate+reportStats.corporateFamily,color:'#ef4444'},{label:'Other (Staff/Mil/Pass)',value:reportStats.staff+reportStats.military+reportStats.dayPass,color:'#64748b'}];
   const statusChartData = [{label:'Active',value:stats.active,color:'#16a34a'},{label:'Expiring Soon',value:stats.expiring,color:'#f59e0b'},{label:'Overdue / Locked',value:stats.overdue,color:'#ef4444'}];
   const familyMembers = activeMember ? members.filter(m => m.id !== activeMember.id && ((m.email && m.email.toLowerCase() === activeMember.email.toLowerCase()) || (m.phone && m.phone === activeMember.phone))) : [];
 
   const handleUpdateProfile = async () => { setIsUpdating(true); const newEmail = document.getElementById('edit_email').value.trim(); const newPhone = document.getElementById('edit_phone').value.trim(); setActiveMember({...activeMember, email: newEmail, phone: newPhone}); setEditMode(false); try { await fetch('/api/update-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: activeMember.airtableId, email: newEmail, phone: newPhone }) }); } catch (err) { alert("App updated locally."); } setIsUpdating(false); };
-const handleRenewVisitor = async (visitor, newPassType) => {
-    const confirmRenew = window.confirm(`Renew ${visitor.firstName} ${visitor.lastName} for a new ${newPassType}?`);
-    if (!confirmRenew) return;
 
-    try {
-      const res = await fetch('/api/add-visitor', { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify({ 
-          firstName: visitor.firstName, 
-          lastName: visitor.lastName, 
-          email: visitor.email, 
-          phone: visitor.phone, 
-          address: visitor.address, 
-          city: visitor.city, 
-          state: visitor.state, 
-          zip: visitor.zip, 
-          passType: newPassType, 
-          center: viewingCenter === 'both' ? 'Anthony Wellness Center' : viewingCenter === 'harper' ? 'Harper Wellness Center' : 'Anthony Wellness Center',
-          referringProvider: visitor.referringProvider,
-          notes: `Renewed on ${new Date().toLocaleDateString()}`
-        }) 
-      });
-      const result = await res.json();
-      if (result.success) {
-        alert(`Pass Renewed!\n\nNew PIN: ${result.pin}\nExpires: ${result.expirationDate}`);
-        // Refresh visitor list
-        fetch('/api/get-visitors').then(r => r.json()).then(data => {
-          if (data.records) setVisitors(data.records.map(r => ({ airtableId: r.id, firstName: r.fields['First Name'] || '', lastName: r.fields['Last Name'] || '', email: r.fields['Email'] || '', phone: r.fields['Phone'] || '', passType: r.fields['Pass Type'] || '', amountPaid: r.fields['Amount Paid'] || 0, referringProvider: r.fields['Referring Provider'] || '', purchaseDate: r.fields['Purchase Date'] || '', expirationDate: r.fields['Expiration Date'] || '', center: r.fields['Center'] || '', pin: r.fields['PIN'] || '', orientationComplete: !!r.fields['Orientation Complete'], totalVisits: r.fields['Total Visits'] || 0, address: r.fields['Street Address'] || '', city: r.fields['City'] || '', state: r.fields['State'] || '', zip: r.fields['Zip'] || '', notes: r.fields['Notes'] || '' })));
-        });
-      }
-    } catch (err) { alert('Renewal failed.'); }
-  };
   const handleAddMemberSubmit = async (e) => {
     e.preventDefault(); setIsAdding(true); setNewMemberPin(null);
     const firstName = e.target.fname.value; const lastName = e.target.lname.value; const email = e.target.email.value; const phone = e.target.phone.value; const plan = e.target.plan.value; const center = e.target.center.value;
@@ -638,14 +592,7 @@ const handleRenewVisitor = async (visitor, newPassType) => {
           {visitors.filter(v => new Date(v.expirationDate + 'T23:59:59') < new Date() && (v.email || v.phone)).length > 0 && (
             <ProListCard title="Conversion Leads — Expired Passes with Contact Info">
               <p className="text-sm text-slate-400 mb-4">These visitors had passes that expired. They have contact info and could be converted to full members.</p>
-              <div className="space-y-3">{visitors.filter(v => new Date(v.expirationDate + 'T23:59:59') < new Date() && (v.email || v.phone)).map(v => (<div key={v.airtableId} className="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-100"><div><p className="font-bold text-slate-800">{v.firstName} {v.lastName}</p><p className="text-[11px] text-slate-400">{v.email} {v.phone ? `· ${v.phone}` : ''}</p><p className="text-[10px] text-purple-500 font-bold">{v.passType} · Referred by {v.referringProvider || 'N/A'} · {v.totalVisits} visit{v.totalVisits !== 1 ? 's' : ''}</p></div><div className="flex gap-2"><div className="relative group/renew">
-                        <button className="px-3 py-1.5 bg-purple-600 text-white rounded-lg text-[10px] font-bold hover:bg-purple-700 transition-colors">Renew Pass</button>
-                        <div className="absolute right-0 top-full mt-1 hidden group-hover/renew:block bg-white border border-slate-200 shadow-xl rounded-xl z-50 overflow-hidden w-40">
-                          <button onClick={() => handleRenewVisitor(v, 'Day Pass')} className="w-full text-left px-4 py-2 text-[10px] font-bold text-slate-600 hover:bg-slate-50 border-b border-slate-100">Day Pass ($5)</button>
-                          <button onClick={() => handleRenewVisitor(v, '2-Week Courtesy')} className="w-full text-left px-4 py-2 text-[10px] font-bold text-slate-600 hover:bg-slate-50 border-b border-slate-100">2-Week Courtesy</button>
-                          <button onClick={() => handleRenewVisitor(v, 'Month Courtesy')} className="w-full text-left px-4 py-2 text-[10px] font-bold text-slate-600 hover:bg-slate-50">Month Courtesy</button>
-                        </div>
-                      </div><button className="p-2 bg-[#1080ad] text-white rounded-lg shadow-md" title="Email"><Mail size={16}/></button><button className="p-2 bg-[#dd6d22] text-white rounded-lg shadow-md" title="Call"><Phone size={16}/></button></div></div>))}</div>
+              <div className="space-y-3">{visitors.filter(v => new Date(v.expirationDate + 'T23:59:59') < new Date() && (v.email || v.phone)).map(v => (<div key={v.airtableId} className="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-100"><div><p className="font-bold text-slate-800">{v.firstName} {v.lastName}</p><p className="text-[11px] text-slate-400">{v.email} {v.phone ? `· ${v.phone}` : ''}</p><p className="text-[10px] text-purple-500 font-bold">{v.passType} · Referred by {v.referringProvider || 'N/A'} · {v.totalVisits} visit{v.totalVisits !== 1 ? 's' : ''}</p></div><div className="flex gap-2"><button className="p-2 bg-[#1080ad] text-white rounded-lg shadow-md" title="Email"><Mail size={16}/></button><button className="p-2 bg-[#dd6d22] text-white rounded-lg shadow-md" title="Call"><Phone size={16}/></button></div></div>))}</div>
             </ProListCard>
           )}
         </div>)}
@@ -918,12 +865,10 @@ const handleRenewVisitor = async (visitor, newPassType) => {
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
                   <h3 className="text-md font-black text-[#001f3f] mb-4">Standard Membership Visits</h3>
                   <div className="space-y-3">
-                    {[{l: 'Single', k: 'SINGLE'}, {l: 'Family', k: 'FAMILY'}, {l: 'Senior', k: 'SENIOR'}, {l: 'Student', k: 'STUDENT'}].map(plan => (
-                      <div key={plan.k} className="flex justify-between items-center border-b border-slate-50 pb-2">
-                        <span className="text-sm font-semibold text-slate-600">{plan.l}</span>
-                        <span className="font-black text-slate-800">
-                          {(visitsByPlan[plan.k] || 0) + (plan.k === 'SENIOR' ? (visitsByPlan['SENIOR CITIZEN'] || 0) : 0)}
-                        </span>
+                    {['SINGLE', 'FAMILY', 'SENIOR CITIZEN', 'STUDENT'].map(plan => (
+                      <div key={plan} className="flex justify-between items-center border-b border-slate-50 pb-2">
+                        <span className="text-sm font-semibold text-slate-600">{plan}</span>
+                        <span className="font-black text-slate-800">{visitsByPlan[plan] || 0}</span>
                       </div>
                     ))}
                   </div>
@@ -1095,7 +1040,7 @@ const handleRenewVisitor = async (visitor, newPassType) => {
                      {!familyFlow && (
                        <>
                          <div className="grid grid-cols-2 gap-5">
-                            <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Plan Type</label><select id="plan" onChange={e => { const v = e.target.value; if (!v.includes('CORPORATE') && !v.includes('HD6') && !v.includes('HCHF')) { setSelectedSponsor(''); setCustomSponsor(''); } }} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors font-bold text-slate-700"><option value="SINGLE">Single</option><option value="FAMILY">Family</option><option value="SENIOR">Senior</option><option value="SENIOR FAMILY">Senior Family</option><option value="STUDENT">Student (14-22)</option><option value="CORPORATE">Corporate</option><option value="CORPORATE FAMILY">Corporate Family</option><option value="MILITARY">Military</option><option value="HD6">Staff (HD6)</option><option value="HCHF">Staff (HCHF)</option></select></div>
+                            <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Plan Type</label><select id="plan" onChange={e => { const v = e.target.value; if (!v.includes('CORPORATE') && !v.includes('HD6') && !v.includes('HCHF')) { setSelectedSponsor(''); setCustomSponsor(''); } }} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors font-bold text-slate-700"><option value="SINGLE">Single</option><option value="FAMILY">Family</option><option value="SENIOR CITIZEN">Senior Citizen</option><option value="SENIOR FAMILY">Senior Family</option><option value="STUDENT">Student (14-22)</option><option value="CORPORATE">Corporate</option><option value="CORPORATE FAMILY">Corporate Family</option><option value="MILITARY">Military</option><option value="HD6">Staff (HD6)</option><option value="HCHF">Staff (HCHF)</option></select></div>
                             <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Home Center</label><select id="center" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors font-bold text-slate-700"><option value="Anthony Wellness Center">Anthony</option><option value="Harper Wellness Center">Harper</option></select></div>
                          </div>
                          <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Billing Method</label>
@@ -1183,7 +1128,7 @@ const handleRenewVisitor = async (visitor, newPassType) => {
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Plan Type</label>
-                        <select id="ed_plan" defaultValue={selectedMember.type} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad] font-bold"><option value="SINGLE">Single</option><option value="FAMILY">Family</option><option value="SENIOR">Senior</option><option value="SENIOR FAMILY">Senior Family</option><option value="STUDENT">Student (14-22)</option><option value="CORPORATE">Corporate</option><option value="CORPORATE FAMILY">Corporate Family</option><option value="MILITARY">Military</option><option value="HD6">Staff (HD6)</option><option value="HCHF">Staff (HCHF)</option></select>
+                        <select id="ed_plan" defaultValue={selectedMember.type} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad] font-bold"><option value="SINGLE">Single</option><option value="FAMILY">Family</option><option value="SENIOR CITIZEN">Senior Citizen</option><option value="SENIOR FAMILY">Senior Family</option><option value="STUDENT">Student (14-22)</option><option value="CORPORATE">Corporate</option><option value="CORPORATE FAMILY">Corporate Family</option><option value="MILITARY">Military</option><option value="HD6">Staff (HD6)</option><option value="HCHF">Staff (HCHF)</option></select>
                       </div>
                       <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Billing Method</label>
                         <select id="ed_billing" defaultValue={selectedMember.billingMethod || 'Month-to-Month'} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad] font-bold"><option value="Month-to-Month">Month-to-Month</option><option value="Auto-Draft">Auto-Draft</option><option value="6-Month Prepay">6-Month Prepay</option><option value="12-Month Prepay">12-Month Prepay</option></select>
