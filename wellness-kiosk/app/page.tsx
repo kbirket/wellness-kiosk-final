@@ -233,7 +233,7 @@ export default function WellnessHub() {
         <div className="p-8 border-b border-white/10 flex justify-center"><img src={LOGO_URL} alt="Logo" className="h-10 opacity-90 drop-shadow-md" /></div>
         <div className="p-6"><div className="flex items-center gap-3 mb-4"><div className="w-10 h-10 rounded-lg bg-[#f59e0b] flex items-center justify-center font-bold text-lg text-[#001f3f]">{user?.name.charAt(0)}</div><div><p className="text-sm font-bold leading-none">{user?.name}</p><p className="text-[11px] text-white/50">@{user?.username}</p></div></div><button onClick={handleLogout} className="flex items-center gap-2 text-xs text-white/40 hover:text-white transition-colors"><LogOut size={14} /> Sign Out</button></div>
         <div className="px-4 mb-8"><p className="px-2 text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3">Viewing</p><div className="space-y-1">{[{k:'both',c:'#ffffff'},{k:'harper',c:'#f59e0b'},{k:'anthony',c:'#1080ad'}].map(item => (<button key={item.k} onClick={() => { setViewingCenter(item.k); localStorage.setItem('wellnessCenter', item.k); }} className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all ${viewingCenter === item.k ? 'bg-white/20 font-bold' : 'text-white/60 hover:bg-white/5'}`}><span className="w-1.5 h-6 rounded-full" style={{ backgroundColor: item.c }} />{item.k === 'both' ? 'Both Centers' : `${item.k.charAt(0).toUpperCase() + item.k.slice(1)}`}</button>))}</div></div>
-        <nav className="flex-1 px-4 space-y-1">{[{id:'dashboard',label:'Dashboard',icon:<LayoutDashboard size={18}/>},{id:'members',label:'Members',icon:<Users size={18}/>},{id:'badge',label:'Staff Check-In',icon:<QrCode size={18}/>},{id:'notif',label:'Notifications',icon:<Bell size={18}/>},{id:'visitors',label:'Visitors',icon:<Eye size={18}/>},{id:'reports',label:'Reports',icon:<FileText size={18}/>}].map(item => (<button key={item.id} onClick={() => { setActiveTab(item.id); setKioskInput(''); }} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all ${activeTab === item.id ? 'bg-[#1080ad] text-white font-bold' : 'text-white/60 hover:bg-white/5'}`}>{item.icon} {item.label}{item.id === 'notif' && stats.overdue > 0 && <span className="ml-auto w-5 h-5 rounded-full bg-red-500 text-[10px] flex items-center justify-center font-bold tracking-tight">{stats.overdue}</span>}</button>))}</nav>
+        <nav className="flex-1 px-4 space-y-1">{[{id:'dashboard',label:'Dashboard',icon:<LayoutDashboard size={18}/>},{id:'members',label:'Members',icon:<Users size={18}/>},{id:'classes',label:'Classes',icon:<Calendar size={18}/>},{id:'badge',label:'Staff Check-In',icon:<QrCode size={18}/>},{id:'notif',label:'Notifications',icon:<Bell size={18}/>},{id:'visitors',label:'Visitors',icon:<Eye size={18}/>},{id:'reports',label:'Reports',icon:<FileText size={18}/>}].map(item => (<button key={item.id} onClick={() => { setActiveTab(item.id); setKioskInput(''); }} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all ${activeTab === item.id ? 'bg-[#1080ad] text-white font-bold' : 'text-white/60 hover:bg-white/5'}`}>{item.icon} {item.label}{item.id === 'notif' && stats.overdue > 0 && <span className="ml-auto w-5 h-5 rounded-full bg-red-500 text-[10px] flex items-center justify-center font-bold tracking-tight">{stats.overdue}</span>}</button>))}</nav>
       </aside>
 
       <main className="flex-1 p-10 h-screen overflow-y-auto relative print:m-0 print:p-0 print:h-auto print:overflow-visible">
@@ -385,7 +385,66 @@ export default function WellnessHub() {
             </ProListCard>
           )}
         </div>)}
+{activeTab === 'classes' && (() => {
+          // Your actual schedule from the screenshot!
+          const allClasses = [
+            { name: 'Low-Impact Aerobics', center: 'anthony', days: 'Mon - Fri', time: '9:30 AM', attendees: 0, capacity: 25, color: 'border-[#1080ad]' },
+            { name: 'Sit & Get Fit', center: 'anthony', days: 'Mon - Fri', time: '11:00 AM', attendees: 0, capacity: 20, color: 'border-[#1080ad]' },
+            { name: 'Modified Sit & Get Fit', center: 'anthony', days: 'Mon, Wed, Fri', time: '2:00 PM', attendees: 0, capacity: 20, color: 'border-[#1080ad]' },
+            { name: 'Low Impact Aerobics', center: 'harper', days: 'Mon, Wed, Fri', time: '10:00 AM', attendees: 0, capacity: 25, color: 'border-[#f59e0b]' },
+            { name: 'Chair Class', center: 'harper', days: 'Mon, Wed, Fri', time: '11:00 AM', attendees: 0, capacity: 20, color: 'border-[#f59e0b]' }
+          ];
 
+          // Magically filters based on the sidebar toggle!
+          const displayedClasses = allClasses.filter(c => viewingCenter === 'both' || c.center === viewingCenter);
+
+          return (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center mb-8">
+                <div>
+                  <h2 className="text-3xl font-bold text-[#001f3f] tracking-tight">Class Attendance</h2>
+                  <p className="text-slate-400 font-medium">Select a class to log attendee check-ins.</p>
+                </div>
+                <div className="bg-white px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-500 shadow-sm">
+                  {new Date().toLocaleDateString('en-US', { weekday: 'long' })} Schedule
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {displayedClasses.map((c, i) => (
+                  <div key={i} className={`bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 ${c.color} flex flex-col justify-between`}>
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h3 className="font-black text-[#001f3f] text-lg leading-tight">{c.name}</h3>
+                        <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">{c.center === 'anthony' ? 'Anthony Center' : 'Harper Center'}</p>
+                        <p className="text-sm font-medium text-slate-500 mt-1">{c.days}</p>
+                      </div>
+                      <span className="bg-slate-50 text-slate-600 px-3 py-1 rounded-lg text-xs font-black whitespace-nowrap">{c.time}</span>
+                    </div>
+                    
+                    <div className="flex justify-between items-end mt-6">
+                      <div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Attendance</p>
+                        <p className="text-2xl font-black text-[#1080ad]">{c.attendees} <span className="text-sm text-slate-400 font-bold">/ {c.capacity}</span></p>
+                      </div>
+                      <button className="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-4 py-2 rounded-xl text-xs font-bold transition-colors shadow-sm">
+                        Start Class →
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <ProListCard title="Recent Class Check-ins">
+                <div className="text-center py-12">
+                  <Calendar size={48} className="mx-auto text-slate-200 mb-4" />
+                  <p className="text-slate-400 font-medium">Click "Start Class" above to begin scanning members in.</p>
+                </div>
+              </ProListCard>
+            </div>
+          );
+        })()}
+        
         {activeTab === 'reports' && (() => {
           // 1. DYNAMIC DATE MATH
           const [year, month] = reportMonth.split('-');
