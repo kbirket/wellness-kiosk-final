@@ -22,6 +22,12 @@ export async function POST(request) {
     if (body.access247 !== undefined) fields["24/7 Access"] = body.access247;
     if (body.badgeNumber) fields["Badge Number"] = body.badgeNumber;
     if (body.notes !== undefined) fields["Notes"] = body.notes;
+    if (body.discountCode !== undefined) fields["Discount Code"] = body.discountCode;
+    if (body.discountExpiration) { 
+        fields["Discount Expiration"] = body.discountExpiration; 
+    } else if (body.discountExpiration === '') { 
+        fields["Discount Expiration"] = null; // Clears the date if they delete it
+    }
 
     // We use PATCH to only update the specific fields provided
     const response = await fetch(`https://api.airtable.com/v0/${baseId}/${tableName}/${body.airtableId}`, {
