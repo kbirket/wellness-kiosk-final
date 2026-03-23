@@ -175,15 +175,9 @@ const handleRenewVisitor = async (visitor, newPassType) => {
       } else { alert('Error: ' + result.error); }
     } catch (err) { alert('Renewal failed.'); }
   };
-```
 
-**2. Add a Renew button to the visitor table rows** — In the visitors table, find the Actions column where the Orient button is. It looks like:
-```
 <td className="px-4 py-4 flex gap-2">{!v.orientationComplete && (<button onClick={...}>Orient</button>)}</td>
-```
 
-Replace that entire `<td>` with:
-```
 <td className="px-4 py-4 flex gap-2">
   {!v.orientationComplete && (<button onClick={async () => { try { const res = await fetch('/api/update-visitor-orientation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visitorAirtableId: v.airtableId }) }); const result = await res.json(); if (result.success) { setVisitors(prev => prev.map(vis => vis.airtableId === v.airtableId ? {...vis, orientationComplete: true} : vis)); } else { alert('Error: ' + result.error); } } catch (err) { alert('Network error.'); } }} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-bold hover:bg-blue-700 transition-colors">Orient</button>)}
   <div className="relative group/renew">
