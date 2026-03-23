@@ -46,6 +46,8 @@ export default function WellnessHub() {
   const [pinInput, setPinInput] = useState('');
   const [visitors, setVisitors] = useState([]);
   const [showAllCheckins, setShowAllCheckins] = useState(false);
+  const [activeClass, setActiveClass] = useState(null);
+  const [kioskMode, setKioskMode] = useState('Gym');
   const [reportMonth, setReportMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -108,7 +110,7 @@ export default function WellnessHub() {
         });
         setMembers(mappedMembers); setApiError('');
         fetch('/api/get-visits').then(res => res.json()).then(visitData => {
-          if (visitData.records) { const mappedVisits = visitData.records.map(v => { const linkedArray = v.fields['Member'] || v.fields['Members'] || []; const linkId = linkedArray[0]; const foundMember = mappedMembers.find(m => m.airtableId === linkId); const fallbackName = Array.isArray(v.fields['Name']) ? v.fields['Name'][0] : v.fields['Name'] || 'Unknown Member'; return { name: foundMember ? `${foundMember.firstName} ${foundMember.lastName}` : fallbackName, center: v.fields['Center'] || v.fields['Location'] || 'Both', time: v.fields['Time'] || v.fields['Date'] || v.createdTime, type: foundMember ? foundMember.type : 'Unknown' }; }); mappedVisits.sort((a,b) => new Date(b.time) - new Date(a.time)); setVisits(mappedVisits); }
+          if (visitData.records) { const mappedVisits = visitData.records.map(v => { const linkedArray = v.fields['Member'] || v.fields['Members'] || []; const linkId = linkedArray[0]; const foundMember = mappedMembers.find(m => m.airtableId === linkId); const fallbackName = Array.isArray(v.fields['Name']) ? v.fields['Name'][0] : v.fields['Name'] || 'Unknown Member'; return { name: foundMember ? `${foundMember.firstName} ${foundMember.lastName}` : fallbackName, center: v.fields['Center'] || v.fields['Location'] || 'Both', time: v.fields['Time'] || v.fields['Date'] || v.createdTime, type: foundMember ? foundMember.type : 'Unknown', method: v.fields['Method'] || 'General' }; }); mappedVisits.sort((a,b) => new Date(b.time) - new Date(a.time)); setVisits(mappedVisits); }
           setLoading(false);
         }).catch(err => { console.error("Could not fetch historical visits:", err); setLoading(false); });
       } else { setLoading(false); }
@@ -180,7 +182,7 @@ export default function WellnessHub() {
   const handleResetPin = async (member) => { if (!window.confirm(`Reset PIN for ${member.firstName} ${member.lastName}?`)) return; try { const newPin = String(Math.floor(1000 + Math.random() * 9000)); await fetch('/api/update-pin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ recordId: member.airtableId, newPin }) }); setMembers(prev => prev.map(m => m.airtableId === member.airtableId ? { ...m, password: newPin } : m)); alert(`New PIN for ${member.firstName}: ${newPin}\n\nPlease give this to the member.`); } catch (err) { alert('Could not reset PIN.'); } };
   const getStoplight = (member) => { if (!member.nextPayment) return 'green'; const due = new Date(member.nextPayment); const diffDays = Math.ceil((new Date() - due) / (1000*60*60*24)); if (diffDays <= 0) return 'green'; if (diffDays <= 14) return 'yellow'; return 'red'; };
 
-  const processCheckIn = async (memberId, method = "Manual Entry") => { const id = memberId.toUpperCase().trim(); const m = membersRef.current.find(m => m.id === id); if(m) { if (m.needsOrientation) { setKioskMessage({ text: 'Orientation Required', type: 'error', subtext: 'Please see front desk to complete your orientation.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 5000); return false; } const light = getStoplight(m); if (light === 'red') { setKioskMessage({ text: 'Please see front desk.', type: 'error', subtext: 'We need to quickly update your account.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4500); return false; } const currentCenter = centerRef.current; const scanCenter = currentCenter === 'both' ? m.center : currentCenter.charAt(0).toUpperCase() + currentCenter.slice(1); const currentTime = new Date().toISOString(); try { const res = await fetch('/api/visits', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: m.airtableId, center: scanCenter, time: currentTime, method: method }) }); const result = await res.json(); if (!result.success) { setKioskMessage({ text: 'System Error', type: 'error', subtext: 'Please see the front desk.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4000); return false; } setVisits(prev => [{name: m.firstName + ' ' + m.lastName, center: scanCenter, time: currentTime, type: m.type}, ...prev]); setMembers(prev => prev.map(member => member.id === id ? { ...member, visits: member.visits + 1 } : member)); if (activeMember && activeMember.id === id) setActiveMember(prev => ({...prev, visits: prev.visits + 1})); if (light === 'yellow') { setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'warning', subtext: 'Please see the front desk at your convenience.' }); } else { setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'success', subtext: '' }); } setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 3500); return true; } catch (err) { setKioskMessage({ text: 'Network Error', type: 'error', subtext: 'Please try again.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4000); return false; } } else { setKioskMessage({ text: 'ID not found.', type: 'error', subtext: 'Please see front desk.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 3500); return false; } };
+  const processCheckIn = async (memberId, method = "Manual Entry") => { const id = memberId.toUpperCase().trim(); const m = membersRef.current.find(m => m.id === id); if(m) { if (m.needsOrientation) { setKioskMessage({ text: 'Orientation Required', type: 'error', subtext: 'Please see front desk to complete your orientation.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 5000); return false; } const light = getStoplight(m); if (light === 'red') { setKioskMessage({ text: 'Please see front desk.', type: 'error', subtext: 'We need to quickly update your account.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4500); return false; } const currentCenter = centerRef.current; const scanCenter = currentCenter === 'both' ? m.center : currentCenter.charAt(0).toUpperCase() + currentCenter.slice(1); const currentTime = new Date().toISOString(); try { const res = await fetch('/api/visits', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: m.airtableId, center: scanCenter, time: currentTime, method: method }) }); const result = await res.json(); if (!result.success) { setKioskMessage({ text: 'System Error', type: 'error', subtext: 'Please see the front desk.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4000); return false; } setVisits(prev => [{name: m.firstName + ' ' + m.lastName, center: scanCenter, time: currentTime, type: m.type, method: method}, ...prev]); setMembers(prev => prev.map(member => member.id === id ? { ...member, visits: member.visits + 1 } : member)); if (activeMember && activeMember.id === id) setActiveMember(prev => ({...prev, visits: prev.visits + 1})); if (light === 'yellow') { setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'warning', subtext: 'Please see the front desk at your convenience.' }); } else { setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'success', subtext: '' }); } setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 3500); return true; } catch (err) { setKioskMessage({ text: 'Network Error', type: 'error', subtext: 'Please try again.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4000); return false; } } else { setKioskMessage({ text: 'ID not found.', type: 'error', subtext: 'Please see front desk.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 3500); return false; } };
 
   useEffect(() => { let scanner = null; if (view === 'secret_scanner' && scannerActive) { scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 280, height: 280} }, false); scanner.render((decodedText) => { processCheckIn(decodedText, "Camera Scan"); }, () => {}); } return () => { if(scanner) scanner.clear().catch(e => console.error(e)); }; }, [view, scannerActive]);
 
@@ -216,7 +218,15 @@ export default function WellnessHub() {
       }} className="absolute top-6 right-6 text-slate-600 hover:text-[#001f3f] flex items-center gap-2 font-bold z-10 bg-white/50 backdrop-blur-md px-4 py-2 rounded-xl shadow-sm border border-slate-200 transition-all">
         <MapPin size={16} className={viewingCenter === 'harper' ? 'text-[#f59e0b]' : 'text-[#1080ad]'} /> 
         {viewingCenter === 'harper' ? '📍 Harper Center Kiosk' : '📍 Anthony Center Kiosk'}
-      </button>{kioskMessage.text && (<div className="absolute inset-0 z-50 flex items-center justify-center bg-[#001f3f]/40 backdrop-blur-sm p-4"><div className={`bg-white rounded-3xl shadow-2xl p-10 w-full max-w-md text-center border-t-8 ${kioskMessage.type === 'success' ? 'border-[#16a34a]' : kioskMessage.type === 'warning' ? 'border-[#eab308]' : 'border-red-600'}`}>{kioskMessage.type === 'success' ? (<CheckCircle size={72} className="text-[#16a34a] mx-auto mb-6" />) : (<AlertCircle size={72} className={`mx-auto mb-6 ${kioskMessage.type === 'warning' ? 'text-[#eab308]' : 'text-red-600'}`} />)}<h1 className="text-3xl font-black text-[#001f3f] tracking-tight mb-2">{kioskMessage.text}</h1>{kioskMessage.subtext && <p className="text-slate-500 font-medium text-lg">{kioskMessage.subtext}</p>}</div></div>)}{pinModal && (<div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-[#001f3f]/90 backdrop-blur-sm p-4"><div className="bg-white p-12 rounded-[3rem] text-center max-w-sm w-full relative shadow-2xl"><button onClick={() => {setPinModal(null); setPinInput('');}} className="absolute top-6 right-6 text-slate-300 hover:text-red-500"><X size={24}/></button><Lock size={48} className="text-[#1080ad] mx-auto mb-6" /><h3 className="text-3xl font-black text-[#001f3f] mb-2 tracking-tight">Security PIN</h3><p className="text-slate-500 font-medium mb-8">Enter your 4-digit security PIN</p><input type="password" maxLength={4} value={pinInput} onChange={e => setPinInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') document.getElementById('btn_submit_pin').click(); }} className="w-full p-6 text-center text-4xl tracking-[0.5em] border-2 rounded-2xl mb-8 outline-none focus:border-[#1080ad] bg-slate-50" autoFocus /><button id="btn_submit_pin" onClick={() => { if (pinModal.isVisitor) { if (pinInput === pinModal.pin) { fetch('/api/visitor-checkin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visitorAirtableId: pinModal.airtableId, pin: pinInput, center: centerRef.current === 'both' ? pinModal.center : centerRef.current }) }).then(res => res.json()).then(result => { if (result.success) { setKioskMessage({ text: `Welcome, ${pinModal.firstName}!`, type: 'success', subtext: '' }); setVisitors(prev => prev.map(v => v.airtableId === pinModal.airtableId ? {...v, totalVisits: v.totalVisits + 1} : v)); } else if (result.error === 'pass_expired') { setKioskMessage({ text: 'Pass Expired', type: 'error', subtext: 'Please see the front desk.' }); } else { setKioskMessage({ text: 'Error', type: 'error', subtext: result.message || 'Please see front desk.' }); } setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 3500); }).catch(() => { setKioskMessage({ text: 'Network Error', type: 'error', subtext: 'Please try again.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4000); }); setPinModal(null); setPinInput(''); } else { alert("Incorrect PIN."); } } else { if (!pinModal.password || pinInput === pinModal.password) { processCheckIn(pinModal.id, "Kiosk Search & PIN"); setPinModal(null); setPinInput(''); } else { alert("Incorrect PIN."); } } }} className="w-full bg-[#1080ad] text-white p-5 rounded-2xl font-bold text-xl shadow-lg hover:bg-blue-800 transition-colors">Verify</button></div></div>)}<div className="bg-white rounded-[3rem] shadow-2xl p-12 w-full max-w-2xl border-t-8 border-[#1080ad] text-center relative z-0"><h2 className="text-5xl font-black text-[#001f3f] mb-4 tracking-tight">Check-In</h2><p className="text-slate-500 mb-12 text-lg font-medium">Type your last name to check in.</p><div className="relative w-full max-w-md mx-auto mb-10"><div className="flex gap-4"><input className="flex-1 p-6 border-2 rounded-2xl outline-none focus:border-[#1080ad] font-sans text-2xl text-center bg-slate-50" placeholder="e.g. Smith" value={kioskInput} onChange={(e) => setKioskInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { processCheckIn(kioskInput, "Manual ID Entry"); setKioskInput(''); } }} /><button onClick={() => { processCheckIn(kioskInput, "Manual ID Entry"); setKioskInput(''); }} className="bg-[#001f3f] text-white px-10 rounded-2xl font-bold text-xl hover:bg-blue-900 transition-colors shadow-lg">Go</button></div>{kioskMatches.length > 0 && (<div className="absolute bottom-[115%] left-0 w-full mb-2 bg-white border-2 border-[#1080ad] rounded-2xl shadow-2xl z-30 overflow-hidden text-left flex flex-col-reverse">{kioskMatches.map(m => (<button key={m._type + (m.airtableId || m.id)} onClick={() => { if (m._type === 'visitor') { setPinModal({...m, isVisitor: true}); } else { setPinModal(m); } setKioskInput(''); }} className="w-full p-5 border-b border-slate-100 hover:bg-blue-50 transition-colors flex justify-between items-center group"><div><p className="font-bold text-[#001f3f] text-xl">{m.firstName} {m.lastName}</p><p className="text-xs text-slate-400 font-mono tracking-widest">{m._type === 'visitor' ? <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded font-black text-[9px] uppercase tracking-widest">Visitor · {m.passType}</span> : m.id}</p></div><div className="bg-[#1080ad] text-white px-4 py-2 rounded-xl text-sm font-bold shadow-md group-hover:scale-105 transition-transform">Tap to Check In</div></button>))}</div>)}</div><img src={LOGO_URL} alt="Logo" className="h-10 mx-auto opacity-30 invert grayscale" /></div></div>); }
+      </button>{kioskMessage.text && (<div className="absolute inset-0 z-50 flex items-center justify-center bg-[#001f3f]/40 backdrop-blur-sm p-4"><div className={`bg-white rounded-3xl shadow-2xl p-10 w-full max-w-md text-center border-t-8 ${kioskMessage.type === 'success' ? 'border-[#16a34a]' : kioskMessage.type === 'warning' ? 'border-[#eab308]' : 'border-red-600'}`}>{kioskMessage.type === 'success' ? (<CheckCircle size={72} className="text-[#16a34a] mx-auto mb-6" />) : (<AlertCircle size={72} className={`mx-auto mb-6 ${kioskMessage.type === 'warning' ? 'text-[#eab308]' : 'text-red-600'}`} />)}<h1 className="text-3xl font-black text-[#001f3f] tracking-tight mb-2">{kioskMessage.text}</h1>{kioskMessage.subtext && <p className="text-slate-500 font-medium text-lg">{kioskMessage.subtext}</p>}</div></div>)}{pinModal && (<div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-[#001f3f]/90 backdrop-blur-sm p-4"><div className="bg-white p-12 rounded-[3rem] text-center max-w-sm w-full relative shadow-2xl"><button onClick={() => {setPinModal(null); setPinInput('');}} className="absolute top-6 right-6 text-slate-300 hover:text-red-500"><X size={24}/></button><Lock size={48} className="text-[#1080ad] mx-auto mb-6" /><h3 className="text-3xl font-black text-[#001f3f] mb-2 tracking-tight">Security PIN</h3><p className="text-slate-500 font-medium mb-8">Enter your 4-digit security PIN</p><input type="password" maxLength={4} value={pinInput} onChange={e => setPinInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') document.getElementById('btn_submit_pin').click(); }} className="w-full p-6 text-center text-4xl tracking-[0.5em] border-2 rounded-2xl mb-8 outline-none focus:border-[#1080ad] bg-slate-50" autoFocus /><button id="btn_submit_pin" onClick={() => { if (pinModal.isVisitor) { if (pinInput === pinModal.pin) { fetch('/api/visitor-checkin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visitorAirtableId: pinModal.airtableId, pin: pinInput, center: centerRef.current === 'both' ? pinModal.center : centerRef.current }) }).then(res => res.json()).then(result => { if (result.success) { setKioskMessage({ text: `Welcome, ${pinModal.firstName}!`, type: 'success', subtext: '' }); setVisitors(prev => prev.map(v => v.airtableId === pinModal.airtableId ? {...v, totalVisits: v.totalVisits + 1} : v)); } else if (result.error === 'pass_expired') { setKioskMessage({ text: 'Pass Expired', type: 'error', subtext: 'Please see the front desk.' }); } else { setKioskMessage({ text: 'Error', type: 'error', subtext: result.message || 'Please see front desk.' }); } setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 3500); }).catch(() => { setKioskMessage({ text: 'Network Error', type: 'error', subtext: 'Please try again.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4000); }); setPinModal(null); setPinInput(''); } else { alert("Incorrect PIN."); } } else { if (!pinModal.password || pinInput === pinModal.password) { processCheckIn(pinModal.id, kioskMode === 'Class' ? "Class Attendee (Kiosk)" : "Kiosk Search & PIN"); setPinModal(null); setPinInput(''); } else { alert("Incorrect PIN."); } } }} className="w-full bg-[#1080ad] text-white p-5 rounded-2xl font-bold text-xl shadow-lg hover:bg-blue-800 transition-colors">Verify</button></div></div>)}<div className="bg-white rounded-[3rem] shadow-2xl p-12 w-full max-w-2xl border-t-8 border-[#1080ad] text-center relative z-0"><h2 className="text-5xl font-black text-[#001f3f] mb-4 tracking-tight">Check-In</h2><p className="text-slate-500 mb-8 text-lg font-medium">Type your last name to check in.</p>
+      
+      {/* THE NEW PUBLIC KIOSK TOGGLE */}
+      <div className="flex justify-center gap-4 mb-8">
+        <button onClick={() => setKioskMode('Gym')} className={`px-6 py-2 rounded-full font-bold text-sm transition-all ${kioskMode === 'Gym' ? 'bg-[#1080ad] text-white shadow-lg' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}>🏋️ General Workout</button>
+        <button onClick={() => setKioskMode('Class')} className={`px-6 py-2 rounded-full font-bold text-sm transition-all ${kioskMode === 'Class' ? 'bg-[#f59e0b] text-white shadow-lg' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}>🧘‍♀️ Group Class</button>
+      </div>
+
+      <div className="relative w-full max-w-md mx-auto mb-10"><div className="flex gap-4"><input className="flex-1 p-6 border-2 rounded-2xl outline-none focus:border-[#1080ad] font-sans text-2xl text-center bg-slate-50" placeholder="e.g. Smith" value={kioskInput} onChange={(e) => setKioskInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { processCheckIn(kioskInput, kioskMode === 'Class' ? "Class Attendee (Kiosk)" : "Manual ID Entry"); setKioskInput(''); } }} /><button onClick={() => { processCheckIn(kioskInput, kioskMode === 'Class' ? "Class Attendee (Kiosk)" : "Manual ID Entry"); setKioskInput(''); }} className="bg-[#001f3f] text-white px-10 rounded-2xl font-bold text-xl hover:bg-blue-900 transition-colors shadow-lg">Go</button></div>{kioskMatches.length > 0 && (<div className="absolute bottom-[115%] left-0 w-full mb-2 bg-white border-2 border-[#1080ad] rounded-2xl shadow-2xl z-30 overflow-hidden text-left flex flex-col-reverse">{kioskMatches.map(m => (<button key={m._type + (m.airtableId || m.id)} onClick={() => { if (m._type === 'visitor') { setPinModal({...m, isVisitor: true}); } else { setPinModal(m); } setKioskInput(''); }} className="w-full p-5 border-b border-slate-100 hover:bg-blue-50 transition-colors flex justify-between items-center group"><div><p className="font-bold text-[#001f3f] text-xl">{m.firstName} {m.lastName}</p><p className="text-xs text-slate-400 font-mono tracking-widest">{m._type === 'visitor' ? <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded font-black text-[9px] uppercase tracking-widest">Visitor · {m.passType}</span> : m.id}</p></div><div className="bg-[#1080ad] text-white px-4 py-2 rounded-xl text-sm font-bold shadow-md group-hover:scale-105 transition-transform">Tap to Check In</div></button>))}</div>)}</div><img src={LOGO_URL} alt="Logo" className="h-10 mx-auto opacity-30 invert grayscale" /></div></div>); }
 
   if (view === 'secret_scanner') { return (<div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 font-sans relative"><button onClick={() => {setView('landing'); setScannerActive(false);}} className="absolute top-6 left-6 text-white/50 hover:text-white flex items-center gap-2 font-bold z-10"><LogOut size={20}/> Exit Scanner</button>{kioskMessage.text && (<div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"><div className={`bg-white rounded-3xl shadow-2xl p-10 w-full max-w-md text-center border-t-8 ${kioskMessage.type === 'success' ? 'border-[#16a34a]' : kioskMessage.type === 'warning' ? 'border-[#eab308]' : 'border-red-600'}`}>{kioskMessage.type === 'success' ? (<CheckCircle size={72} className="text-[#16a34a] mx-auto mb-6" />) : (<AlertCircle size={72} className={`mx-auto mb-6 ${kioskMessage.type === 'warning' ? 'text-[#eab308]' : 'text-red-600'}`} />)}<h1 className="text-3xl font-black text-[#001f3f] tracking-tight mb-2">{kioskMessage.text}</h1>{kioskMessage.subtext && <p className="text-slate-500 font-medium text-lg">{kioskMessage.subtext}</p>}</div></div>)}<div className="w-full max-w-lg mx-auto bg-slate-900 border-4 border-slate-800 rounded-3xl overflow-hidden min-h-[400px] flex flex-col items-center justify-center">{!scannerActive ? (<button onClick={() => setScannerActive(true)} className="bg-[#1080ad] text-white px-8 py-4 rounded-xl font-bold text-lg flex items-center gap-2">Turn On Camera</button>) : (<div id="reader" className="w-full h-full"></div>)}</div></div>); }
 
@@ -361,42 +371,17 @@ export default function WellnessHub() {
 
         {activeTab === 'members' && (<div className="space-y-6"><div className="flex justify-between items-center mb-8"><div><h2 className="text-3xl font-bold text-[#001f3f] tracking-tight">Members</h2></div><div className="flex gap-3"><button onClick={handleExportCSV} className="bg-white border border-slate-200 text-[#001f3f] px-6 py-2 rounded-xl font-bold text-sm shadow-sm flex items-center gap-2 hover:bg-slate-50 transition-all"><Download size={16}/> Export CSV</button><button onClick={() => { setShowAddModal(true); setNewMemberPin(null); setFamilyFlow(null); setSelectedSponsor(''); setCustomSponsor(''); }} className="bg-[#001f3f] text-white px-6 py-2 rounded-xl font-bold text-sm shadow-xl shadow-blue-900/10 flex items-center gap-2 hover:bg-blue-900 transition-colors"><Plus size={16}/> Add Member</button></div></div><div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex gap-4 items-center"><div className="relative flex-1"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} /><input className="pl-12 pr-4 py-2 border rounded-xl text-sm w-full outline-none" placeholder="Search..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} /></div></div>{loading ? (<div className="text-center py-20 text-slate-300 font-medium italic">Syncing Airtable...</div>) : apiError ? (<div className="bg-red-50 border-2 border-red-200 text-red-700 p-10 rounded-2xl text-center shadow-sm"><AlertCircle size={48} className="mx-auto mb-4 text-red-500" /><h3 className="text-2xl font-black mb-2">Airtable Refused Connection</h3><p className="font-mono text-sm bg-white p-4 rounded-lg border border-red-100 max-w-2xl mx-auto">{apiError}</p></div>) : (<div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden"><table className="w-full text-left border-collapse"><thead className="bg-slate-50 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b"><tr><th className="px-6 py-4 w-56">Member</th><th className="px-4 py-4">ID</th><th className="px-4 py-4 w-36">Type</th><th className="px-4 py-4 w-28">Status</th><th className="px-4 py-4 w-28">Payment</th><th className="px-4 py-4 w-24">Info</th></tr></thead><tbody className="text-sm">{filteredMembers.map(m => { const light = getStoplight(m); return (<tr key={m.id} className="border-b hover:bg-slate-50/80 cursor-pointer" onClick={() => setSelectedMember(m)}><td className="px-6 py-4"><p className="font-bold text-slate-800">{m.firstName} {m.lastName}</p><p className="text-[11px] text-slate-400">{m.email}{m.needsOrientation && <span className="ml-2 px-2 py-0.5 rounded text-[9px] font-black bg-blue-100 text-blue-700 uppercase">Orientation</span>}{m.familyName && <span className="ml-2 px-2 py-0.5 rounded text-[9px] font-black bg-purple-100 text-purple-700 uppercase">{m.familyName}</span>}{m.sponsorName && <span className="ml-2 px-2 py-0.5 rounded text-[9px] font-black bg-orange-100 text-orange-700 uppercase">{m.sponsorName}</span>}{m.access247 && <span className="ml-2 px-2 py-0.5 rounded text-[9px] font-black bg-amber-100 text-amber-700 uppercase">24/7</span>}</p>{m.notes && (<p className="mt-1.5 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-md truncate max-w-[220px]" title={m.notes}><strong>Note:</strong> {m.notes}</p>)}</td><td className="px-4 py-4 font-mono text-slate-400 text-xs">{m.id}</td><td className="px-4 py-4"><span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black tracking-tight">{m.type}</span></td><td className="px-4 py-4"><span className={`px-3 py-1 rounded-full text-[10px] font-black ${light==='green'?'bg-green-100 text-green-600':light==='yellow'?'bg-yellow-100 text-yellow-600':'bg-red-100 text-red-600'}`}>{light==='green'?'ACTIVE':light==='yellow'?'GRACE':'LOCKED'}</span></td><td className="px-4 py-4 text-slate-600 text-xs">{m.nextPayment||'N/A'}</td><td className="px-4 py-4"><button className="p-2 bg-[#1080ad] text-white rounded-lg shadow-md"><QrCode size={16}/></button></td></tr>);})}</tbody></table></div>)}</div>)}
 
-        {activeTab === 'visitors' && (<div className="space-y-6">
-          <div className="flex justify-between items-center mb-8">
-            <div><h2 className="text-3xl font-bold text-[#001f3f] tracking-tight">Visitors</h2><p className="text-slate-400 font-medium">Day passes, courtesy passes & referrals</p></div>
-            <button onClick={() => setShowAddVisitorModal(true)} className="bg-[#001f3f] text-white px-6 py-2 rounded-xl font-bold text-sm shadow-xl shadow-blue-900/10 flex items-center gap-2 hover:bg-blue-900 transition-colors"><Plus size={16}/> Add Visitor</button>
-          </div>
-          <div className="grid grid-cols-4 gap-6">
-            <ProStatCard value={visitors.filter(v => { const exp = new Date(v.expirationDate + 'T23:59:59'); return exp >= new Date(); }).length} label="Active Passes" color="#16a34a" />
-            <ProStatCard value={visitors.filter(v => { const exp = new Date(v.expirationDate + 'T23:59:59'); return exp < new Date(); }).length} label="Expired" color="#dc2626" />
-            <ProStatCard value={visitors.filter(v => v.passType === 'Day Pass').length} label="Day Passes" color="#1080ad" />
-            <ProStatCard value={visitors.filter(v => v.passType !== 'Day Pass').length} label="Courtesy Passes" color="#8b5cf6" />
-          </div>
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <table className="w-full text-left border-collapse">
-              <thead className="bg-slate-50 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b"><tr><th className="px-6 py-4">Visitor</th><th className="px-4 py-4">Pass Type</th><th className="px-4 py-4">Referring Provider</th><th className="px-4 py-4">Expires</th><th className="px-4 py-4">Status</th><th className="px-4 py-4">Visits</th><th className="px-4 py-4">Actions</th></tr></thead>
-              <tbody className="text-sm">{visitors.length === 0 ? (<tr><td colSpan="7" className="text-center py-12 text-slate-400 font-medium italic">No visitors yet.</td></tr>) : visitors.map(v => { const expired = new Date(v.expirationDate + 'T23:59:59') < new Date(); return (<tr key={v.airtableId} className="border-b hover:bg-slate-50/80"><td className="px-6 py-4"><p className="font-bold text-slate-800 cursor-pointer hover:text-[#1080ad]" onClick={() => setSelectedVisitor(v)}>{v.firstName} {v.lastName}</p><p className="text-[11px] text-slate-400">{v.email || v.phone || 'No contact info'}{!v.orientationComplete && <span className="ml-2 px-2 py-0.5 rounded text-[9px] font-black bg-blue-100 text-blue-700 uppercase">Needs Orientation</span>}</p></td><td className="px-4 py-4"><span className={`px-3 py-1 rounded-full text-[10px] font-black ${v.passType === 'Day Pass' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>{v.passType}</span></td><td className="px-4 py-4 text-slate-600 text-xs">{v.referringProvider || '—'}</td><td className="px-4 py-4 text-xs"><span className={expired ? 'text-red-500 font-bold' : 'text-slate-600'}>{v.expirationDate ? new Date(v.expirationDate + 'T00:00:00').toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'}) : 'N/A'}</span></td><td className="px-4 py-4"><span className={`px-3 py-1 rounded-full text-[10px] font-black ${expired ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>{expired ? 'EXPIRED' : 'ACTIVE'}</span></td><td className="px-4 py-4 font-black text-[#1080ad]">{v.totalVisits}</td><td className="px-4 py-4 flex gap-2">{!v.orientationComplete && (<button onClick={async () => { try { const res = await fetch('/api/update-visitor-orientation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visitorAirtableId: v.airtableId }) }); const result = await res.json(); if (result.success) { setVisitors(prev => prev.map(vis => vis.airtableId === v.airtableId ? {...vis, orientationComplete: true} : vis)); } else { alert('Error: ' + result.error); } } catch (err) { alert('Network error.'); } }} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-bold hover:bg-blue-700 transition-colors" title="Mark Orientation Complete">Orient</button>)}</td></tr>); })}</tbody>
-            </table>
-          </div>
-          {visitors.filter(v => new Date(v.expirationDate + 'T23:59:59') < new Date() && (v.email || v.phone)).length > 0 && (
-            <ProListCard title="Conversion Leads — Expired Passes with Contact Info">
-              <p className="text-sm text-slate-400 mb-4">These visitors had passes that expired. They have contact info and could be converted to full members.</p>
-              <div className="space-y-3">{visitors.filter(v => new Date(v.expirationDate + 'T23:59:59') < new Date() && (v.email || v.phone)).map(v => (<div key={v.airtableId} className="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-100"><div><p className="font-bold text-slate-800">{v.firstName} {v.lastName}</p><p className="text-[11px] text-slate-400">{v.email} {v.phone ? `· ${v.phone}` : ''}</p><p className="text-[10px] text-purple-500 font-bold">{v.passType} · Referred by {v.referringProvider || 'N/A'} · {v.totalVisits} visit{v.totalVisits !== 1 ? 's' : ''}</p></div><div className="flex gap-2"><button className="p-2 bg-[#1080ad] text-white rounded-lg shadow-md" title="Email"><Mail size={16}/></button><button className="p-2 bg-[#dd6d22] text-white rounded-lg shadow-md" title="Call"><Phone size={16}/></button></div></div>))}</div>
-            </ProListCard>
-          )}
-        </div>)}
-{activeTab === 'classes' && (() => {
-          // Your actual schedule from the screenshot!
+        {activeTab === 'classes' && (() => {
           const allClasses = [
-            { name: 'Low-Impact Aerobics', center: 'anthony', days: 'Mon - Fri', time: '9:30 AM', attendees: 0, capacity: 25, color: 'border-[#1080ad]' },
-            { name: 'Sit & Get Fit', center: 'anthony', days: 'Mon - Fri', time: '11:00 AM', attendees: 0, capacity: 20, color: 'border-[#1080ad]' },
-            { name: 'Modified Sit & Get Fit', center: 'anthony', days: 'Mon, Wed, Fri', time: '2:00 PM', attendees: 0, capacity: 20, color: 'border-[#1080ad]' },
-            { name: 'Low Impact Aerobics', center: 'harper', days: 'Mon, Wed, Fri', time: '10:00 AM', attendees: 0, capacity: 25, color: 'border-[#f59e0b]' },
-            { name: 'Chair Class', center: 'harper', days: 'Mon, Wed, Fri', time: '11:00 AM', attendees: 0, capacity: 20, color: 'border-[#f59e0b]' }
+            { name: 'Low-Impact Aerobics', center: 'anthony', days: 'Mon - Fri', time: '9:30 AM', capacity: 25, color: 'border-[#1080ad]' },
+            { name: 'Sit & Get Fit', center: 'anthony', days: 'Mon - Fri', time: '11:00 AM', capacity: 20, color: 'border-[#1080ad]' },
+            { name: 'Modified Sit & Get Fit', center: 'anthony', days: 'Mon, Wed, Fri', time: '2:00 PM', capacity: 20, color: 'border-[#1080ad]' },
+            { name: 'Low Impact Aerobics', center: 'harper', days: 'Mon, Wed, Fri', time: '10:00 AM', capacity: 25, color: 'border-[#f59e0b]' },
+            { name: 'Chair Class', center: 'harper', days: 'Mon, Wed, Fri', time: '11:00 AM', capacity: 20, color: 'border-[#f59e0b]' }
           ];
 
-          // Magically filters based on the sidebar toggle!
           const displayedClasses = allClasses.filter(c => viewingCenter === 'both' || c.center === viewingCenter);
+          const todayStr = new Date().toDateString();
 
           return (
             <div className="space-y-6">
@@ -423,67 +408,156 @@ export default function WellnessHub() {
                     </div>
                     
                     <div className="flex justify-between items-end mt-6">
-                      <div>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Attendance</p>
-                        <p className="text-2xl font-black text-[#1080ad]">{c.attendees} <span className="text-sm text-slate-400 font-bold">/ {c.capacity}</span></p>
-                      </div>
-                      <button className="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-4 py-2 rounded-xl text-xs font-bold transition-colors shadow-sm">
-                        Start Class →
+                      <button onClick={() => setActiveClass(c)} className="w-full bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-4 py-3 rounded-xl text-sm font-bold transition-colors shadow-sm flex items-center justify-center gap-2">
+                        <QrCode size={16} /> Start Class Scanner
                       </button>
                     </div>
                   </div>
                 ))}
               </div>
 
-              <ProListCard title="Recent Class Check-ins">
-                <div className="text-center py-12">
-                  <Calendar size={48} className="mx-auto text-slate-200 mb-4" />
-                  <p className="text-slate-400 font-medium">Click "Start Class" above to begin scanning members in.</p>
-                </div>
-              </ProListCard>
+              {activeClass && (() => {
+                // BRILLIANT FIX: This filters the roster feed to ONLY show people specifically checked into THIS exact class today!
+                const classVisits = filteredVisits.filter(v => new Date(v.time).toDateString() === todayStr && v.method === `Class: ${activeClass.name}`);
+
+                return (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#001f3f]/90 backdrop-blur-md">
+                    <div className="bg-white rounded-3xl w-full max-w-4xl p-10 relative shadow-2xl flex flex-col md:flex-row gap-8">
+                      <button onClick={() => { setActiveClass(null); setKioskInput(''); }} className="absolute top-6 right-6 text-slate-300 hover:text-red-500 transition-all z-10"><X size={24}/></button>
+                      
+                      <div className="flex-1 relative">
+                        <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase mb-4 inline-block">Live Class Scanner</span>
+                        <h2 className="text-4xl font-black text-[#001f3f] leading-tight mb-2">{activeClass.name}</h2>
+                        <p className="text-slate-500 font-medium mb-12 flex items-center gap-2"><Clock size={16}/> {activeClass.time} • {activeClass.center === 'anthony' ? 'Anthony Wellness Center' : 'Harper Wellness Center'}</p>
+                        
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 block">Scan Badge or Type Name</label>
+                        <div className="flex gap-3">
+                          <input 
+                            autoFocus
+                            className="flex-1 p-5 border-2 border-slate-200 rounded-2xl outline-none focus:border-[#1080ad] text-2xl bg-slate-50" 
+                            placeholder="e.g. Smith" 
+                            value={kioskInput} 
+                            onChange={(e) => setKioskInput(e.target.value)} 
+                            onKeyDown={(e) => { 
+                              if (e.key === 'Enter') { 
+                                processCheckIn(kioskInput, `Class: ${activeClass.name}`); 
+                                setKioskInput(''); 
+                              } 
+                            }} 
+                          />
+                          <button 
+                            onClick={() => { processCheckIn(kioskInput, `Class: ${activeClass.name}`); setKioskInput(''); }} 
+                            className="bg-[#001f3f] text-white px-8 rounded-2xl font-bold text-xl hover:bg-blue-900 transition-colors shadow-lg"
+                          >
+                            Check In
+                          </button>
+                        </div>
+
+                        {kioskMatches.length > 0 && (
+                          <div className="absolute top-[80%] left-0 right-0 mt-2 bg-white border-2 border-[#1080ad] rounded-2xl shadow-2xl z-50 overflow-hidden text-left">
+                            {kioskMatches.map(m => (
+                              <button key={m._type + (m.airtableId || m.id)} onClick={() => { processCheckIn(m.id, `Class: ${activeClass.name}`); setKioskInput(''); }} className="w-full p-4 border-b border-slate-100 hover:bg-blue-50 transition-colors flex justify-between items-center group">
+                                <div><p className="font-bold text-[#001f3f] text-lg">{m.firstName} {m.lastName}</p></div>
+                                <div className="bg-[#1080ad] text-white px-4 py-2 rounded-xl text-sm font-bold shadow-md group-hover:scale-105 transition-transform">Check In</div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {kioskMessage.text && (
+                          <div className={`mt-6 p-4 rounded-xl text-center font-bold text-lg ${kioskMessage.type==='success'?'bg-green-100 text-green-700':kioskMessage.type==='warning'?'bg-yellow-100 text-yellow-700':'bg-red-100 text-red-700'}`}>
+                            {kioskMessage.text}
+                            {kioskMessage.subtext && <p className="text-sm mt-1">{kioskMessage.subtext}</p>}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="w-full md:w-80 bg-slate-50 rounded-2xl p-6 border border-slate-100 flex flex-col h-[400px]">
+                        <div className="flex justify-between items-center mb-4">
+                          <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Activity size={14}/> Live Roster</h3>
+                          <span className="bg-[#1080ad] text-white px-2 py-1 rounded font-bold text-xs">{classVisits.length}</span>
+                        </div>
+                        <div className="flex-1 overflow-y-auto space-y-3 pr-2">
+                          {classVisits.length === 0 ? (
+                              <p className="text-slate-400 italic text-sm text-center mt-10">Waiting for class check-ins...</p>
+                          ) : (
+                              classVisits.map((v, i) => (
+                              <div key={i} className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm transition-all duration-300">
+                                  <p className="font-bold text-slate-800 text-sm">{v.name}</p>
+                                  <p className="text-[10px] font-bold text-[#f59e0b] uppercase mt-1">
+                                  {new Date(v.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} • Checked In
+                                  </p>
+                              </div>
+                              ))
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           );
         })()}
-        
+
+        {activeTab === 'visitors' && (<div className="space-y-6">
+          <div className="flex justify-between items-center mb-8">
+            <div><h2 className="text-3xl font-bold text-[#001f3f] tracking-tight">Visitors</h2><p className="text-slate-400 font-medium">Day passes, courtesy passes & referrals</p></div>
+            <button onClick={() => setShowAddVisitorModal(true)} className="bg-[#001f3f] text-white px-6 py-2 rounded-xl font-bold text-sm shadow-xl shadow-blue-900/10 flex items-center gap-2 hover:bg-blue-900 transition-colors"><Plus size={16}/> Add Visitor</button>
+          </div>
+          <div className="grid grid-cols-4 gap-6">
+            <ProStatCard value={visitors.filter(v => { const exp = new Date(v.expirationDate + 'T23:59:59'); return exp >= new Date(); }).length} label="Active Passes" color="#16a34a" />
+            <ProStatCard value={visitors.filter(v => { const exp = new Date(v.expirationDate + 'T23:59:59'); return exp < new Date(); }).length} label="Expired" color="#dc2626" />
+            <ProStatCard value={visitors.filter(v => v.passType === 'Day Pass').length} label="Day Passes" color="#1080ad" />
+            <ProStatCard value={visitors.filter(v => v.passType !== 'Day Pass').length} label="Courtesy Passes" color="#8b5cf6" />
+          </div>
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <table className="w-full text-left border-collapse">
+              <thead className="bg-slate-50 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b"><tr><th className="px-6 py-4">Visitor</th><th className="px-4 py-4">Pass Type</th><th className="px-4 py-4">Referring Provider</th><th className="px-4 py-4">Expires</th><th className="px-4 py-4">Status</th><th className="px-4 py-4">Visits</th><th className="px-4 py-4">Actions</th></tr></thead>
+              <tbody className="text-sm">{visitors.length === 0 ? (<tr><td colSpan="7" className="text-center py-12 text-slate-400 font-medium italic">No visitors yet.</td></tr>) : visitors.map(v => { const expired = new Date(v.expirationDate + 'T23:59:59') < new Date(); return (<tr key={v.airtableId} className="border-b hover:bg-slate-50/80"><td className="px-6 py-4"><p className="font-bold text-slate-800 cursor-pointer hover:text-[#1080ad]" onClick={() => setSelectedVisitor(v)}>{v.firstName} {v.lastName}</p><p className="text-[11px] text-slate-400">{v.email || v.phone || 'No contact info'}{!v.orientationComplete && <span className="ml-2 px-2 py-0.5 rounded text-[9px] font-black bg-blue-100 text-blue-700 uppercase">Needs Orientation</span>}</p></td><td className="px-4 py-4"><span className={`px-3 py-1 rounded-full text-[10px] font-black ${v.passType === 'Day Pass' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>{v.passType}</span></td><td className="px-4 py-4 text-slate-600 text-xs">{v.referringProvider || '—'}</td><td className="px-4 py-4 text-xs"><span className={expired ? 'text-red-500 font-bold' : 'text-slate-600'}>{v.expirationDate ? new Date(v.expirationDate + 'T00:00:00').toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'}) : 'N/A'}</span></td><td className="px-4 py-4"><span className={`px-3 py-1 rounded-full text-[10px] font-black ${expired ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>{expired ? 'EXPIRED' : 'ACTIVE'}</span></td><td className="px-4 py-4 font-black text-[#1080ad]">{v.totalVisits}</td><td className="px-4 py-4 flex gap-2">{!v.orientationComplete && (<button onClick={async () => { try { const res = await fetch('/api/update-visitor-orientation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visitorAirtableId: v.airtableId }) }); const result = await res.json(); if (result.success) { setVisitors(prev => prev.map(vis => vis.airtableId === v.airtableId ? {...vis, orientationComplete: true} : vis)); } else { alert('Error: ' + result.error); } } catch (err) { alert('Network error.'); } }} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-bold hover:bg-blue-700 transition-colors" title="Mark Orientation Complete">Orient</button>)}</td></tr>); })}</tbody>
+            </table>
+          </div>
+          {visitors.filter(v => new Date(v.expirationDate + 'T23:59:59') < new Date() && (v.email || v.phone)).length > 0 && (
+            <ProListCard title="Conversion Leads — Expired Passes with Contact Info">
+              <p className="text-sm text-slate-400 mb-4">These visitors had passes that expired. They have contact info and could be converted to full members.</p>
+              <div className="space-y-3">{visitors.filter(v => new Date(v.expirationDate + 'T23:59:59') < new Date() && (v.email || v.phone)).map(v => (<div key={v.airtableId} className="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-100"><div><p className="font-bold text-slate-800">{v.firstName} {v.lastName}</p><p className="text-[11px] text-slate-400">{v.email} {v.phone ? `· ${v.phone}` : ''}</p><p className="text-[10px] text-purple-500 font-bold">{v.passType} · Referred by {v.referringProvider || 'N/A'} · {v.totalVisits} visit{v.totalVisits !== 1 ? 's' : ''}</p></div><div className="flex gap-2"><button className="p-2 bg-[#1080ad] text-white rounded-lg shadow-md" title="Email"><Mail size={16}/></button><button className="p-2 bg-[#dd6d22] text-white rounded-lg shadow-md" title="Call"><Phone size={16}/></button></div></div>))}</div>
+            </ProListCard>
+          )}
+        </div>)}
+
         {activeTab === 'reports' && (() => {
-          // 1. DYNAMIC DATE MATH
           const [year, month] = reportMonth.split('-');
           const y = parseInt(year);
           const m = parseInt(month) - 1; 
 
-          // Filter Visits for the selected month
           const monthlyVisits = visits.filter(v => {
-            if (!v.timestamp) return false;
-            const d = new Date(v.timestamp);
+            if (!v.time) return false;
+            const d = new Date(v.time);
             return d.getFullYear() === y && d.getMonth() === m;
           });
 
-          // Filter New Members for the selected month
           const newMembersThisMonth = members.filter(mem => {
             if (!mem.startDate) return false;
             const d = new Date(mem.startDate);
             return d.getFullYear() === y && d.getMonth() === m;
           });
 
-          // Calculate Member of the Month (Most visits this month)
           const visitCounts = monthlyVisits.reduce((acc, v) => {
-            const name = `${v.firstName} ${v.lastName}`;
+            const name = v.name;
             acc[name] = (acc[name] || 0) + 1;
             return acc;
           }, {});
           const topMembers = Object.entries(visitCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
-          // Slipping Away (No visits in 21 days)
           const twentyOneDaysAgo = new Date();
           twentyOneDaysAgo.setDate(twentyOneDaysAgo.getDate() - 21);
-          const slippingAway = members.filter(m => {
-            const memberVisits = visits.filter(v => v.email === m.email || v.badgeNumber === m.badgeNumber);
+          const slippingAway = members.filter(mem => {
+            const memberVisits = visits.filter(v => v.name.toLowerCase() === (mem.firstName + ' ' + mem.lastName).toLowerCase());
             if (memberVisits.length === 0) return true; 
-            const lastVisit = new Date(Math.max(...memberVisits.map(v => new Date(v.timestamp))));
+            const lastVisit = new Date(Math.max(...memberVisits.map(v => new Date(v.time))));
             return lastVisit < twentyOneDaysAgo;
           }).slice(0, 5);
 
-          // Group monthly visits by plan (What Deanna and Patrick asked for!)
           const visitsByPlan = monthlyVisits.reduce((acc, v) => {
             acc[v.type] = (acc[v.type] || 0) + 1;
             return acc;
@@ -491,8 +565,6 @@ export default function WellnessHub() {
 
           return (
             <div className="max-w-7xl mx-auto space-y-6">
-              
-              {/* HEADER WITH NEW DROPDOWN */}
               <div className="flex justify-between items-center mb-6">
                 <div>
                   <h2 className="text-2xl font-black text-[#001f3f]">Monthly Summary Report</h2>
@@ -514,7 +586,6 @@ export default function WellnessHub() {
                 </div>
               </div>
 
-              {/* NEW KPI CARDS */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-2">
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-blue-500">
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Visits</p>
@@ -534,7 +605,6 @@ export default function WellnessHub() {
                 </div>
               </div>
 
-              {/* RESTORED TOP ROW: Member of Month & Slipping Away */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
                   <h3 className="text-md font-black text-[#001f3f] mb-4 flex items-center gap-2">🏆 Top Visitors ({reportMonth})</h3>
@@ -560,7 +630,6 @@ export default function WellnessHub() {
                 </div>
               </div>
 
-              {/* RESTORED BOTTOM ROW: Category Breakdowns (Now shows VISITS instead of just member count, per Director request) */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
                   <h3 className="text-md font-black text-[#001f3f] mb-4">Standard Membership Visits</h3>
