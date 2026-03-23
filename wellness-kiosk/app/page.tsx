@@ -626,7 +626,7 @@ const handleRenewVisitor = async (visitor, newPassType) => {
                           <button onClick={() => handleRenewVisitor(v, '2-Week Courtesy')} className="w-full text-left px-4 py-2 text-[10px] font-bold text-slate-600 hover:bg-slate-50 border-b border-slate-100">2-Week Courtesy</button>
                           <button onClick={() => handleRenewVisitor(v, 'Month Courtesy')} className="w-full text-left px-4 py-2 text-[10px] font-bold text-slate-600 hover:bg-slate-50">Month Courtesy</button>
                         </div>
-                      </div></button></div></div>))}</div>
+                      </div></div></div>))}</div>
             </ProListCard>
           )}
         </div>)}
