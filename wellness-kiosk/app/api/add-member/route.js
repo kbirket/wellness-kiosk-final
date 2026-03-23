@@ -19,7 +19,7 @@ export async function POST(request) {
     const today = new Date().toISOString().split('T')[0];
     const newPIN = generatePIN();
 
-    // FIX: Properly declare 'fields' as a variable
+    // 1. Create the main fields object
     const fields = {
       "First Name": body.firstName,
       "Last Name": body.lastName,
@@ -38,10 +38,12 @@ export async function POST(request) {
       "Membership Status": "ACTIVE",
       "Start Date": body.startDate || today,
       "Needs Orientation": body.needsOrientation, 
-      if (body.discountCode) fields["Discount Code"] = body.discountCode;
-    if (body.discountExpiration) fields["Discount Expiration"] = body.discountExpiration;
       ...(body.corporateSponsor ? { "Corporate Sponsor": body.corporateSponsor } : {}),
     };
+
+    // 2. Attach the discount fields safely OUTSIDE the object
+    if (body.discountCode) fields["Discount Code"] = body.discountCode;
+    if (body.discountExpiration) fields["Discount Expiration"] = body.discountExpiration;
 
     const response = await fetch(`https://api.airtable.com/v0/${baseId}/${tableName}`, {
       method: 'POST',
