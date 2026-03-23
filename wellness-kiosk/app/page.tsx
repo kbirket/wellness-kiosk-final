@@ -1100,8 +1100,8 @@ export default function WellnessHub() {
                 <button key={m} onClick={async () => {
                   if (!window.confirm(`Log ${m} payment for ${paymentModal.firstName} ${paymentModal.lastName}?`)) return;
                   try {
-                    const res = await fetch('/api/log-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: paymentModal.airtableId, memberName: `${paymentModal.firstName} ${paymentModal.lastName}`, method: m, currentDueDate: paymentModal.nextPayment }) });
-                    const result = await res.json();
+                    const finalAmount = parseFloat(String(paymentModal.monthlyRate).replace(/[^0-9.]/g, '')) || 0;
+                    const res = await fetch('/api/log-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: paymentModal.airtableId, memberName: `${paymentModal.firstName} ${paymentModal.lastName}`, method: m, currentDueDate: paymentModal.nextPayment, amount: finalAmount }) });
                     if (result.success) {
                       setMembers(prev => prev.map(mem => mem.airtableId === paymentModal.airtableId ? { ...mem, status: 'ACTIVE', nextPayment: result.nextPaymentDue } : mem));
                       if (selectedMember && selectedMember.airtableId === paymentModal.airtableId) { setSelectedMember({ ...selectedMember, status: 'ACTIVE', nextPayment: result.nextPaymentDue }); }
