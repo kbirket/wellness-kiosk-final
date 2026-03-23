@@ -22,6 +22,7 @@ export default function WellnessHub() {
   const [lastActivity, setLastActivity] = useState(Date.now());
   const [members, setMembers] = useState([]);
   const [visits, setVisits] = useState([]);
+  const [payments, setPayments] = useState([]);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const [quickSearch, setQuickSearch] = useState('');
@@ -130,6 +131,13 @@ export default function WellnessHub() {
         setMembers(mappedMembers); setApiError('');
         fetch('/api/get-visits').then(res => res.json()).then(visitData => {
           if (visitData.records) { const mappedVisits = visitData.records.map(v => { const linkedArray = v.fields['Member'] || v.fields['Members'] || []; const linkId = linkedArray[0]; const foundMember = mappedMembers.find(m => m.airtableId === linkId); const fallbackName = Array.isArray(v.fields['Name']) ? v.fields['Name'][0] : v.fields['Name'] || 'Unknown Member'; return { name: foundMember ? `${foundMember.firstName} ${foundMember.lastName}` : fallbackName, center: v.fields['Center'] || v.fields['Location'] || 'Both', time: v.fields['Time'] || v.fields['Date'] || v.createdTime, type: foundMember ? foundMember.type : 'Unknown', method: v.fields['Method'] || 'General' }; }); mappedVisits.sort((a,b) => new Date(b.time) - new Date(a.time)); setVisits(mappedVisits); }
+          
+          // Download the CFO's Payment Data
+          fetch('/api/get-payments').then(res => res.json()).then(payData => {
+            if (payData.records) {
+              setPayments(payData.records.map(p => ({ memberId: (p.fields['Member'] || [])[0], amount: p.fields['Amount'] || 0, date: p.fields['Payment Date'], method: p.fields['Payment Method'] || 'Unknown' })));
+            }
+          }).catch(() => {});
           setLoading(false);
         }).catch(err => { console.error("Could not fetch historical visits:", err); setLoading(false); });
       } else { setLoading(false); }
@@ -681,6 +689,22 @@ export default function WellnessHub() {
                     {['01-2026','02-2026','03-2026','04-2026','05-2026','06-2026','07-2026','08-2026','09-2026','10-2026','11-2026','12-2026'].map(v => { const [m, y] = v.split('-'); return <option key={v} value={v}>{new Date(y, m - 1).toLocaleDateString('en-US', {month: 'long', year: 'numeric'})}</option>; })}
                   </select>
                   <button onClick={() => { if (monthlyVisits.length === 0) { alert('No visits to export for this month.'); return; } const csv = ["Date,Time,Name,Center,Plan Type,Check-In Method",...monthlyVisits.map(v => `"${new Date(v.time).toLocaleDateString()}","${new Date(v.time).toLocaleTimeString()}","${v.name}","${v.center}","${v.type}","${v.method || 'General Workout'}"`)].join('\n'); const b = new Blob([csv],{type:'text/csv'}); const u = window.URL.createObjectURL(b); const a = document.createElement('a'); a.href=u; a.download=`Monthly_Visits_${reportMonth}.csv`; a.click(); window.URL.revokeObjectURL(u); }} className="px-4 py-2 bg-[#1080ad] text-white rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-blue-800"><Download size={16}/> Visits CSV</button>
+
+                  <button onClick={() => {
+                    const [month, year] = reportMonth.split('-');
+                    const y = parseInt(year); const m = parseInt(month) - 1; 
+                    const monthlyPayments = payments.filter(p => { if (!p.date) return false; const d = new Date(p.date); return d.getFullYear() === y && d.getMonth() === m; });
+                    if (monthlyPayments.length === 0) { alert('No payments logged for this month.'); return; }
+                    
+                    const csv = ["Member Name,Plan Type,Final Rate Paid,Payment Method,Payment Date", ...monthlyPayments.map(p => {
+                      const member = members.find(mem => mem.airtableId === p.memberId) || {};
+                      const name = member.firstName ? `${member.firstName} ${member.lastName}` : 'Unknown Member';
+                      const plan = member.type || 'Unknown';
+                      return `"${name}","${plan}","$${Number(p.amount).toFixed(2)}","${p.method}","${new Date(p.date).toLocaleDateString()}"`;
+                    })].join('\n');
+                    
+                    const b = new Blob([csv],{type:'text/csv'}); const u = window.URL.createObjectURL(b); const a = document.createElement('a'); a.href=u; a.download=`Transaction_Log_${reportMonth}.csv`; a.click(); window.URL.revokeObjectURL(u);
+                  }} className="px-4 py-2 bg-purple-600 text-white rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-purple-700"><Download size={16}/> Transaction Log</button>
                   <button onClick={() => {
                     if (scopedMembers.length === 0) { alert('No members found.'); return; }
                     const centerName = viewingCenter === 'both' ? 'All Centers' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1) + ' Wellness Center';
