@@ -140,25 +140,45 @@ const handleAddMemberSubmit = async (e) => {
     const address = e.target.address?.value || ''; const city = e.target.city?.value || ''; const mstate = e.target.mstate?.value || 'KS'; const mzip = e.target.mzip?.value || '';
     const billing = e.target.billing?.value || 'Month-to-Month'; const access247 = e.target.access247?.checked || false; const startDate = document.getElementById('startDate').value; const badgeNumber = e.target.badgenum?.value || '';
     
-    // NEW: Grab the discount fields
     const discountCode = e.target.discount?.value || '';
     const discountExpiration = e.target.discount_exp?.value || '';
 
+    // --- SMART PRICE CALCULATOR ---
+    const getBaseRate = (p, b) => {
+      const r = {
+        'SINGLE': { 'Month-to-Month': 35, 'Auto-Draft': 32, '6-Month Prepay': 200, '12-Month Prepay': 378 },
+        'FAMILY': { 'Month-to-Month': 55, 'Auto-Draft': 50, '6-Month Prepay': 313, '12-Month Prepay': 594 },
+        'SENIOR CITIZEN': { 'Month-to-Month': 22, 'Auto-Draft': 20, '6-Month Prepay': 125, '12-Month Prepay': 238 },
+        'SENIOR FAMILY': { 'Month-to-Month': 40, 'Auto-Draft': 36, '6-Month Prepay': 228, '12-Month Prepay': 432 },
+        'STUDENT': { 'Month-to-Month': 20, 'Auto-Draft': 18, '6-Month Prepay': 114, '12-Month Prepay': 216 }
+      };
+      if (p === 'CORPORATE') return 25;
+      if (p === 'CORPORATE FAMILY') return 45;
+      if (['MILITARY', 'HD6', 'HCHF', 'FIRST DAY FREE'].includes(p)) return 0;
+      return r[p] ? (r[p][b] || r[p]['Month-to-Month']) : 0;
+    };
+    
+    const basePrice = getBaseRate(plan, billing);
+    const discountMatch = discountCode.match(/\$(\d+)/);
+    const discountAmount = discountMatch ? parseInt(discountMatch[1], 10) : 0;
+    const finalMonthlyRate = Math.max(0, basePrice - discountAmount);
+    // ------------------------------
+
     if (isFamily && !familyFlow) {
       try {
-        const res = await fetch('/api/add-family-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName, lastName, email, phone, plan, center, corporateSponsor: sponsor, needsOrientation, startDate, address, city, state: mstate, zip: mzip, billingMethod: billing, access247, badgeNumber, discountCode, discountExpiration }) });
+        const res = await fetch('/api/add-family-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName, lastName, email, phone, plan, center, corporateSponsor: sponsor, needsOrientation, startDate, address, city, state: mstate, zip: mzip, billingMethod: billing, access247, badgeNumber, discountCode, discountExpiration, monthlyRate: finalMonthlyRate }) });
         const result = await res.json();
         if (result.success) { setFamilyFlow({ familyRecordId: result.familyRecordId, familyName: result.familyName, lastName, plan, center, email, phone, corporateSponsor: sponsor, addedMembers: [{ name: `${firstName} ${lastName}`, pin: result.pin, isPrimary: true }] }); setNewMemberPin({ name: `${firstName} ${lastName}`, pin: result.pin }); } else { alert('Error: ' + result.error); }
       } catch (err) { alert('Network error. Please try again.'); }
     } else if (isFamily && familyFlow) {
       try {
-        const res = await fetch('/api/add-family-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName, lastName: familyFlow.lastName, email: email || familyFlow.email, phone: phone || familyFlow.phone, plan: familyFlow.plan, center: familyFlow.center, familyRecordId: familyFlow.familyRecordId, corporateSponsor: familyFlow.corporateSponsor, needsOrientation, address, city, state: mstate, zip: mzip, access247, badgeNumber, discountCode, discountExpiration }) });
+        const res = await fetch('/api/add-family-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName, lastName: familyFlow.lastName, email: email || familyFlow.email, phone: phone || familyFlow.phone, plan: familyFlow.plan, center: familyFlow.center, familyRecordId: familyFlow.familyRecordId, corporateSponsor: familyFlow.corporateSponsor, needsOrientation, address, city, state: mstate, zip: mzip, access247, badgeNumber, discountCode, discountExpiration, monthlyRate: finalMonthlyRate }) });
         const result = await res.json();
         if (result.success) { const updated = { ...familyFlow, addedMembers: [...familyFlow.addedMembers, { name: `${firstName} ${familyFlow.lastName}`, pin: result.pin, isPrimary: false }] }; setFamilyFlow(updated); setNewMemberPin({ name: `${firstName} ${familyFlow.lastName}`, pin: result.pin }); } else { alert('Error: ' + result.error); }
       } catch (err) { alert('Network error. Please try again.'); }
     } else {
       try {
-        const res = await fetch('/api/add-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName, lastName, email, phone, plan, center, corporateSponsor: sponsor, needsOrientation, address, city, state: mstate, zip: mzip, billingMethod: billing, access247, badgeNumber, startDate, discountCode, discountExpiration }) });
+        const res = await fetch('/api/add-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName, lastName, email, phone, plan, center, corporateSponsor: sponsor, needsOrientation, address, city, state: mstate, zip: mzip, billingMethod: billing, access247, badgeNumber, startDate, discountCode, discountExpiration, monthlyRate: finalMonthlyRate }) });
         const result = await res.json();
         if (result.success) { setNewMemberPin({ name: `${firstName} ${lastName}`, pin: result.pin || '1111' }); } else { alert('Error: ' + result.error); }
       } catch (err) { alert('Network error. Please try again.'); }
@@ -990,12 +1010,38 @@ const handleAddMemberSubmit = async (e) => {
                     </div>
                    <div className="flex gap-3 mt-4">
                       <button onClick={async () => {
-                        const updates = { airtableId: selectedMember.airtableId, firstName: document.getElementById('ed_fname').value, lastName: document.getElementById('ed_lname').value, email: document.getElementById('ed_email').value, phone: document.getElementById('ed_phone').value, plan: document.getElementById('ed_plan').value, billingMethod: document.getElementById('ed_billing').value, center: document.getElementById('ed_center').value, sponsor: document.getElementById('ed_sponsor').value, access247: document.getElementById('ed_247').checked, badgeNumber: document.getElementById('ed_badge').value, notes: document.getElementById('ed_notes').value, discountCode: document.getElementById('ed_discount').value, discountExpiration: document.getElementById('ed_discount_exp').value };
+                        <button onClick={async () => {
+                        // --- SMART PRICE CALCULATOR (EDIT MODE) ---
+                        const selectedPlan = document.getElementById('ed_plan').value;
+                        const selectedBilling = document.getElementById('ed_billing').value;
+                        const enteredDiscount = document.getElementById('ed_discount').value;
+                        
+                        const getBaseRate = (p, b) => {
+                          const r = {
+                            'SINGLE': { 'Month-to-Month': 35, 'Auto-Draft': 32, '6-Month Prepay': 200, '12-Month Prepay': 378 },
+                            'FAMILY': { 'Month-to-Month': 55, 'Auto-Draft': 50, '6-Month Prepay': 313, '12-Month Prepay': 594 },
+                            'SENIOR CITIZEN': { 'Month-to-Month': 22, 'Auto-Draft': 20, '6-Month Prepay': 125, '12-Month Prepay': 238 },
+                            'SENIOR FAMILY': { 'Month-to-Month': 40, 'Auto-Draft': 36, '6-Month Prepay': 228, '12-Month Prepay': 432 },
+                            'STUDENT': { 'Month-to-Month': 20, 'Auto-Draft': 18, '6-Month Prepay': 114, '12-Month Prepay': 216 }
+                          };
+                          if (p === 'CORPORATE') return 25;
+                          if (p === 'CORPORATE FAMILY') return 45;
+                          if (['MILITARY', 'HD6', 'HCHF', 'FIRST DAY FREE'].includes(p)) return 0;
+                          return r[p] ? (r[p][b] || r[p]['Month-to-Month']) : 0;
+                        };
+
+                        const basePrice = getBaseRate(selectedPlan, selectedBilling);
+                        const discountMatch = enteredDiscount.match(/\$(\d+)/);
+                        const discountAmount = discountMatch ? parseInt(discountMatch[1], 10) : 0;
+                        const finalMonthlyRate = Math.max(0, basePrice - discountAmount);
+                        // ------------------------------------------
+
+                        const updates = { airtableId: selectedMember.airtableId, firstName: document.getElementById('ed_fname').value, lastName: document.getElementById('ed_lname').value, email: document.getElementById('ed_email').value, phone: document.getElementById('ed_phone').value, plan: selectedPlan, billingMethod: selectedBilling, center: document.getElementById('ed_center').value, sponsor: document.getElementById('ed_sponsor').value, access247: document.getElementById('ed_247').checked, badgeNumber: document.getElementById('ed_badge').value, notes: document.getElementById('ed_notes').value, discountCode: enteredDiscount, discountExpiration: document.getElementById('ed_discount_exp').value, monthlyRate: finalMonthlyRate };
                         try {
                           const res = await fetch('/api/update-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates) });
                           const result = await res.json();
                           if (result.success || res.ok) {
-                            const updated = { ...selectedMember, firstName: updates.firstName, lastName: updates.lastName, email: updates.email, phone: updates.phone, type: updates.plan, billingMethod: updates.billingMethod, center: updates.center, sponsorName: updates.sponsor, access247: updates.access247, badgeNumber: updates.badgeNumber, notes: updates.notes };
+                            const updated = { ...selectedMember, firstName: updates.firstName, lastName: updates.lastName, email: updates.email, phone: updates.phone, type: updates.plan, billingMethod: updates.billingMethod, center: updates.center, sponsorName: updates.sponsor, access247: updates.access247, badgeNumber: updates.badgeNumber, notes: updates.notes, discountCode: updates.discountCode, discountExpiration: updates.discountExpiration, monthlyRate: updates.monthlyRate };
                             setSelectedMember(updated); setMembers(prev => prev.map(m => m.airtableId === selectedMember.airtableId ? updated : m)); setEditMode(false);
                           } else { alert('Airtable Error: ' + result.error); console.log(result); }
                         } catch (err) { alert('Network error.'); }
