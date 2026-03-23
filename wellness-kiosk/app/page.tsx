@@ -163,7 +163,39 @@ export default function WellnessHub() {
   const familyMembers = activeMember ? members.filter(m => m.id !== activeMember.id && ((m.email && m.email.toLowerCase() === activeMember.email.toLowerCase()) || (m.phone && m.phone === activeMember.phone))) : [];
 
   const handleUpdateProfile = async () => { setIsUpdating(true); const newEmail = document.getElementById('edit_email').value.trim(); const newPhone = document.getElementById('edit_phone').value.trim(); setActiveMember({...activeMember, email: newEmail, phone: newPhone}); setEditMode(false); try { await fetch('/api/update-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: activeMember.airtableId, email: newEmail, phone: newPhone }) }); } catch (err) { alert("App updated locally."); } setIsUpdating(false); };
+const handleRenewVisitor = async (visitor, newPassType) => {
+    const confirmRenew = window.confirm(`Renew ${visitor.firstName} ${visitor.lastName} for a new ${newPassType}?`);
+    if (!confirmRenew) return;
 
+    try {
+      const res = await fetch('/api/add-visitor', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ 
+          firstName: visitor.firstName, 
+          lastName: visitor.lastName, 
+          email: visitor.email, 
+          phone: visitor.phone, 
+          address: visitor.address, 
+          city: visitor.city, 
+          state: visitor.state, 
+          zip: visitor.zip, 
+          passType: newPassType, 
+          center: viewingCenter === 'both' ? 'Anthony Wellness Center' : viewingCenter === 'harper' ? 'Harper Wellness Center' : 'Anthony Wellness Center',
+          referringProvider: visitor.referringProvider,
+          notes: `Renewed on ${new Date().toLocaleDateString()}`
+        }) 
+      });
+      const result = await res.json();
+      if (result.success) {
+        alert(`Pass Renewed!\n\nNew PIN: ${result.pin}\nExpires: ${result.expirationDate}`);
+        // Refresh visitor list
+        fetch('/api/get-visitors').then(r => r.json()).then(data => {
+          if (data.records) setVisitors(data.records.map(r => ({ airtableId: r.id, firstName: r.fields['First Name'] || '', lastName: r.fields['Last Name'] || '', email: r.fields['Email'] || '', phone: r.fields['Phone'] || '', passType: r.fields['Pass Type'] || '', amountPaid: r.fields['Amount Paid'] || 0, referringProvider: r.fields['Referring Provider'] || '', purchaseDate: r.fields['Purchase Date'] || '', expirationDate: r.fields['Expiration Date'] || '', center: r.fields['Center'] || '', pin: r.fields['PIN'] || '', orientationComplete: !!r.fields['Orientation Complete'], totalVisits: r.fields['Total Visits'] || 0, address: r.fields['Street Address'] || '', city: r.fields['City'] || '', state: r.fields['State'] || '', zip: r.fields['Zip'] || '', notes: r.fields['Notes'] || '' })));
+        });
+      }
+    } catch (err) { alert('Renewal failed.'); }
+  };
   const handleAddMemberSubmit = async (e) => {
     e.preventDefault(); setIsAdding(true); setNewMemberPin(null);
     const firstName = e.target.fname.value; const lastName = e.target.lname.value; const email = e.target.email.value; const phone = e.target.phone.value; const plan = e.target.plan.value; const center = e.target.center.value;
@@ -606,7 +638,14 @@ export default function WellnessHub() {
           {visitors.filter(v => new Date(v.expirationDate + 'T23:59:59') < new Date() && (v.email || v.phone)).length > 0 && (
             <ProListCard title="Conversion Leads — Expired Passes with Contact Info">
               <p className="text-sm text-slate-400 mb-4">These visitors had passes that expired. They have contact info and could be converted to full members.</p>
-              <div className="space-y-3">{visitors.filter(v => new Date(v.expirationDate + 'T23:59:59') < new Date() && (v.email || v.phone)).map(v => (<div key={v.airtableId} className="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-100"><div><p className="font-bold text-slate-800">{v.firstName} {v.lastName}</p><p className="text-[11px] text-slate-400">{v.email} {v.phone ? `· ${v.phone}` : ''}</p><p className="text-[10px] text-purple-500 font-bold">{v.passType} · Referred by {v.referringProvider || 'N/A'} · {v.totalVisits} visit{v.totalVisits !== 1 ? 's' : ''}</p></div><div className="flex gap-2"><button className="p-2 bg-[#1080ad] text-white rounded-lg shadow-md" title="Email"><Mail size={16}/></button><button className="p-2 bg-[#dd6d22] text-white rounded-lg shadow-md" title="Call"><Phone size={16}/></button></div></div>))}</div>
+              <div className="space-y-3">{visitors.filter(v => new Date(v.expirationDate + 'T23:59:59') < new Date() && (v.email || v.phone)).map(v => (<div key={v.airtableId} className="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-100"><div><p className="font-bold text-slate-800">{v.firstName} {v.lastName}</p><p className="text-[11px] text-slate-400">{v.email} {v.phone ? `· ${v.phone}` : ''}</p><p className="text-[10px] text-purple-500 font-bold">{v.passType} · Referred by {v.referringProvider || 'N/A'} · {v.totalVisits} visit{v.totalVisits !== 1 ? 's' : ''}</p></div><div className="flex gap-2"><div className="relative group/renew">
+                        <button className="px-3 py-1.5 bg-purple-600 text-white rounded-lg text-[10px] font-bold hover:bg-purple-700 transition-colors">Renew Pass</button>
+                        <div className="absolute right-0 top-full mt-1 hidden group-hover/renew:block bg-white border border-slate-200 shadow-xl rounded-xl z-50 overflow-hidden w-40">
+                          <button onClick={() => handleRenewVisitor(v, 'Day Pass')} className="w-full text-left px-4 py-2 text-[10px] font-bold text-slate-600 hover:bg-slate-50 border-b border-slate-100">Day Pass ($5)</button>
+                          <button onClick={() => handleRenewVisitor(v, '2-Week Courtesy')} className="w-full text-left px-4 py-2 text-[10px] font-bold text-slate-600 hover:bg-slate-50 border-b border-slate-100">2-Week Courtesy</button>
+                          <button onClick={() => handleRenewVisitor(v, 'Month Courtesy')} className="w-full text-left px-4 py-2 text-[10px] font-bold text-slate-600 hover:bg-slate-50">Month Courtesy</button>
+                        </div>
+                      </div><button className="p-2 bg-[#1080ad] text-white rounded-lg shadow-md" title="Email"><Mail size={16}/></button><button className="p-2 bg-[#dd6d22] text-white rounded-lg shadow-md" title="Call"><Phone size={16}/></button></div></div>))}</div>
             </ProListCard>
           )}
         </div>)}
