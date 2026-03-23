@@ -588,14 +588,19 @@ const exportTodaysLog = () => { const tv = filteredVisits.filter(v => new Date(v
                     <option value="2026-04">April 2026</option>
                     <option value="2026-05">May 2026</option>
                   </select>
-                 <button onClick={() => {
+            <button onClick={() => {
                     if (monthlyVisits.length === 0) { alert('No visits to export for this month.'); return; }
                     const csv = ["Date,Time,Name,Center,Plan Type,Check-In Method",...monthlyVisits.map(v => `"${new Date(v.time).toLocaleDateString()}","${new Date(v.time).toLocaleTimeString()}","${v.name}","${v.center}","${v.type}","${v.method || 'General Workout'}"`)].join('\n');
                     const b = new Blob([csv],{type:'text/csv'}); const u = window.URL.createObjectURL(b); const a = document.createElement('a'); a.href=u; a.download=`Monthly_Visits_${reportMonth}.csv`; a.click(); window.URL.revokeObjectURL(u);
                   }} className="px-4 py-2 bg-[#1080ad] text-white rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-blue-800"><Download size={16}/> Export Visits</button>
-                  <button onClick={() => window.print()} className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-slate-50">🖨️ Print Dashboard</button>
-                </div>
-              </div>
+
+                  <button onClick={() => {
+                    if (scopedMembers.length === 0) { alert('No members found.'); return; }
+                    const csv = ["Member ID,First Name,Last Name,Plan Type,Billing Method,Monthly Rate,Status,Next Payment Due,Corporate Sponsor,Center",...scopedMembers.map(m => `"${m.id}","${m.firstName}","${m.lastName}","${m.type}","${m.billingMethod || 'N/A'}","${m.monthlyRate || '0'}","${m.status}","${m.nextPayment || 'N/A'}","${m.sponsorName || 'None'}","${m.center}"`)].join('\n');
+                    const b = new Blob([csv],{type:'text/csv'}); const u = window.URL.createObjectURL(b); const a = document.createElement('a'); a.href=u; a.download=`Financial_Roster_${new Date().toISOString().slice(0,10)}.csv`; a.click(); window.URL.revokeObjectURL(u);
+                  }} className="px-4 py-2 bg-[#16a34a] text-white rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-green-700"><Download size={16}/> Financials</button>
+
+                  <button onClick={() => window.print()} className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-slate-50">🖨️ Print</button>
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-2">
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-blue-500">
