@@ -431,26 +431,48 @@ const exportTodaysLog = () => { const tv = filteredVisits.filter(v => new Date(v
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {displayedClasses.map((c, i) => {
-                  // This actually counts the people checked into this class today!
-                  const classCount = filteredVisits.filter(v => new Date(v.time).toDateString() === todayStr && v.method === `Class: ${c.name}`).length;
+                  // This grabs exactly who is in the class today
+                  const classVisits = filteredVisits.filter(v => new Date(v.time).toDateString() === todayStr && v.method === `Class: ${c.name}`);
+                  
                   return (
                     <div key={i} className={`bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 ${c.color} flex flex-col justify-between`}>
-                      <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <h3 className="font-black text-[#001f3f] text-lg leading-tight">{c.name}</h3>
-                          <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">{c.center === 'anthony' ? 'Anthony Center' : 'Harper Center'}</p>
-                          <p className="text-sm font-medium text-slate-500 mt-1">{c.days}</p>
+                      <div>
+                        <div className="flex justify-between items-start mb-4">
+                          <div>
+                            <h3 className="font-black text-[#001f3f] text-lg leading-tight">{c.name}</h3>
+                            <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">{c.center === 'anthony' ? 'Anthony Center' : 'Harper Center'}</p>
+                            <p className="text-sm font-medium text-slate-500 mt-1">{c.days}</p>
+                          </div>
+                          <span className="bg-slate-50 text-slate-600 px-3 py-1 rounded-lg text-xs font-black whitespace-nowrap">{c.time}</span>
                         </div>
-                        <span className="bg-slate-50 text-slate-600 px-3 py-1 rounded-lg text-xs font-black whitespace-nowrap">{c.time}</span>
+                        
+                        {/* THE NEW MINI-ROSTER PREVIEW */}
+                        {classVisits.length > 0 && (
+                          <div className="mt-4 bg-slate-50 rounded-xl p-3 border border-slate-100">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Current Roster</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {classVisits.slice(0, 6).map((v, idx) => (
+                                <span key={idx} className="bg-white border border-slate-200 text-slate-700 text-[10px] font-bold px-2 py-1 rounded-md shadow-sm">
+                                  {v.name.split(' ')[0]} {v.name.split(' ')[1] ? v.name.split(' ')[1].charAt(0) + '.' : ''}
+                                </span>
+                              ))}
+                              {classVisits.length > 6 && (
+                                <span className="bg-blue-50 text-blue-600 border border-blue-100 text-[10px] font-bold px-2 py-1 rounded-md shadow-sm">
+                                  +{classVisits.length - 6} more
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                       
                       <div className="flex justify-between items-end mt-6">
                         <div>
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Today's Check-ins</p>
-                          <p className="text-3xl font-black text-[#1080ad] leading-none">{classCount} <span className="text-sm text-slate-400 font-bold">/ {c.capacity}</span></p>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Check-ins</p>
+                          <p className="text-3xl font-black text-[#1080ad] leading-none">{classVisits.length} <span className="text-sm text-slate-400 font-bold">/ {c.capacity}</span></p>
                         </div>
                         <button onClick={() => setActiveClass(c)} className="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-5 py-3 rounded-xl text-sm font-bold transition-colors shadow-sm flex items-center justify-center gap-2">
-                          <QrCode size={16} /> Scanner
+                          <Users size={16} /> Manage Roster
                         </button>
                       </div>
                     </div>
