@@ -57,41 +57,22 @@ export default function WellnessHub() {
   const [showAddVisitorModal, setShowAddVisitorModal] = useState(false);
   const [selectedVisitor, setSelectedVisitor] = useState(null);
 
-  // --- CENTRAL PRICING ENGINE ---
+// --- CENTRAL PRICING ENGINE ---
   const getBaseRate = (p, b) => {
     const r = {
       'SINGLE': { 'Month-to-Month': 35, 'Auto-Draft': 32, '6-Month Prepay': 200, '12-Month Prepay': 378 },
       'FAMILY': { 'Month-to-Month': 55, 'Auto-Draft': 50, '6-Month Prepay': 313, '12-Month Prepay': 594 },
       'SENIOR': { 'Month-to-Month': 22, 'Auto-Draft': 20, '6-Month Prepay': 125, '12-Month Prepay': 238 },
-      'SENIOR CITIZEN': { 'Month-to-Month': 22, 'Auto-Draft': 20, '6-Month Prepay': 125, '12-Month Prepay': 238 }, // Fallback for old records
+      'SENIOR CITIZEN': { 'Month-to-Month': 22, 'Auto-Draft': 20, '6-Month Prepay': 125, '12-Month Prepay': 238 }, 
       'SENIOR FAMILY': { 'Month-to-Month': 40, 'Auto-Draft': 36, '6-Month Prepay': 228, '12-Month Prepay': 432 },
-      'STUDENT': { 'Month-to-Month': 20, 'Auto-Draft': 18, '6-Month Prepay': 114, '12-Month Prepay': 216 }
+      'STUDENT': { 'Month-to-Month': 20, 'Auto-Draft': 18, '6-Month Prepay': 114, '12-Month Prepay': 216 },
+      'CLASS ONLY': { 'Month-to-Month': 10, 'Auto-Draft': 10, '6-Month Prepay': 60, '12-Month Prepay': 120 }
     };
-    if (p === 'CORPORATE') return 25;
+    if (['CORPORATE', 'CORPORATE SELF PAY'].includes(p)) return 25;
     if (p === 'CORPORATE FAMILY') return 45;
-    if (['MILITARY', 'HD6', 'HCHF', 'FIRST DAY FREE'].includes(p)) return 0;
+    if (['MILITARY', 'HD6', 'HD6 FAMILY', 'HCHF', 'FIRST DAY FREE', 'HERITAGE ESTATES'].includes(p)) return 0;
     return r[p] ? (r[p][b] || r[p]['Month-to-Month']) : 0;
   };
-
-  const membersRef = useRef(members);
-  useEffect(() => { membersRef.current = members; }, [members]);
-  const centerRef = useRef(viewingCenter);
-  useEffect(() => { centerRef.current = viewingCenter; }, [viewingCenter]);
-
-  useEffect(() => {
-    setIsMounted(true);
-    setCurrentDateString(new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }));
-    const savedToken = localStorage.getItem('wellnessToken');
-    const savedCenter = localStorage.getItem('wellnessCenter');
-    if (savedToken) {
-      fetch('/api/verify-session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: savedToken }) })
-      .then(res => res.json()).then(data => {
-        if (data.valid) { setSessionToken(savedToken); setLastActivity(Date.now()); if (data.type === 'director' && data.user) { setUser(data.user); setViewingCenter(data.user.center); setView('dashboard'); } else if (data.type === 'corporate' && data.corp) { setActiveCorp(data.corp); setView('corp_portal'); } }
-        else { localStorage.removeItem('wellnessToken'); localStorage.removeItem('wellnessCenter'); }
-      }).catch(() => { localStorage.removeItem('wellnessToken'); });
-    }
-    if (savedCenter) setViewingCenter(savedCenter);
-  }, []);
 
   const handleLogin = async () => { const u = document.getElementById('u_in').value.toLowerCase().trim(); const p = document.getElementById('p_in').value.trim(); try { const res = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: u, password: p, loginType: 'director' }) }); const data = await res.json(); if (data.success) { setUser(data.user); setSessionToken(data.token); setViewingCenter(data.user.center); setLastActivity(Date.now()); localStorage.setItem('wellnessToken', data.token); localStorage.setItem('wellnessCenter', data.user.center); setView('dashboard'); } else { alert('Incorrect credentials.'); } } catch (err) { alert('Login failed. Please try again.'); } };
   const handleCorpLogin = async () => { const u = document.getElementById('c_in').value.toLowerCase().trim(); const p = document.getElementById('c_pin').value.trim(); try { const res = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: u, password: p, loginType: 'corporate' }) }); const data = await res.json(); if (data.success) { setActiveCorp(data.corp); setSessionToken(data.token); setLastActivity(Date.now()); localStorage.setItem('wellnessToken', data.token); setView('corp_portal'); } else { alert('Incorrect corporate credentials.'); } } catch (err) { alert('Login failed. Please try again.'); } };
@@ -147,20 +128,25 @@ export default function WellnessHub() {
   const reportStats = { 
       single: scopedMembers.filter(m => m.type === 'SINGLE').length, 
       family: scopedMembers.filter(m => m.type === 'FAMILY').length, 
-      // Merges the new "SENIOR" and the old "SENIOR CITIZEN" into one stat
       senior: scopedMembers.filter(m => m.type === 'SENIOR' || m.type === 'SENIOR CITIZEN').length, 
       seniorFamily: scopedMembers.filter(m => m.type === 'SENIOR FAMILY').length, 
       student: scopedMembers.filter(m => m.type.includes('STUDENT')).length, 
-      corporate: scopedMembers.filter(m => m.type === 'CORPORATE').length, 
-      corporateFamily: scopedMembers.filter(m => m.type === 'CORPORATE FAMILY').length, 
+      corporate: scopedMembers.filter(m => m.type.includes('CORPORATE')).length, 
       dayPass: scopedMembers.filter(m => m.type.includes('DAY PASS')).length, 
       staff: scopedMembers.filter(m => m.type.includes('HD6') || m.type.includes('HCHF')).length, 
-      military: scopedMembers.filter(m => m.type.includes('MILITARY')).length 
+      military: scopedMembers.filter(m => m.type.includes('MILITARY')).length,
+      classOnly: scopedMembers.filter(m => m.type === 'CLASS ONLY').length,
+      heritage: scopedMembers.filter(m => m.type === 'HERITAGE ESTATES').length
   };
   
-  const planChartData = [{label:'Single',value:reportStats.single,color:'#1080ad'},{label:'Family',value:reportStats.family,color:'#f59e0b'},{label:'Senior',value:reportStats.senior+reportStats.seniorFamily,color:'#16a34a'},{label:'Student',value:reportStats.student,color:'#8b5cf6'},{label:'Corporate',value:reportStats.corporate+reportStats.corporateFamily,color:'#ef4444'},{label:'Other (Staff/Mil/Pass)',value:reportStats.staff+reportStats.military+reportStats.dayPass,color:'#64748b'}];
-  const statusChartData = [{label:'Active',value:stats.active,color:'#16a34a'},{label:'Expiring Soon',value:stats.expiring,color:'#f59e0b'},{label:'Overdue / Locked',value:stats.overdue,color:'#ef4444'}];
-  const familyMembers = activeMember ? members.filter(m => m.id !== activeMember.id && ((m.email && m.email.toLowerCase() === activeMember.email.toLowerCase()) || (m.phone && m.phone === activeMember.phone))) : [];
+  const planChartData = [
+      {label:'Single',value:reportStats.single,color:'#1080ad'},
+      {label:'Family',value:reportStats.family,color:'#f59e0b'},
+      {label:'Senior',value:reportStats.senior+reportStats.seniorFamily,color:'#16a34a'},
+      {label:'Corporate',value:reportStats.corporate,color:'#ef4444'},
+      {label:'Class Only',value:reportStats.classOnly,color:'#8b5cf6'},
+      {label:'Other (Staff/Heritage/Mil)',value:reportStats.staff+reportStats.heritage+reportStats.military+reportStats.student+reportStats.dayPass,color:'#64748b'}
+  ];
 
   const handleUpdateProfile = async () => { setIsUpdating(true); const newEmail = document.getElementById('edit_email').value.trim(); const newPhone = document.getElementById('edit_phone').value.trim(); setActiveMember({...activeMember, email: newEmail, phone: newPhone}); setEditMode(false); try { await fetch('/api/update-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: activeMember.airtableId, email: newEmail, phone: newPhone }) }); } catch (err) { alert("App updated locally."); } setIsUpdating(false); };
 const handleRenewVisitor = async (visitor, newPassType) => {
@@ -1076,7 +1062,7 @@ const handleRenewVisitor = async (visitor, newPassType) => {
                      {!familyFlow && (
                        <>
                          <div className="grid grid-cols-2 gap-5">
-                            <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Plan Type</label><select id="plan" onChange={e => { const v = e.target.value; if (!v.includes('CORPORATE') && !v.includes('HD6') && !v.includes('HCHF')) { setSelectedSponsor(''); setCustomSponsor(''); } }} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors font-bold text-slate-700"><option value="SINGLE">Single</option><option value="FAMILY">Family</option><option value="SENIOR">Senior</option><option value="SENIOR FAMILY">Senior Family</option><option value="STUDENT">Student (14-22)</option><option value="CORPORATE">Corporate</option><option value="CORPORATE FAMILY">Corporate Family</option><option value="MILITARY">Military</option><option value="HD6">Staff (HD6)</option><option value="HCHF">Staff (HCHF)</option></select></div>
+                            <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Plan Type</label><select id="plan" onChange={e => { const v = e.target.value; if (!v.includes('CORPORATE') && !v.includes('HD6') && !v.includes('HCHF')) { setSelectedSponsor(''); setCustomSponsor(''); } }} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors font-bold text-slate-700"><option value="SINGLE">Single</option><option value="FAMILY">Family</option><option value="SENIOR">Senior</option><option value="SENIOR FAMILY">Senior Family</option><option value="STUDENT">Student (14-22)</option><option value="CLASS ONLY">Class Only</option><option value="CORPORATE">Corporate</option><option value="CORPORATE FAMILY">Corporate Family</option><option value="CORPORATE SELF PAY">Corporate Self Pay</option><option value="HERITAGE ESTATES">Heritage Estates</option><option value="MILITARY">Military</option><option value="HD6">Staff (HD6)</option><option value="HD6 FAMILY">Staff Family (HD6)</option><option value="HCHF">Staff (HCHF)</option></select></div>
                             <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Home Center</label><select id="center" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors font-bold text-slate-700"><option value="Anthony Wellness Center">Anthony</option><option value="Harper Wellness Center">Harper</option></select></div>
                          </div>
                          <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Billing Method</label>
@@ -1164,7 +1150,7 @@ const handleRenewVisitor = async (visitor, newPassType) => {
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Plan Type</label>
-                        <select id="ed_plan" defaultValue={selectedMember.type} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad] font-bold"><option value="SINGLE">Single</option><option value="FAMILY">Family</option><option value="SENIOR">Senior</option><option value="SENIOR FAMILY">Senior Family</option><option value="STUDENT">Student (14-22)</option><option value="CORPORATE">Corporate</option><option value="CORPORATE FAMILY">Corporate Family</option><option value="MILITARY">Military</option><option value="HD6">Staff (HD6)</option><option value="HCHF">Staff (HCHF)</option></select>
+                        <select id="ed_plan" defaultValue={selectedMember.type} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad] font-bold"><option value="SINGLE">Single</option><option value="FAMILY">Family</option><option value="SENIOR">Senior</option><option value="SENIOR FAMILY">Senior Family</option><option value="STUDENT">Student (14-22)</option><option value="CLASS ONLY">Class Only</option><option value="CORPORATE">Corporate</option><option value="CORPORATE FAMILY">Corporate Family</option><option value="CORPORATE SELF PAY">Corporate Self Pay</option><option value="HERITAGE ESTATES">Heritage Estates</option><option value="MILITARY">Military</option><option value="HD6">Staff (HD6)</option><option value="HD6 FAMILY">Staff Family (HD6)</option><option value="HCHF">Staff (HCHF)</option></select>
                       </div>
                       <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Billing Method</label>
                         <select id="ed_billing" defaultValue={selectedMember.billingMethod || 'Month-to-Month'} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad] font-bold"><option value="Month-to-Month">Month-to-Month</option><option value="Auto-Draft">Auto-Draft</option><option value="6-Month Prepay">6-Month Prepay</option><option value="12-Month Prepay">12-Month Prepay</option></select>
