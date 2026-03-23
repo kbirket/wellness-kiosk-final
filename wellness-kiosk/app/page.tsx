@@ -132,47 +132,35 @@ export default function WellnessHub() {
 
   const handleUpdateProfile = async () => { setIsUpdating(true); const newEmail = document.getElementById('edit_email').value.trim(); const newPhone = document.getElementById('edit_phone').value.trim(); setActiveMember({...activeMember, email: newEmail, phone: newPhone}); setEditMode(false); try { await fetch('/api/update-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: activeMember.airtableId, email: newEmail, phone: newPhone }) }); } catch (err) { alert("App updated locally."); } setIsUpdating(false); };
 
-  const handleAddMemberSubmit = async (e) => {
+const handleAddMemberSubmit = async (e) => {
     e.preventDefault(); setIsAdding(true); setNewMemberPin(null);
-    const firstName = e.target.fname.value;
-    const lastName = e.target.lname.value;
-    const email = e.target.email.value;
-    const phone = e.target.phone.value;
-    const plan = e.target.plan.value;
-    const center = e.target.center.value;
-    const needsOrientation = e.target.orientation?.checked || false;
-    const isFamily = plan.includes('FAMILY');
-    const isCorporate = plan.includes('CORPORATE') || plan.includes('HD6') || plan.includes('HCHF');
+    const firstName = e.target.fname.value; const lastName = e.target.lname.value; const email = e.target.email.value; const phone = e.target.phone.value; const plan = e.target.plan.value; const center = e.target.center.value;
+    const needsOrientation = e.target.orientation?.checked || false; const isFamily = plan.includes('FAMILY'); const isCorporate = plan.includes('CORPORATE') || plan.includes('HD6') || plan.includes('HCHF');
     const sponsor = isCorporate ? (selectedSponsor === '__other__' ? customSponsor : selectedSponsor) : '';
-    const address = e.target.address?.value || '';
-    const city = e.target.city?.value || '';
-    const mstate = e.target.mstate?.value || 'KS';
-    const mzip = e.target.mzip?.value || '';
-    const billing = e.target.billing?.value || 'Month-to-Month';
-    const access247 = e.target.access247?.checked || false;
-    const startDate = document.getElementById('startDate').value;
-    const badgeNumber = e.target.badgenum?.value || '';
+    const address = e.target.address?.value || ''; const city = e.target.city?.value || ''; const mstate = e.target.mstate?.value || 'KS'; const mzip = e.target.mzip?.value || '';
+    const billing = e.target.billing?.value || 'Month-to-Month'; const access247 = e.target.access247?.checked || false; const startDate = document.getElementById('startDate').value; const badgeNumber = e.target.badgenum?.value || '';
+    
+    // NEW: Grab the discount fields
+    const discountCode = e.target.discount?.value || '';
+    const discountExpiration = e.target.discount_exp?.value || '';
 
     if (isFamily && !familyFlow) {
       try {
-        const res = await fetch('/api/add-family-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName, lastName, email, phone, plan, center, corporateSponsor: sponsor, needsOrientation, startDate, address, city, state: mstate, zip: mzip, billingMethod: billing, access247, badgeNumber }) });
+        const res = await fetch('/api/add-family-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName, lastName, email, phone, plan, center, corporateSponsor: sponsor, needsOrientation, startDate, address, city, state: mstate, zip: mzip, billingMethod: billing, access247, badgeNumber, discountCode, discountExpiration }) });
         const result = await res.json();
-        if (result.success) { setFamilyFlow({ familyRecordId: result.familyRecordId, familyName: result.familyName, lastName, plan, center, email, phone, corporateSponsor: sponsor, addedMembers: [{ name: `${firstName} ${lastName}`, pin: result.pin, isPrimary: true }] }); setNewMemberPin({ name: `${firstName} ${lastName}`, pin: result.pin }); }
-        else { alert('Error: ' + result.error); }
+        if (result.success) { setFamilyFlow({ familyRecordId: result.familyRecordId, familyName: result.familyName, lastName, plan, center, email, phone, corporateSponsor: sponsor, addedMembers: [{ name: `${firstName} ${lastName}`, pin: result.pin, isPrimary: true }] }); setNewMemberPin({ name: `${firstName} ${lastName}`, pin: result.pin }); } else { alert('Error: ' + result.error); }
       } catch (err) { alert('Network error. Please try again.'); }
     } else if (isFamily && familyFlow) {
       try {
-        const res = await fetch('/api/add-family-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName, lastName: familyFlow.lastName, email: email || familyFlow.email, phone: phone || familyFlow.phone, plan: familyFlow.plan, center: familyFlow.center, familyRecordId: familyFlow.familyRecordId, corporateSponsor: familyFlow.corporateSponsor, needsOrientation, address, city, state: mstate, zip: mzip, access247, badgeNumber }) });
+        const res = await fetch('/api/add-family-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName, lastName: familyFlow.lastName, email: email || familyFlow.email, phone: phone || familyFlow.phone, plan: familyFlow.plan, center: familyFlow.center, familyRecordId: familyFlow.familyRecordId, corporateSponsor: familyFlow.corporateSponsor, needsOrientation, address, city, state: mstate, zip: mzip, access247, badgeNumber, discountCode, discountExpiration }) });
         const result = await res.json();
-        if (result.success) { const updated = { ...familyFlow, addedMembers: [...familyFlow.addedMembers, { name: `${firstName} ${familyFlow.lastName}`, pin: result.pin, isPrimary: false }] }; setFamilyFlow(updated); setNewMemberPin({ name: `${firstName} ${familyFlow.lastName}`, pin: result.pin }); }
-        else { alert('Error: ' + result.error); }
+        if (result.success) { const updated = { ...familyFlow, addedMembers: [...familyFlow.addedMembers, { name: `${firstName} ${familyFlow.lastName}`, pin: result.pin, isPrimary: false }] }; setFamilyFlow(updated); setNewMemberPin({ name: `${firstName} ${familyFlow.lastName}`, pin: result.pin }); } else { alert('Error: ' + result.error); }
       } catch (err) { alert('Network error. Please try again.'); }
     } else {
       try {
-        const res = await fetch('/api/add-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName, lastName, email, phone, plan, center, corporateSponsor: sponsor, needsOrientation, address, city, state: mstate, zip: mzip, billingMethod: billing, access247, badgeNumber, startDate }) });
+        const res = await fetch('/api/add-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName, lastName, email, phone, plan, center, corporateSponsor: sponsor, needsOrientation, address, city, state: mstate, zip: mzip, billingMethod: billing, access247, badgeNumber, startDate, discountCode, discountExpiration }) });
         const result = await res.json();
-        if (result.success) { setNewMemberPin({ name: `${firstName} ${lastName}`, pin: result.pin || '1111' }); }
-        else { alert('Error: ' + result.error); }
+        if (result.success) { setNewMemberPin({ name: `${firstName} ${lastName}`, pin: result.pin || '1111' }); } else { alert('Error: ' + result.error); }
       } catch (err) { alert('Network error. Please try again.'); }
     }
     setIsAdding(false);
@@ -904,6 +892,10 @@ export default function WellnessHub() {
                              <option value="__other__">Other (type below)</option>
                            </select>
                            {selectedSponsor === '__other__' && (<input placeholder="Enter company name" value={customSponsor} onChange={e => setCustomSponsor(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors mt-3" />)}
+                         </div>
+<div className="grid grid-cols-2 gap-5 mt-2 mb-2">
+                           <div><label className="text-xs font-bold text-green-600 uppercase mb-1 ml-2 block tracking-widest">Discount / Promo</label><input id="discount" placeholder="e.g. Farm Bureau $10" className="w-full p-4 bg-green-50 border border-green-200 rounded-xl outline-none focus:border-green-600 font-bold text-green-800 placeholder:text-green-300 transition-colors" /></div>
+                           <div><label className="text-xs font-bold text-green-600 uppercase mb-1 ml-2 block tracking-widest">Expiration Date</label><input type="date" id="discount_exp" className="w-full p-4 bg-green-50 border border-green-200 rounded-xl outline-none focus:border-green-600 font-bold text-green-800 transition-colors" /></div>
                          </div>
                          <label className="flex items-center gap-3 bg-amber-50 border border-amber-100 rounded-xl p-4 cursor-pointer hover:bg-amber-100 transition-colors">
                            <input type="checkbox" id="access247" className="w-5 h-5 rounded border-slate-300 text-[#f59e0b] focus:ring-[#f59e0b]" />
