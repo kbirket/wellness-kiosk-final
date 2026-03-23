@@ -260,24 +260,73 @@ const startDate = document.getElementById('startDate').value;
           return (<div className="space-y-8">
             <div className="bg-gradient-to-br from-[#001f3f] to-[#003d6b] rounded-3xl p-8 text-white relative overflow-hidden"><div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div><div className="relative z-10"><div className="flex justify-between items-start mb-6"><div><h2 className="text-2xl font-black tracking-tight">{greeting}, {user?.name?.split(' ')[0] || 'Director'}.</h2><p className="text-white/60 text-sm font-medium mt-1">{currentDateString} · {viewingCenter === 'both' ? 'All Centers' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1) + ' Center'}</p></div><div className="flex flex-col items-end gap-2"><div className="flex items-center gap-3 bg-white/10 px-4 py-2 rounded-xl"><Activity size={16} className="text-[#dba51f]" /><span className="text-sm font-bold">{stats.today} check-in{stats.today !== 1 ? 's' : ''} today</span></div><div className="flex items-center gap-3 bg-black/30 px-4 py-2 rounded-xl border border-white/10 shadow-inner"><span className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: occColor }}></span><span className="relative inline-flex rounded-full h-3 w-3" style={{ backgroundColor: occColor }}></span></span><span className="text-xs font-bold text-white/80 uppercase tracking-widest">Est. Occupancy: <span style={{ color: occColor, fontSize: '14px', marginLeft: '4px' }}>{currentOccupancy} ({occStatus})</span></span></div></div></div>{briefingItems.length === 0 ? (<div className="bg-white/10 rounded-2xl p-6 text-center"><CheckCircle size={32} className="mx-auto mb-2 text-green-400" /><p className="font-bold text-lg">All clear!</p><p className="text-white/50 text-sm">No members need attention right now.</p></div>) : (<div><p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-3">Needs Your Attention ({briefingItems.length})</p><div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[200px] overflow-y-auto pr-2">{briefingItems.slice(0,8).map((item,i) => (<button key={i} onClick={() => { const f = scopedMembers.find(m => m.id === item.id); if (f) setSelectedMember(f); }} className="flex items-center gap-3 bg-white/10 hover:bg-white/20 rounded-xl p-3 text-left transition-all group"><div className={`w-2 h-8 rounded-full flex-shrink-0 ${item.type==='overdue'?'bg-red-500':item.type==='due'?'bg-[#dd6d22]':item.type==='orientation'?'bg-[#1080ad]':'bg-[#dba51f]'}`}></div><div className="flex-1 min-w-0"><p className="font-bold text-sm truncate">{item.name}</p><p className="text-[11px] text-white/50">{item.detail}</p></div><ChevronRight size={14} className="text-white/30 group-hover:text-white/60 flex-shrink-0" /></button>))}</div>{briefingItems.length > 8 && <p className="text-xs text-white/40 mt-3 text-center">+ {briefingItems.length-8} more</p>}</div>)}</div></div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 relative"><h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Search size={14}/> Quick Member Lookup</h3><div className="relative"><input className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] text-sm" placeholder="Type a name, ID, or email..." value={quickSearch} onChange={e => setQuickSearch(e.target.value)} />{quickResults.length > 0 && (<div className="absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 overflow-hidden">{quickResults.map(m => (<button key={m.id} onClick={() => { setSelectedMember(m); setQuickSearch(''); }} className="w-full p-4 border-b border-slate-50 last:border-0 hover:bg-blue-50 transition-colors flex justify-between items-center text-left"><div><p className="font-bold text-[#001f3f]">{m.firstName} {m.lastName}</p><p className="text-[10px] text-slate-400">{m.id} · {m.type}</p></div><span className={`px-2 py-1 rounded-full text-[9px] font-black ${getStoplight(m)==='green'?'bg-green-100 text-green-600':getStoplight(m)==='yellow'?'bg-yellow-100 text-yellow-600':'bg-red-100 text-red-600'}`}>{getStoplight(m)==='green'?'ACTIVE':getStoplight(m)==='yellow'?'GRACE':'LOCKED'}</span></button>))}</div>)}</div></div><div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between"><h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><FileText size={14}/> Quick Export</h3><div className="space-y-3"><button onClick={exportTodaysLog} className="w-full bg-[#1080ad] text-white py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors shadow-sm"><Download size={16}/> Export Today's Check-in Log</button><button onClick={handleExportCSV} className="w-full bg-slate-100 text-[#001f3f] py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-slate-200 transition-colors"><Download size={16}/> Export Full Member List</button></div></div></div>
-            <div className="grid grid-cols-5 gap-6">{[{label:'Total Members',value:stats.total,color:'#001f3f'},{label:'Active',value:stats.active,color:'#16a34a'},{label:'Overdue',value:stats.overdue,color:'#dc2626'},{label:'Expiring',value:stats.expiring,color:'#f59e0b'},{label:'Check-ins Today',value:stats.today,color:'#1080ad'}].map((s,i) => (<ProStatCard key={i} {...s} />))}</div>
-            <div className="grid grid-cols-2 gap-8"><ProListCard title="Today's Check-ins">
-  {(() => {
-    const todayStr = new Date().toDateString();
-    // Your system uses v.time, so we make sure to read that!
-    const todayVisits = filteredVisits.filter(v => new Date(v.time).toDateString() === todayStr);
+            <div className="grid grid-cols-2 gap-8">
+  
+  {/* CARD 1: TODAY'S CHECK-INS */}
+  <ProListCard title="Today's Check-ins">
+    {(() => {
+      const todayStr = new Date().toDateString();
+      const todayVisits = filteredVisits.filter(v => new Date(v.time).toDateString() === todayStr);
 
-    // Count up the memberships
-    const todayByPlan = todayVisits.reduce((acc, v) => {
-      acc[v.type] = (acc[v.type] || 0) + 1;
-      return acc;
-    }, {});
+      const todayByPlan = todayVisits.reduce((acc, v) => {
+        acc[v.type] = (acc[v.type] || 0) + 1;
+        return acc;
+      }, {});
 
-    // Slice the list if it's not expanded
-    const displayedVisits = showAllCheckins ? todayVisits : todayVisits.slice(0, 5);
+      const displayedVisits = showAllCheckins ? todayVisits : todayVisits.slice(0, 5);
 
-    return (
-      <div className="space-y-6">
+      return (
+        <div className="space-y-6">
+          {Object.keys(todayByPlan).length > 0 && (
+            <div className="flex flex-wrap gap-2 pb-4 border-b border-slate-100">
+              {Object.entries(todayByPlan).sort((a,b) => b[1] - a[1]).map(([plan, count]) => (
+                <div key={plan} className="bg-slate-50 border border-slate-200 px-3 py-1 rounded-lg flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase">{plan}</span>
+                  <span className="text-sm font-black text-[#001f3f]">{count}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="space-y-4">
+            {todayVisits.length === 0 ? (
+              <p className="text-slate-400 italic text-sm">Waiting for activity...</p>
+            ) : (
+              displayedVisits.map((v, i) => (
+                <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
+                  <div>
+                    <p className="font-bold text-slate-800">{v.name}</p>
+                    <p className="text-[11px] font-bold text-[#f59e0b] uppercase">
+                      {v.center?.toLowerCase() === 'harper' ? 'Harper Wellness Center' : v.center?.toLowerCase() === 'anthony' ? 'Anthony Wellness Center' : v.center} • {v.type}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-400 text-xs font-medium">
+                    <Clock size={14}/> {new Date(v.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          {todayVisits.length > 5 && (
+            <button
+              onClick={() => setShowAllCheckins(!showAllCheckins)}
+              className="w-full py-2 mt-2 text-sm font-bold text-[#1080ad] hover:text-[#001f3f] transition-colors bg-blue-50/50 rounded-lg border border-blue-100 hover:bg-blue-50"
+            >
+              {showAllCheckins ? 'Collapse List ↑' : `See All ${todayVisits.length} Check-ins →`}
+            </button>
+          )}
+        </div>
+      );
+    })()}
+  </ProListCard>
+
+  {/* CARD 2: ACCOUNT HEALTH (RESTORED!) */}
+  <ProListCard title="Account Health">
+    <div className="py-4">
+      <DonutChart data={statusChartData} totalLabel="Accounts" />
+    </div>
+  </ProListCard>
+
+</div>
         
         {/* 1. MEMBERSHIP BREAKDOWN */}
         {Object.keys(todayByPlan).length > 0 && (
