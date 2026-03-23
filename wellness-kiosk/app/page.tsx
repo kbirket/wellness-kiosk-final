@@ -176,17 +176,7 @@ const handleRenewVisitor = async (visitor, newPassType) => {
     } catch (err) { alert('Renewal failed.'); }
   };
 
-<td className="px-4 py-4 flex gap-2">
-  {!v.orientationComplete && (<button onClick={async () => { try { const res = await fetch('/api/update-visitor-orientation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visitorAirtableId: v.airtableId }) }); const result = await res.json(); if (result.success) { setVisitors(prev => prev.map(vis => vis.airtableId === v.airtableId ? {...vis, orientationComplete: true} : vis)); } else { alert('Error: ' + result.error); } } catch (err) { alert('Network error.'); } }} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-bold hover:bg-blue-700 transition-colors">Orient</button>)}
-  <div className="relative group/renew">
-    <button className="px-3 py-1.5 bg-purple-600 text-white rounded-lg text-[10px] font-bold hover:bg-purple-700 transition-colors">Renew</button>
-    <div className="absolute right-0 top-full mt-1 hidden group-hover/renew:block bg-white border border-slate-200 shadow-xl rounded-xl z-50 overflow-hidden w-44">
-      <button onClick={() => handleRenewVisitor(v, 'Day Pass')} className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 border-b border-slate-100">Day Pass ($5)</button>
-      <button onClick={() => handleRenewVisitor(v, '2-Week Courtesy')} className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 border-b border-slate-100">2-Week Courtesy</button>
-      <button onClick={() => handleRenewVisitor(v, 'Month Courtesy')} className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50">Month Courtesy</button>
-    </div>
-  </div>
-</td>
+
   const handleAddMemberSubmit = async (e) => {
     e.preventDefault(); setIsAdding(true); setNewMemberPin(null);
     const firstName = e.target.fname.value; const lastName = e.target.lname.value; const email = e.target.email.value; const phone = e.target.phone.value; const plan = e.target.plan.value; const center = e.target.center.value;
