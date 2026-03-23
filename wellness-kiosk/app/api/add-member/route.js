@@ -38,6 +38,8 @@ export async function POST(request) {
       "Membership Status": "ACTIVE",
       "Start Date": body.startDate || today,
       "Needs Orientation": body.needsOrientation, 
+      if (body.discountCode) fields["Discount Code"] = body.discountCode;
+    if (body.discountExpiration) fields["Discount Expiration"] = body.discountExpiration;
       ...(body.corporateSponsor ? { "Corporate Sponsor": body.corporateSponsor } : {}),
     };
 
