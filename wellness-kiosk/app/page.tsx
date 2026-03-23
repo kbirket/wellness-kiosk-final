@@ -610,18 +610,30 @@ export default function WellnessHub() {
                  const totalOwed = activeMembers.reduce((sum, m) => sum + (parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0), 0);
                  const totalVisits = corpMembers.reduce((sum, m) => sum + m.visits, 0);
 
-                 // The 1-Click Export Function
+                 // The 1-Click Export Function (Spreadsheet)
                  const downloadCSV = () => {
                     if (corpMembers.length === 0) { alert('No employees enrolled for this partner.'); return; }
                     const headers = ["Employee Name", "Member ID", "Plan Type", "Status", "Lifetime Visits", "Monthly Amount"];
                     const rows = corpMembers.map(m => `"${m.firstName} ${m.lastName}","${m.id}","${m.type}","${m.status}","${m.visits}","$${parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0}"`);
-                    
-                    // Add a totally blank row, then the TOTAL row at the very bottom
                     rows.push(`"","","","","",""`);
                     rows.push(`"","","","","TOTAL DUE:","$${totalOwed.toFixed(2)}"`);
-                    
                     const csv = [headers.join(','), ...rows].join('\n');
                     const b = new Blob([csv],{type:'text/csv'}); const u = window.URL.createObjectURL(b); const a = document.createElement('a'); a.href=u; a.download=`${corp.name.replace(/\s+/g, '_')}_Invoice_${new Date().toISOString().slice(0,10)}.csv`; a.click(); window.URL.revokeObjectURL(u);
+                 };
+
+                 // The Official Print Letter / PDF Invoice
+                 const printInvoice = () => {
+                    if (corpMembers.length === 0) { alert('No employees enrolled for this partner.'); return; }
+                    const isHarper = viewingCenter === 'harper'; 
+                    const centerName = isHarper ? 'Harper Wellness Center' : 'Anthony Wellness Center'; 
+                    const centerAddr = isHarper ? '615 W 12th St, Harper, KS 67058' : '309 W Main St, Anthony, KS 67003'; 
+                    const centerPhone = isHarper ? '(620) 896-1202' : '(620) 842-5190'; 
+                    const directorName = isHarper ? 'Patrick Johnson' : 'Deanna Smithhisler'; 
+
+                    const rows = corpMembers.map(m => `<tr><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${m.firstName} ${m.lastName}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; font-family: monospace; color: #64748b;">${m.id}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${m.type}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: center; color: #1080ad; font-weight: bold;">${m.visits}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: ${m.status === 'ACTIVE' ? '#1e293b' : '#dc2626'};">$${parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0}</td></tr>`).join('');
+
+                    const html = `<!DOCTYPE html><html><head><title>Corporate Invoice - ${corp.name}</title><style>@media print{body{margin:0}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:40px}.hdr{background:#003d6b;padding:20px 44px;display:flex;justify-content:space-between;align-items:center;border-radius:8px 8px 0 0}.hdr-logo{height:40px}.hdr-text{text-align:right;color:white}.hdr-title{font-size:24px;font-weight:900;margin:0}.hdr-sub{font-size:12px;color:#8bb8d9;margin-top:4px;line-height:1.4}.accent{height:4px;background:linear-gradient(to right,#dba51f,#dd6d22);margin-bottom:40px}.bill-to{margin-bottom:30px}.bill-to h2{margin:0 0 5px 0;font-size:14px;color:#64748b;text-transform:uppercase;letter-spacing:1px}.bill-to p{margin:0;font-size:18px;font-weight:900;color:#003d6b}.summary{display:flex;gap:40px;margin-bottom:30px;background:#f8fafc;padding:20px;border-radius:8px;border:1px solid #e2e8f0}.sum-box{text-align:left}.sum-lbl{font-size:10px;font-weight:bold;color:#64748b;text-transform:uppercase;letter-spacing:1px}.sum-val{font-size:24px;font-weight:900;color:#003d6b;margin-top:5px}.sum-val.due{color:#16a34a}table{width:100%;border-collapse:collapse;margin-bottom:30px;font-size:12px}th{background:#003d6b;color:white;text-align:left;padding:12px 10px;font-size:10px;text-transform:uppercase;letter-spacing:1px}th.right{text-align:right}th.center{text-align:center}.total-row td{background:#fff;border-top:2px solid #003d6b;padding-top:20px;font-size:14px}.total-lbl{text-align:right;font-weight:900;color:#1e293b;text-transform:uppercase}.total-val{font-size:20px;font-weight:900;color:#16a34a;text-align:right}.sign{margin-top:40px;font-size:14px}.sign-name{font-weight:bold;color:#003d6b;margin-top:5px}.sign-title{color:#64748b;font-size:12px}</style></head><body><div class="hdr"><img src="${LOGO_URL}" class="hdr-logo" /><div class="hdr-text"><h1 class="hdr-title">Corporate Invoice</h1><div class="hdr-sub">${centerName}<br/>${centerAddr} | ${centerPhone}</div></div></div><div class="accent"></div><div class="bill-to"><h2>Billed To:</h2><p>${corp.name}</p><p style="font-size: 14px; font-weight: normal; color: #475569; margin-top: 4px;">Attn: ${corp.contactName || 'Benefits Administrator'}</p></div><div class="summary"><div class="sum-box"><div class="sum-lbl">Billing Date</div><div class="sum-val" style="font-size: 18px;">${new Date().toLocaleDateString('en-US', {month:'long',day:'numeric',year:'numeric'})}</div></div><div class="sum-box"><div class="sum-lbl">Total Enrolled</div><div class="sum-val" style="font-size: 18px;">${corpMembers.length}</div></div><div class="sum-box"><div class="sum-lbl">Total Amount Due</div><div class="sum-val due" style="font-size: 18px;">$${totalOwed.toFixed(2)}</div></div></div><table><thead><tr><th>Employee Name</th><th>Member ID</th><th>Plan Type</th><th class="center">Lifetime Visits</th><th class="right">Monthly Rate</th></tr></thead><tbody>${rows}</tbody><tfoot><tr class="total-row"><td colspan="4" class="total-lbl">Total Corporate Responsibility:</td><td class="total-val">$${totalOwed.toFixed(2)}</td></tr></tfoot></table><div class="sign"><p>Thank you for partnering with Patterson Health Center to keep your team healthy!</p><div class="sign-name">${directorName}</div><div class="sign-title">Director, ${centerName}</div></div></body></html>`;
+                    const w = window.open('', '_blank'); w.document.write(html); w.document.close(); setTimeout(() => w.print(), 500);
                  };
 
                  return (
@@ -647,9 +659,10 @@ export default function WellnessHub() {
                      </div>
 
                      <div className="flex gap-2">
-                       <button onClick={downloadCSV} className="flex-1 bg-[#1080ad] text-white py-3 rounded-xl text-sm font-bold shadow-sm flex items-center justify-center gap-2 hover:bg-blue-800 transition-colors"><Download size={16}/> Invoice CSV</button>
+                       <button onClick={printInvoice} className="flex-1 bg-[#16a34a] text-white py-3 rounded-xl text-sm font-bold shadow-sm flex items-center justify-center gap-2 hover:bg-green-700 transition-colors"><Printer size={16}/> Print Invoice</button>
+                       <button onClick={downloadCSV} className="bg-slate-100 text-[#001f3f] px-4 py-3 rounded-xl text-sm font-bold shadow-sm flex items-center justify-center hover:bg-slate-200 transition-colors" title="Download Spreadsheet CSV"><Download size={16}/></button>
                        {corp.contactEmail && (
-                         <a href={`mailto:${corp.contactEmail}?subject=${corp.name} Wellness Roster & Invoice - ${new Date().toLocaleDateString()}&body=Hello ${corp.contactName || 'Partner'},\n\nPlease find attached your updated wellness center roster and invoice for this billing period.\n\nTotal Enrolled: ${corpMembers.length}\nTotal Due: $${totalOwed.toFixed(2)}\n\nThank you for partnering with us to keep your team healthy!\n\n- Patterson Health Center`} className="bg-slate-100 text-slate-600 p-3 rounded-xl hover:bg-slate-200 transition-colors flex items-center justify-center" title="Draft Email"><Mail size={20}/></a>
+                         <a href={`mailto:${corp.contactEmail}?subject=${corp.name} Wellness Roster & Invoice - ${new Date().toLocaleDateString()}&body=Hello ${corp.contactName || 'Partner'},\n\nPlease find attached your updated wellness center roster and invoice for this billing period.\n\nTotal Enrolled: ${corpMembers.length}\nTotal Due: $${totalOwed.toFixed(2)}\n\nThank you for partnering with us to keep your team healthy!\n\n- Patterson Health Center`} className="bg-slate-100 text-slate-600 px-4 py-3 rounded-xl hover:bg-slate-200 transition-colors flex items-center justify-center" title="Draft Email to Partner"><Mail size={16}/></a>
                        )}
                      </div>
                    </div>
