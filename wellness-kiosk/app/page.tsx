@@ -264,8 +264,7 @@ export default function WellnessHub() {
           const expiringThisWeek = scopedMembers.filter(m => { if (!m.nextPayment || m.status === 'OVERDUE') return false; const d = new Date(m.nextPayment); return d > today && d <= weekFromNow; });
           const briefingItems = [...overdueMembers.map(m => ({name:`${m.firstName} ${m.lastName}`,detail:`Overdue since ${m.nextPayment}`,type:'overdue',id:m.id})),...dueTodayMembers.map(m => ({name:`${m.firstName} ${m.lastName}`,detail:'Payment due today',type:'due',id:m.id})),...orientationMembers.map(m => ({name:`${m.firstName} ${m.lastName}`,detail:'Needs facility orientation',type:'orientation',id:m.id})),...expiringThisWeek.map(m => ({name:`${m.firstName} ${m.lastName}`,detail:`Expires ${m.nextPayment}`,type:'expiring',id:m.id}))];
           const quickResults = quickSearch.length >= 2 ? scopedMembers.filter(m => `${m.firstName} ${m.lastName} ${m.id} ${m.email}`.toLowerCase().includes(quickSearch.toLowerCase())).slice(0,5) : [];
-          const exportTodaysLog = () => { const tv = filteredVisits.filter(v => new Date(v.time).toDateString() === todayStr); if (tv.length === 0) { alert('No check-ins today yet.'); return; } const csv = ["Name,Center,Time,Type",...tv.map(v => `"${v.name}","${v.center}","${new Date(v.time).toLocaleTimeString()}","${v.type}"`)].join('\n'); const b = new Blob([csv],{type:'text/csv'}); const u = window.URL.createObjectURL(b); const a = document.createElement('a'); a.href=u; a.download=`Check_Ins_${new Date().toISOString().slice(0,10)}.csv`; a.click(); window.URL.revokeObjectURL(u); };
-          const greeting = today.getHours() < 12 ? 'Good morning' : today.getHours() < 17 ? 'Good afternoon' : 'Good evening';
+const exportTodaysLog = () => { const tv = filteredVisits.filter(v => new Date(v.time).toDateString() === todayStr); if (tv.length === 0) { alert('No check-ins today yet.'); return; } const csv = ["Name,Center,Time,Type,Check-In Method",...tv.map(v => `"${v.name}","${v.center}","${new Date(v.time).toLocaleTimeString()}","${v.type}","${v.method || 'General Workout'}"`)].join('\n'); const b = new Blob([csv],{type:'text/csv'}); const u = window.URL.createObjectURL(b); const a = document.createElement('a'); a.href=u; a.download=`Check_Ins_${new Date().toISOString().slice(0,10)}.csv`; a.click(); window.URL.revokeObjectURL(u); };          const greeting = today.getHours() < 12 ? 'Good morning' : today.getHours() < 17 ? 'Good afternoon' : 'Good evening';
           
           const ninetyMinsAgo = new Date(Date.now() - 90 * 60 * 1000);
           const currentOccupancy = filteredVisits.filter(v => new Date(v.time) > ninetyMinsAgo).length;
@@ -589,6 +588,11 @@ export default function WellnessHub() {
                     <option value="2026-04">April 2026</option>
                     <option value="2026-05">May 2026</option>
                   </select>
+                 <button onClick={() => {
+                    if (monthlyVisits.length === 0) { alert('No visits to export for this month.'); return; }
+                    const csv = ["Date,Time,Name,Center,Plan Type,Check-In Method",...monthlyVisits.map(v => `"${new Date(v.time).toLocaleDateString()}","${new Date(v.time).toLocaleTimeString()}","${v.name}","${v.center}","${v.type}","${v.method || 'General Workout'}"`)].join('\n');
+                    const b = new Blob([csv],{type:'text/csv'}); const u = window.URL.createObjectURL(b); const a = document.createElement('a'); a.href=u; a.download=`Monthly_Visits_${reportMonth}.csv`; a.click(); window.URL.revokeObjectURL(u);
+                  }} className="px-4 py-2 bg-[#1080ad] text-white rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-blue-800"><Download size={16}/> Export Visits</button>
                   <button onClick={() => window.print()} className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-slate-50">🖨️ Print Dashboard</button>
                 </div>
               </div>
