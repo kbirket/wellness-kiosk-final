@@ -49,6 +49,7 @@ export default function WellnessHub() {
   const [showAllMemberVisits, setShowAllMemberVisits] = useState(false);
   const [activeClass, setActiveClass] = useState(null);
   const [kioskMode, setKioskMode] = useState('Gym');
+  const [expandedFaq, setExpandedFaq] = useState(null); // Controls the help accordion
   
   const [reportMonth, setReportMonth] = useState(() => {
     const now = new Date();
@@ -359,7 +360,7 @@ export default function WellnessHub() {
       </aside>
 
       <main className="flex-1 p-10 h-screen overflow-y-auto relative print:m-0 print:p-0 print:h-auto print:overflow-visible">
-        <div className="mb-10 print:hidden"><h2 className="text-3xl font-bold text-[#001f3f] capitalize tracking-tight">{activeTab === 'notif' ? 'Notifications' : activeTab}</h2><p className="text-sm text-slate-400 font-medium">{viewingCenter === 'both' ? 'All Centers' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1) + ' Center'} · {currentDateString}</p></div>
+        <div className="mb-10 print:hidden"><h2 className="text-3xl font-bold text-[#001f3f] capitalize tracking-tight">{activeTab === 'notif' ? 'Notifications' : activeTab === 'help' ? '' : activeTab}</h2>{activeTab !== 'help' && <p className="text-sm text-slate-400 font-medium">{viewingCenter === 'both' ? 'All Centers' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1) + ' Center'} · {currentDateString}</p>}</div>
 
         {activeTab === 'dashboard' && (() => {
           const today = new Date(); const todayStr = today.toDateString(); const weekFromNow = new Date(today.getTime() + 7*24*60*60*1000);
@@ -1028,66 +1029,103 @@ export default function WellnessHub() {
         {activeTab === 'badge' && (<div className="space-y-6"><div className="mb-8"><h2 className="text-3xl font-bold text-[#001f3f] tracking-tight mb-1">Staff Check-In</h2><p className="text-slate-400 font-medium">Log a check-in manually or via scanner.</p></div><div className="flex gap-8"><div className="bg-white p-12 rounded-3xl shadow-sm border border-slate-200 flex-1 text-center"><p className="text-sm font-bold text-slate-400 mb-4">Enter Name or ID:</p><div className="relative w-full max-w-sm mx-auto mb-10"><div className="flex gap-4"><input className="flex-1 p-4 border rounded-xl outline-none text-xl text-center bg-slate-100 focus:border-[#1080ad] focus:bg-white transition-colors" placeholder="e.g. Smith" value={kioskInput} onChange={(e) => setKioskInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { processCheckIn(kioskInput, "Staff Scan/Entry"); setKioskInput(''); } }} /><button onClick={() => { processCheckIn(kioskInput, "Staff Scan/Entry"); setKioskInput(''); }} className="bg-[#001f3f] text-white px-8 rounded-xl font-bold hover:bg-blue-900 transition-colors shadow-sm">Check In</button></div>{kioskMatches.length > 0 && (<div className="absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 overflow-hidden text-left">{kioskMatches.map(m => (<button key={m._type + (m.airtableId || m.id)} onClick={() => { processCheckIn(m.id, "Staff Override Entry"); setKioskInput(''); }} className="w-full p-4 border-b border-slate-100 last:border-0 hover:bg-blue-50 transition-colors flex justify-between items-center group"><div><p className="font-bold text-[#001f3f] text-lg">{m.firstName} {m.lastName}</p><p className="text-[10px] text-slate-400 uppercase tracking-widest">{m.phone||'No Phone'}</p></div><div className="bg-[#1080ad] text-white px-3 py-1 rounded-lg text-xs font-bold shadow-sm group-hover:scale-105 transition-transform">Select</div></button>))}</div>)}</div>{kioskMessage.text && (<div className={`mt-8 p-4 rounded-xl text-center font-bold text-lg ${kioskMessage.type==='success'?'bg-green-100 text-green-700':kioskMessage.type==='warning'?'bg-yellow-100 text-yellow-700':'bg-red-100 text-red-700'}`}>{kioskMessage.text}{kioskMessage.subtext && <p className="text-sm mt-1">{kioskMessage.subtext}</p>}</div>)}</div></div></div>)}
 
         {/* --- NEW HELP & TRAINING TAB --- */}
-        {activeTab === 'help' && (
-          <div className="max-w-4xl mx-auto space-y-8">
-            <div className="mb-8">
-              <h2 className="text-3xl font-bold text-[#001f3f] tracking-tight">Help & Training</h2>
-              <p className="text-slate-400 font-medium">Director's manual and frequently asked questions for the custom app features.</p>
+        {activeTab === 'help' && (() => {
+          const faqs = [
+            {
+              category: "Membership Management",
+              icon: <Users size={20} className="text-[#1080ad]" />,
+              items: [
+                { id: 'm1', q: "How do I add a family member?", a: "There are two ways to add members to a family group:<br/><br/><b>Option 1 (New Family):</b> Click 'Add Member' and select the FAMILY plan. After you save the first member, the success screen will offer a blue 'Add Family Member' button to keep adding people under that exact same family plan.<br/><br/><b>Option 2 (Existing Family):</b> Find the primary member on the dashboard and click their row to open their profile. Click the purple 'Add to Family' button at the bottom. This will automatically link the new person to their family group." },
+                { id: 'm2', q: "How do I log a member's payment?", a: "Open the member's profile by clicking their name. Click the green 'Log Payment' button at the bottom. Select their payment method (Cash, Check, Card, or ACH). The system will instantly log the payment and automatically push their 'Next Payment Due' date forward by one month." },
+                { id: 'm3', q: "What if someone forgets their PIN?", a: "Open their profile card and click the yellow 'Reset PIN' button at the bottom. The system will instantly generate a new, random 4-digit code and display it on your screen to give to the member." },
+                { id: 'm4', q: "How do I manage 24/7 badge access?", a: "To give someone 24/7 access, click their name to open their profile, then click 'Edit Member'. Scroll down, check the '24/7 Access' box, and type their key fob/badge number into the box right below it. Hit Save!" },
+                { id: 'm5', q: "How do I mark an orientation as complete?", a: "If a member still needs an orientation, their profile will have a blue 'Orientation' tag, and they will get a warning if they try to check in at the kiosk. To clear this, open their profile and click the 'Mark Complete' button inside the blue warning banner at the top." },
+                { id: 'm6', q: "How do I print a payment reminder letter?", a: "Open a member's profile card and click the grey 'Print Letter' button at the bottom. It will generate a custom PDF addressed to them. The layout is specifically designed so that if you fold the paper in thirds, their address will perfectly align with a standard windowed envelope." }
+              ]
+            },
+            {
+              category: "Classes & Check-ins",
+              icon: <Calendar size={20} className="text-[#f59e0b]" />,
+              items: [
+                { id: 'c1', q: "How do I check someone into a class?", a: "Go to the 'Classes' tab and click 'Manage Roster' on the class you are running. A live scanner window will pop up. You can either type the attendee's name into the box, or they can scan their digital badge. It will instantly add them to the live roster on the right." },
+                { id: 'c2', q: "How do I manually check someone in (override)?", a: "If the kiosk is down or someone forgot their phone, go to the 'Staff Check-In' tab (the QR code icon). Type their name into the box and hit 'Check In'. You can also force a check-in directly from their profile card by clicking the dark blue 'Force Manual Check-In' button." }
+              ]
+            },
+            {
+              category: "Corporate & Usage-Based Billing",
+              icon: <Briefcase size={20} className="text-[#8b5cf6]" />,
+              items: [
+                { id: 'corp1', q: "How do I charge a corporate partner based on usage?", a: "Some partners (like the City of Harper) only pay for employees who actually use the gym.<br/><br/>1. Go to the Corporate tab.<br/>2. Select the billing period (e.g., Q1 2026) from the dropdown at the top right.<br/>3. Check the 'Usage-Based Billing' box on that company's card.<br/>4. Click 'Invoice'. The system will automatically scan that quarter, find exactly who visited, calculate the total owed based on active months, and print a fully itemized invoice for their HR department." },
+                { id: 'corp2', q: "How do I update a company's mailing address or HR contact?", a: "Go to the Corporate tab and click the small blue 'Edit' button next to the company's name. A window will pop up allowing you to change their HR Contact Name, Email, and Full Mailing Address. This new address will immediately be applied to all future printed invoices." },
+                { id: 'corp3', q: "How do I see a company's full employee list?", a: "On the Corporate tab, click the 'View Employee Roster ↓' button at the bottom of any company card. It will drop down a scrollable list of every enrolled employee, showing how many times they visited in the selected timeframe and how much they are contributing to the total bill." }
+              ]
+            },
+            {
+              category: "Visitors & Passes",
+              icon: <Eye size={20} className="text-[#16a34a]" />,
+              items: [
+                { id: 'v1', q: "How do I issue a new Day Pass or Courtesy Pass?", a: "Go to the 'Visitors' tab and click 'Add Visitor' in the top right. Fill out their information and select the pass type. The system will give you a 4-digit PIN for them to use at the kiosk." },
+                { id: 'v2', q: "How do I renew an expired visitor pass?", a: "Go to the Visitors tab. Find their name in the list, hover your mouse over the purple 'Renew Pass' button on the far right, and click the type of pass they are getting. It will instantly generate a new active pass with a fresh expiration date and PIN." }
+              ]
+            },
+            {
+              category: "Reporting & Exports",
+              icon: <FileText size={20} className="text-[#dd6d22]" />,
+              items: [
+                { id: 'r1', q: "How do I export today's check-in log?", a: "Go to the 'Dashboard' tab. On the right side under 'Quick Export', click 'Export Today's Check-in Log'. It will instantly download a spreadsheet showing everyone who visited today, what time they came, and what center they used." },
+                { id: 'r2', q: "How do I run a monthly financial report?", a: "Go to the 'Reports' tab. Select the month or quarter you want to view from the dropdown menu at the top. You can then click 'Print Financials' to get a beautiful PDF breakdown, or click 'CSV' to download the raw data into Excel." }
+              ]
+            }
+          ];
+
+          return (
+            <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+              <div className="mb-8 text-center bg-gradient-to-br from-[#001f3f] to-[#1080ad] p-12 rounded-[2rem] text-white shadow-xl relative overflow-hidden">
+                 <div className="absolute -top-24 -right-24 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+                 <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-blue-400/20 rounded-full blur-3xl"></div>
+                 <HelpCircle size={48} className="mx-auto mb-6 text-blue-200" />
+                 <h2 className="text-4xl font-black tracking-tight mb-4 relative z-10">Help & Training Center</h2>
+                 <p className="text-blue-100 font-medium text-lg max-w-2xl mx-auto relative z-10">Your complete guide to managing members, billing, and facility operations in the custom WellnessHub.</p>
+              </div>
+
+              <div className="space-y-6">
+                {faqs.map((section, idx) => (
+                  <div key={idx} className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div className="bg-slate-50 border-b border-slate-100 p-6 flex items-center gap-3">
+                       <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-100">{section.icon}</div>
+                       <h3 className="text-xl font-black text-[#001f3f]">{section.category}</h3>
+                    </div>
+                    <div className="divide-y divide-slate-100">
+                      {section.items.map(faq => (
+                        <div key={faq.id} className="group">
+                          <button 
+                            onClick={() => setExpandedFaq(expandedFaq === faq.id ? null : faq.id)} 
+                            className="w-full text-left p-6 flex justify-between items-center hover:bg-slate-50/50 transition-colors focus:outline-none"
+                          >
+                            <span className={`font-bold text-lg transition-colors pr-8 ${expandedFaq === faq.id ? 'text-[#1080ad]' : 'text-slate-700 group-hover:text-[#1080ad]'}`}>
+                              {faq.q}
+                            </span>
+                            <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center transition-all duration-300 ${expandedFaq === faq.id ? 'bg-blue-100 text-[#1080ad] rotate-90' : 'bg-slate-100 text-slate-400 group-hover:bg-blue-50 group-hover:text-[#1080ad]'}`}>
+                              <ChevronRight size={18} />
+                            </div>
+                          </button>
+                          <div 
+                            className={`overflow-hidden transition-all duration-300 ease-in-out ${expandedFaq === faq.id ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}
+                          >
+                            <div 
+                              className="p-6 pt-0 text-slate-600 leading-relaxed text-sm"
+                              dangerouslySetInnerHTML={{ __html: faq.a }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-
-            <ProListCard title="General Membership Management">
-              <div className="space-y-6">
-                <div>
-                  <h4 className="font-bold text-slate-800 text-lg mb-2">How do I add a family member?</h4>
-                  <p className="text-slate-600 text-sm leading-relaxed mb-2">There are two ways to add members to a family group:</p>
-                  <ul className="list-disc pl-6 text-slate-600 text-sm space-y-1">
-                    <li><strong>Option 1 (New Family):</strong> Click "Add Member" and select the `FAMILY` plan. After you save the first member, the success screen will offer a blue "Add Family Member" button to keep adding people under that exact same family plan.</li>
-                    <li><strong>Option 2 (Existing Family):</strong> Find the primary member on the dashboard and click their row to open their profile. Click the purple <span className="font-bold">"Add to Family"</span> button at the bottom. This will automatically link the new person to their family group.</li>
-                  </ul>
-                </div>
-                
-                <div className="border-t border-slate-100 pt-6">
-                  <h4 className="font-bold text-slate-800 text-lg mb-2">How do I print a payment reminder letter?</h4>
-                  <p className="text-slate-600 text-sm leading-relaxed">Open a member's profile card and click the grey <span className="font-bold">"Print Letter"</span> button at the bottom. It will generate a custom PDF addressed to them. The layout is specifically designed so that if you fold the paper in thirds, their address will perfectly align with a standard windowed envelope.</p>
-                </div>
-
-                <div className="border-t border-slate-100 pt-6">
-                  <h4 className="font-bold text-slate-800 text-lg mb-2">What if someone forgets their PIN?</h4>
-                  <p className="text-slate-600 text-sm leading-relaxed">Open their profile card and click the yellow <span className="font-bold">"Reset PIN"</span> button at the bottom. The system will instantly generate a new, random 4-digit code and display it on your screen to give to the member.</p>
-                </div>
-              </div>
-            </ProListCard>
-
-            <ProListCard title="Corporate & Usage-Based Billing">
-              <div className="space-y-6">
-                <div>
-                  <h4 className="font-bold text-slate-800 text-lg mb-2">How do I charge a corporate partner based on usage?</h4>
-                  <p className="text-slate-600 text-sm leading-relaxed mb-2">Some partners (like the City of Harper) only pay for employees who actually use the gym. To generate their invoice:</p>
-                  <ol className="list-decimal pl-6 text-slate-600 text-sm space-y-1">
-                    <li>Go to the <strong>Corporate</strong> tab.</li>
-                    <li>Select the billing period (e.g., Q1 2026) from the dropdown at the top right.</li>
-                    <li>Check the <strong>"Usage-Based Billing"</strong> box on that company's card.</li>
-                    <li>Click <strong>Invoice</strong>. The system will automatically scan that quarter, find exactly who visited, calculate the total owed based on active months, and print a fully itemized invoice for their HR department.</li>
-                  </ol>
-                </div>
-                
-                <div className="border-t border-slate-100 pt-6">
-                  <h4 className="font-bold text-slate-800 text-lg mb-2">How do I update a company's mailing address or HR contact?</h4>
-                  <p className="text-slate-600 text-sm leading-relaxed">Go to the Corporate tab and click the small blue <span className="font-bold">"Edit"</span> button next to the company's name. A window will pop up allowing you to change their HR Contact Name, Email, and Full Mailing Address. This new address will immediately be applied to all future printed invoices.</p>
-                </div>
-              </div>
-            </ProListCard>
-
-            <ProListCard title="Visitors & Passes">
-              <div className="space-y-6">
-                <div>
-                  <h4 className="font-bold text-slate-800 text-lg mb-2">How do I renew an expired visitor pass?</h4>
-                  <p className="text-slate-600 text-sm leading-relaxed">If a visitor comes back and wants to buy another Day Pass or Courtesy Pass, go to the <strong>Visitors</strong> tab. Find their name in the list, hover your mouse over the purple <span className="font-bold">"Renew Pass"</span> button on the far right, and click the type of pass they are getting. It will instantly generate a new active pass with a fresh expiration date and PIN.</p>
-                </div>
-              </div>
-            </ProListCard>
-          </div>
-        )}
+          );
+        })()}
 
       </main>
 
@@ -1530,22 +1568,4 @@ export default function WellnessHub() {
                 <button key={m} onClick={async () => {
                   if (!window.confirm(`Log ${m} payment for ${paymentModal.firstName} ${paymentModal.lastName}?`)) return;
                   try {
-                    const res = await fetch('/api/log-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: paymentModal.airtableId, memberName: `${paymentModal.firstName} ${paymentModal.lastName}`, method: m, currentDueDate: paymentModal.nextPayment }) });
-                    const result = await res.json();
-                    if (result.success) {
-                      setMembers(prev => prev.map(mem => mem.airtableId === paymentModal.airtableId ? { ...mem, status: 'ACTIVE', nextPayment: result.nextPaymentDue } : mem));
-                      if (selectedMember && selectedMember.airtableId === paymentModal.airtableId) { setSelectedMember({ ...selectedMember, status: 'ACTIVE', nextPayment: result.nextPaymentDue }); }
-                      setPaymentModal(null);
-                      alert(`Payment logged! Next payment due: ${result.nextPaymentDue}`);
-                    } else { alert('Error: ' + result.error); }
-                  } catch (err) { alert('Network error. Please try again.'); }
-                }} className="bg-slate-50 hover:bg-[#16a34a] hover:text-white text-[#001f3f] font-bold py-4 rounded-xl border border-slate-200 transition-all text-sm">{m}</button>
-              ))}
-            </div>
-            <button onClick={() => setPaymentModal(null)} className="w-full text-slate-400 text-sm font-bold hover:text-slate-600">Cancel</button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+                    const res = await fetch('/api/log-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId:
