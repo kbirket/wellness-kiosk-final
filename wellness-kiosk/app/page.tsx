@@ -55,7 +55,7 @@ export default function WellnessHub() {
     return `${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
   });
   
-  const [usageBasedCorps, setUsageBasedCorps] = useState({});
+  const [usageBasedCorps, setUsageBasedCorps] = useState({});   const [expandedCorpId, setExpandedCorpId] = useState(null);
   const [showAddVisitorModal, setShowAddVisitorModal] = useState(false);
   const [selectedVisitor, setSelectedVisitor] = useState(null);
 
@@ -814,7 +814,28 @@ export default function WellnessHub() {
                        <label className="flex items-center gap-2 mb-6 cursor-pointer group w-fit">
                           <input type="checkbox" checked={isUsageBased} onChange={() => setUsageBasedCorps(prev => ({...prev, [corp.id]: !prev[corp.id]}))} className="w-4 h-4 text-[#1080ad] rounded border-slate-300 cursor-pointer" />
                           <span className="text-xs font-bold text-slate-500 uppercase tracking-widest group-hover:text-[#1080ad] transition-colors">Usage-Based Billing</span>
-                       </label>
+                      </label>
+
+                       <button onClick={() => setExpandedCorpId(expandedCorpId === corp.id ? null : corp.id)} className="w-full text-left py-2 border-t border-slate-100 flex justify-between items-center text-xs font-bold text-slate-500 hover:text-[#1080ad] transition-colors mb-4">
+                         {expandedCorpId === corp.id ? 'Hide Employee Roster ↑' : 'View Employee Roster ↓'}
+                       </button>
+                       
+                       {expandedCorpId === corp.id && (
+                         <div className="mb-6 bg-slate-50 rounded-xl border border-slate-100 overflow-hidden">
+                            <div className="max-h-48 overflow-y-auto p-3 space-y-2">
+                              {enrichedMembers.length === 0 ? <p className="text-xs text-slate-400 italic">No members enrolled.</p> : enrichedMembers.map(em => (
+                                <div key={em.id} className="flex justify-between items-center bg-white p-2 rounded-lg border border-slate-100 shadow-sm">
+                                   <div>
+                                     <p className="text-xs font-bold text-slate-800">{em.firstName} {em.lastName}</p>
+                                     <p className="text-[9px] text-slate-400 uppercase tracking-widest">{em.type} • {em.periodVisits} visit{em.periodVisits !== 1 ? 's' : ''}</p>
+                                   </div>
+                                   <span className={`text-xs font-black ${em.memberOwed > 0 ? 'text-[#16a34a]' : 'text-slate-400'}`}>${em.memberOwed.toFixed(2)}</span>
+                                </div>
+                              ))}
+                            </div>
+                         </div>
+                       )}
+
                      </div>
 
                      <div className="flex flex-col gap-2">
