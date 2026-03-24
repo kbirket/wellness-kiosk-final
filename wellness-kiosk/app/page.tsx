@@ -751,13 +751,19 @@ useEffect(() => {
 
                  const activeMembersCount = enrichedMembers.filter(m => m.memberOwed > 0 || m.status === 'ACTIVE').length;
 
-                 const isPaid = corp.paidMonths && corp.paidMonths.includes(reportMonth);
+                 const paidMatch = corp.paidMonths ? corp.paidMonths.split(',').find(str => str.startsWith(reportMonth)) : null;
+                 const isPaid = !!paidMatch;
+                 const corpPayMethod = paidMatch && paidMatch.includes(':') ? paidMatch.split(':')[1] : '';
+
                  const togglePayment = async () => {
                     let newPaidMonths = corp.paidMonths || '';
                     if (isPaid) {
-                       newPaidMonths = newPaidMonths.split(',').filter(mn => mn !== reportMonth).join(',');
+                       newPaidMonths = newPaidMonths.split(',').filter(mn => !mn.startsWith(reportMonth)).join(',');
                     } else {
-                       newPaidMonths = newPaidMonths ? `${newPaidMonths},${reportMonth}` : reportMonth;
+                       const method = window.prompt(`How is ${corp.name} paying for ${displayPeriod}?\n(e.g., Check, ACH, Card)`);
+                       if (method === null) return; // User cancelled
+                       const entry = `${reportMonth}:${method.trim() || 'Unknown'}`;
+                       newPaidMonths = newPaidMonths ? `${newPaidMonths},${entry}` : entry;
                     }
                     setCorporatePartners(prev => prev.map(c => c.id === corp.id ? { ...c, paidMonths: newPaidMonths } : c));
                     try {
@@ -799,7 +805,7 @@ useEffect(() => {
                          <div className="flex items-center gap-2">
                            <button onClick={() => setEditingCorp(corp)} className="bg-blue-50 text-[#1080ad] hover:bg-blue-100 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase transition-colors">Edit</button>
                            <span className={`px-3 py-1 rounded-full text-[10px] font-black tracking-widest ${isPaid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                             {isPaid ? 'PAID' : 'UNPAID'}
+                             {isPaid ? `PAID ${corpPayMethod ? `(${corpPayMethod.toUpperCase()})` : ''}` : 'UNPAID'}
                            </span>
                          </div>
                        </div>
@@ -931,21 +937,81 @@ useEffect(() => {
                     const activeMembers = scopedMembers.filter(m => m.status === 'ACTIVE');
                     const totalRevenue = activeMembers.reduce((sum, m) => { const rate = parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0; return sum + rate; }, 0);
                     
-                    const rows = scopedMembers.map(m => {
-                      const finalRate = parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0;
-                      // No more fallback! Strictly shows the payment method, or "None Logged"
-                      const payMethod = m.paymentMethod ? m.paymentMethod : 'None Logged'; 
-                      return `<tr><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${m.firstName} ${m.lastName}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${m.type}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${payMethod}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; font-weight:bold; color: #16a34a;">$${finalRate.toFixed(2)}</td></tr>`;
-                    }).join('');
+                  <button onClick={() => {
+                    const activePaidMembers = scopedMembers.filter(m => {
+                        if (m.status !== 'ACTIVE') return false;
+                        if (m.type.includes('CORPORATE') || m.sponsorName) {
+                            const sponsor = corporatePartners.find(cp => cp.sponsorMatch === m.sponsorName);
+                            return sponsor && sponsor.paidMonths && sponsor.paidMonths.includes(reportMonth);
+                        }
+                        return !!m.paymentMethod;
+                    });
+                    
+                    if (activePaidMembers.length === 0) { alert('No completed payments found to report.'); return; }
+                    
+                    const centerName = viewingCenter === 'both' ? 'All Centers' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1) + ' Wellness Center';
+                    
+                    const standardMembers = activePaidMembers.filter(m => !m.type.includes('CORPORATE') && !m.sponsorName);
+                    const corporateMembers = activePaidMembers.filter(m => m.type.includes('CORPORATE') || m.sponsorName);
+                    
+                    const calcTotal = (mems) => mems.reduce((sum, m) => sum + (parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0), 0);
+                    const standardTotal = calcTotal(standardMembers);
+                    const corpTotal = calcTotal(corporateMembers);
+                    const grandTotal = standardTotal + corpTotal;
+                    
+                    const getPayMethod = (m) => {
+                        if (m.type.includes('CORPORATE') || m.sponsorName) {
+                            const sponsor = corporatePartners.find(cp => cp.sponsorMatch === m.sponsorName);
+                            if (sponsor && sponsor.paidMonths) {
+                                const match = sponsor.paidMonths.split(',').find(str => str.startsWith(reportMonth));
+                                return match && match.includes(':') ? match.split(':')[1] : 'Corp Payment';
+                            }
+                        }
+                        return m.paymentMethod || 'None Logged';
+                    };
 
-                    const html = `<!DOCTYPE html><html><head><title>Financial Roster - ${centerName}</title><style>@media print { body { margin: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } } body { font-family: Arial, sans-serif; color: #1e293b; margin: 0; padding: 40px; } .hdr { background: #003d6b; padding: 20px; display: flex; align-items: center; gap: 15px; border-radius: 8px 8px 0 0; } .hdr img { height: 40px; } .hdr-text { color: white; } .hdr-title { font-size: 24px; font-weight: 900; margin: 0; } .hdr-sub { font-size: 12px; color: #8bb8d9; text-transform: uppercase; letter-spacing: 1px; } .accent { height: 4px; background: linear-gradient(to right, #dba51f, #dd6d22); margin-bottom: 30px; } .summary { display: flex; gap: 40px; margin-bottom: 20px; background: #f8fafc; padding: 15px 20px; border-radius: 8px; border: 1px solid #e2e8f0; } .sum-box { text-align: left; } .sum-lbl { font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 1px; } .sum-val { font-size: 20px; font-weight: 900; color: #003d6b; margin-top: 5px; } table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 12px; } th { background: #003d6b; color: white; text-align: left; padding: 12px 10px; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; } td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; } tr:nth-child(even) { background-color: #f8fafc; } .total-row td { background: #fff; border-top: 2px solid #003d6b; border-bottom: none; padding-top: 20px; font-size: 14px; } .total-lbl { text-align: right; font-weight: 900; color: #1e293b; text-transform: uppercase; letter-spacing: 1px; } .total-val { font-size: 20px; font-weight: 900; color: #16a34a; text-align: left; padding-left: 12px;}</style></head><body><div class="hdr"><img src="${LOGO_URL}" /><div class="hdr-text"><h1 class="hdr-title">Financial Roster</h1><div class="hdr-sub">${centerName} • ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div></div></div><div class="accent"></div><div class="summary"><div class="sum-box"><div class="sum-lbl">Total Members</div><div class="sum-val">${scopedMembers.length}</div></div><div class="sum-box"><div class="sum-lbl">Active Accounts</div><div class="sum-val" style="color: #16a34a;">${activeMembers.length}</div></div><div class="sum-box"><div class="sum-lbl">Overdue / Locked</div><div class="sum-val" style="color: #dc2626;">${scopedMembers.length - activeMembers.length}</div></div></div><table><thead><tr><th>Member Name</th><th>Plan Type</th><th>Payment Method</th><th>Final Rate</th></tr></thead><tbody>${rows}</tbody><tfoot><tr class="total-row"><td colspan="3" class="total-lbl">Expected Monthly Revenue (Active Members):</td><td class="total-val">$${totalRevenue.toFixed(2)}</td></tr></tfoot></table></body></html>`;
+                    const buildTable = (mems, title, total) => {
+                        if (mems.length === 0) return '';
+                        const rows = mems.map(m => {
+                            const finalRate = parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0;
+                            const payMethod = getPayMethod(m);
+                            return `<tr><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${m.firstName} ${m.lastName}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${m.type}${m.sponsorName ? ` (${m.sponsorName})` : ''}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${payMethod}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; font-weight:bold; color: #16a34a;">$${finalRate.toFixed(2)}</td></tr>`;
+                        }).join('');
+                        return `<h3 style="color:#003d6b; margin-top:30px; margin-bottom:10px; font-size:16px; text-transform:uppercase; letter-spacing:1px;">${title}</h3><table><thead><tr><th>Member Name</th><th>Plan Type</th><th>Payment Method</th><th>Final Rate</th></tr></thead><tbody>${rows}</tbody><tfoot><tr class="total-row"><td colspan="3" class="total-lbl">${title} Revenue:</td><td class="total-val">$${total.toFixed(2)}</td></tr></tfoot></table>`;
+                    };
+
+                    const html = `<!DOCTYPE html><html><head><title>Financial Report - ${centerName}</title><style>@media print { body { margin: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } } body { font-family: Arial, sans-serif; color: #1e293b; margin: 0; padding: 40px; } .hdr { background: #003d6b; padding: 20px; display: flex; align-items: center; gap: 15px; border-radius: 8px 8px 0 0; } .hdr img { height: 40px; } .hdr-text { color: white; } .hdr-title { font-size: 24px; font-weight: 900; margin: 0; } .hdr-sub { font-size: 12px; color: #8bb8d9; text-transform: uppercase; letter-spacing: 1px; } .accent { height: 4px; background: linear-gradient(to right, #dba51f, #dd6d22); margin-bottom: 30px; } .summary { display: flex; gap: 40px; margin-bottom: 20px; background: #f8fafc; padding: 15px 20px; border-radius: 8px; border: 1px solid #e2e8f0; } .sum-box { text-align: left; } .sum-lbl { font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 1px; } .sum-val { font-size: 20px; font-weight: 900; color: #003d6b; margin-top: 5px; } table { width: 100%; border-collapse: collapse; font-size: 12px; } th { background: #003d6b; color: white; text-align: left; padding: 12px 10px; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; } td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; } tr:nth-child(even) { background-color: #f8fafc; } .total-row td { background: #fff; border-top: 2px solid #003d6b; border-bottom: none; padding-top: 20px; font-size: 14px; } .total-lbl { text-align: right; font-weight: 900; color: #1e293b; text-transform: uppercase; letter-spacing: 1px; } .total-val { font-size: 16px; font-weight: 900; color: #16a34a; text-align: left; padding-left: 12px;} .grand-total { margin-top: 30px; padding: 20px; background: #003d6b; color: white; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: 900; }</style></head><body><div class="hdr"><img src="${LOGO_URL}" /><div class="hdr-text"><h1 class="hdr-title">Financial Report</h1><div class="hdr-sub">${centerName} • ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div></div></div><div class="accent"></div><div class="summary"><div class="sum-box"><div class="sum-lbl">Total Paying Accounts</div><div class="sum-val">${activePaidMembers.length}</div></div><div class="sum-box"><div class="sum-lbl">Standard Members</div><div class="sum-val" style="color: #1080ad;">${standardMembers.length}</div></div><div class="sum-box"><div class="sum-lbl">Corporate Members</div><div class="sum-val" style="color: #8b5cf6;">${corporateMembers.length}</div></div></div>${buildTable(standardMembers, 'Standard Memberships', standardTotal)}${buildTable(corporateMembers, 'Corporate Memberships', corpTotal)}<div class="grand-total"><span>TOTAL COLLECTED REVENUE:</span><span>$${grandTotal.toFixed(2)}</span></div></body></html>`;
                     const w = window.open('', '_blank'); w.document.write(html); w.document.close(); setTimeout(() => w.print(), 500);
                   }} className="px-4 py-2 bg-[#16a34a] text-white rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-green-700"><Printer size={16}/> Print Financials</button>
 
                   <button onClick={() => {
-                    if (scopedMembers.length === 0) { alert('No members found.'); return; }
-                    const csv = ["Member Name,Plan Type,Payment Method,Final Rate",...scopedMembers.map(m => `"${m.firstName} ${m.lastName}","${m.type}","${m.paymentMethod ? m.paymentMethod : 'None Logged'}","$${parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || '0'}"`)].join('\n');
-                    const b = new Blob([csv],{type:'text/csv'}); const u = window.URL.createObjectURL(b); const a = document.createElement('a'); a.href=u; a.download=`Financial_Roster_${reportMonth}.csv`; a.click(); window.URL.revokeObjectURL(u);
+                    const activePaidMembers = scopedMembers.filter(m => {
+                        if (m.status !== 'ACTIVE') return false;
+                        if (m.type.includes('CORPORATE') || m.sponsorName) {
+                            const sponsor = corporatePartners.find(cp => cp.sponsorMatch === m.sponsorName);
+                            return sponsor && sponsor.paidMonths && sponsor.paidMonths.includes(reportMonth);
+                        }
+                        return !!m.paymentMethod;
+                    });
+                    
+                    if (activePaidMembers.length === 0) { alert('No completed payments found to report.'); return; }
+                    
+                    const getPayMethod = (m) => {
+                        if (m.type.includes('CORPORATE') || m.sponsorName) {
+                            const sponsor = corporatePartners.find(cp => cp.sponsorMatch === m.sponsorName);
+                            if (sponsor && sponsor.paidMonths) {
+                                const match = sponsor.paidMonths.split(',').find(str => str.startsWith(reportMonth));
+                                return match && match.includes(':') ? match.split(':')[1] : 'Corp Payment';
+                            }
+                        }
+                        return m.paymentMethod || 'None Logged';
+                    };
+                    
+                    const csv = ["Category,Member Name,Plan Type,Sponsor,Payment Method,Final Rate", ...activePaidMembers.map(m => {
+                       const isCorp = m.type.includes('CORPORATE') || m.sponsorName ? 'Corporate' : 'Standard';
+                       return `"${isCorp}","${m.firstName} ${m.lastName}","${m.type}","${m.sponsorName || 'N/A'}","${getPayMethod(m)}","$${parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || '0'}"`;
+                    })].join('\n');
+                    const b = new Blob([csv],{type:'text/csv'}); const u = window.URL.createObjectURL(b); const a = document.createElement('a'); a.href=u; a.download=`Financial_Report_${reportMonth}.csv`; a.click(); window.URL.revokeObjectURL(u);
                   }} className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-slate-50"><Download size={16}/> CSV</button>
                 </div>
               </div>
