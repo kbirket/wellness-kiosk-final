@@ -1205,7 +1205,30 @@ export default function WellnessHub() {
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Director Notes</p>
                         <p className="text-sm text-slate-600 bg-slate-50 p-4 rounded-xl border border-slate-100 whitespace-pre-wrap">{selectedMember.notes}</p>
                       </div>
-                    )}
+                 )}
+                 
+                 <div className="col-span-2 mt-6">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Recent Check-ins</p>
+                    {(() => {
+                      const memberVisits = visits.filter(v => v.name.toLowerCase() === `${selectedMember.firstName} ${selectedMember.lastName}`.toLowerCase()).slice(0, 5);
+                      if (memberVisits.length === 0) return <p className="text-sm text-slate-500 bg-slate-50 p-4 rounded-xl border border-slate-100 italic">No recent visits on file.</p>;
+                      return (
+                        <div className="space-y-2">
+                          {memberVisits.map((v, i) => (
+                            <div key={i} className="flex justify-between items-center bg-blue-50 p-3 rounded-xl border border-blue-100">
+                              <span className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                                <CheckCircle size={14} className="text-[#1080ad]"/> {v.center} 
+                                <span className="text-xs font-medium text-slate-500 hidden md:inline ml-1">({v.method || 'General Workout'})</span>
+                              </span>
+                              <span className="font-bold text-[#1080ad] text-xs">
+                                {new Date(v.time).toLocaleDateString()} @ {new Date(v.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                 </div>
                  </>) : (<>
                  <div className="space-y-4 mb-8">
                     <div className="grid grid-cols-2 gap-4">
