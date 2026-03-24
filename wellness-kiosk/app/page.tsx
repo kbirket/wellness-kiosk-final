@@ -1113,7 +1113,28 @@ export default function WellnessHub() {
                   {familyFlow && (<div className="w-full bg-slate-50 rounded-xl p-4 mb-6 border border-slate-200"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{familyFlow.familyName} — {familyFlow.addedMembers.length} member{familyFlow.addedMembers.length !== 1 ? 's' : ''}</p>{familyFlow.addedMembers.map((m, i) => (<div key={i} className="flex justify-between items-center py-1"><span className="text-sm font-bold text-slate-700">{m.name} {m.isPrimary ? <span className="text-[9px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded font-black ml-1">PRIMARY</span> : ''}</span><span className="text-sm font-mono text-slate-400">PIN: {m.pin}</span></div>))}</div>)}
                   <div className="flex gap-3 w-full">
                     {familyFlow && (<button onClick={() => { setNewMemberPin(null); }} className="flex-1 bg-[#1080ad] text-white px-6 py-4 rounded-xl font-bold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"><Plus size={16}/> Add Family Member</button>)}
-                    <button onClick={() => { setNewMemberPin(null); setShowAddModal(false); setFamilyFlow(null); setSelectedSponsor(''); setCustomSponsor(''); window.location.reload(); }} className={`${familyFlow ? 'flex-1' : 'w-full'} bg-[#001f3f] text-white px-8 py-4 rounded-xl font-bold`}>Done</button>
+                   <button onClick={() => { 
+  setNewMemberPin(null); 
+  setShowAddModal(false); 
+  setFamilyFlow(null); 
+  setSelectedSponsor(''); 
+  setCustomSponsor(''); 
+  
+  // Silently refresh the members list in the background
+  setLoading(true);
+  fetch('/api/members').then(res => res.json()).then(data => {
+    if (data.records) {
+      const mappedMembers = data.records.filter(r => r.fields['First Name'] && r.fields['First Name'] !== '').map(r => {
+        let planText = r.fields['Plan Name'] ? (Array.isArray(r.fields['Plan Name']) ? r.fields['Plan Name'][0] : r.fields['Plan Name']) : 'UNKNOWN PLAN';
+        let rawPassword = String(r.fields['Password'] || '').trim();
+        let finalPassword = (rawPassword === '' || rawPassword.includes('ERROR')) ? '1111' : rawPassword;
+        return { airtableId: r.id, id: r.fields['Member ID'] || r.id, firstName: r.fields['First Name'] || 'Unknown', lastName: r.fields['Last Name'] || '', email: r.fields['Email'] || '', phone: r.fields['Phone'] || '', password: finalPassword, status: (r.fields['Membership Status'] || 'ACTIVE').toUpperCase(), type: String(planText).toUpperCase().trim(), center: r.fields['Home Center'] || 'Anthony', visits: Number(r.fields['Total Visits'] || 0), nextPayment: r.fields['Next Payment Due'] || null, sponsor: !!r.fields['Corporate Sponsor'], sponsorName: r.fields['Corporate Sponsor'] ? String(r.fields['Corporate Sponsor']).trim() : '', needsOrientation: !!r.fields['Needs Orientation'], familyName: r.fields['Family Name'] ? (Array.isArray(r.fields['Family Name']) ? r.fields['Family Name'][0] : r.fields['Family Name']) : '', billingMethod: r.fields['Billing Method'] || '', monthlyRate: r.fields['Monthly Rate'] || '', access247: !!r.fields['24/7 Access'], badgeNumber: r.fields['Badge Number'] || '', startDate: r.fields['Start Date'] || null, notes: r.fields['Notes'] || '', discountCode: r.fields['Discount Code'] || '', discountExpiration: r.fields['Discount Expiration'] || null };
+      });
+      setMembers(mappedMembers);
+    }
+    setLoading(false);
+  });
+}} className={`${familyFlow ? 'flex-1' : 'w-full'} bg-[#001f3f] text-white px-8 py-4 rounded-xl font-bold`}>Done</button>
                   </div>
                 </div>
               ) : (
