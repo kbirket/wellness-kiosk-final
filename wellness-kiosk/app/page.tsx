@@ -273,7 +273,8 @@ export default function WellnessHub() {
       let bestClass = "Class Attendee (Kiosk)";
       let minDiff = 9999;
       schedule.forEach(c => {
-        if ((c.center === viewingCenter || viewingCenter === 'both') && c.days.includes(todayName)) {
+        const isRightDay = c.days === 'Mon - Fri' ? (now.getDay() >= 1 && now.getDay() <= 5) : c.days.includes(todayName);
+        if ((c.center === viewingCenter || viewingCenter === 'both') && isRightDay) {
           const [t, ampm] = c.time.split(' ');
           let [h, m] = t.split(':').map(Number);
           if (ampm === 'PM' && h !== 12) h += 12;
@@ -485,7 +486,16 @@ export default function WellnessHub() {
             { name: 'Chair Class', center: 'harper', days: 'Mon, Wed, Fri', time: '11:00 AM', capacity: 20, color: 'border-[#f59e0b]' }
           ];
 
-          const displayedClasses = allClasses.filter(c => viewingCenter === 'both' || c.center === viewingCenter);
+          const todayIdx = new Date().getDay();
+          const dayMap = {0:'Sun',1:'Mon',2:'Tue',3:'Wed',4:'Thu',5:'Fri',6:'Sat'};
+          const todayName = dayMap[todayIdx];
+          
+          const displayedClasses = allClasses.filter(c => {
+            const isRightCenter = viewingCenter === 'both' || c.center === viewingCenter;
+            const isRightDay = c.days === 'Mon - Fri' ? (todayIdx >= 1 && todayIdx <= 5) : c.days.includes(todayName);
+            return isRightCenter && isRightDay;
+          });
+
           const todayStr = new Date().toDateString();
 
           return (
