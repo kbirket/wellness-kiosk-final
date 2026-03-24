@@ -2,7 +2,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
-import { Users, Search, QrCode, CreditCard, X, CheckCircle, AlertCircle, TrendingUp, Calendar, MapPin, Mail, LogOut, ShieldCheck, Phone, Activity, ChevronRight, LayoutDashboard, Filter, Download, Bell, FileText, Plus, Smartphone, Clock, Camera, UserCircle, Lock, Printer, Trash2, Briefcase, KeyRound, Eye } from 'lucide-react';
+import { Users, Search, QrCode, CreditCard, X, CheckCircle, AlertCircle, TrendingUp, Calendar, MapPin, Mail, LogOut, ShieldCheck, Phone, Activity, ChevronRight, LayoutDashboard, Filter, Download, Bell, FileText, Plus, Smartphone, Clock, Camera, UserCircle, Lock, Printer, Trash2, Briefcase, KeyRound, Eye, HelpCircle } from 'lucide-react';
 
 const QRCode = ({ data, size = 160, darkColor = '#001f3f' }) => { const hexColor = darkColor.replace('#', ''); const safeData = encodeURIComponent(data || "WC-000"); const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${safeData}&color=${hexColor}&bgcolor=ffffff`; return <img src={qrUrl} alt="QR Code" style={{ width: size, height: size, display: 'block' }} />; };
 
@@ -355,11 +355,11 @@ export default function WellnessHub() {
         <div className="p-8 border-b border-white/10 flex justify-center"><img src={LOGO_URL} alt="Logo" className="h-10 opacity-90 drop-shadow-md" /></div>
         <div className="p-6"><div className="flex items-center gap-3 mb-4"><div className="w-10 h-10 rounded-lg bg-[#f59e0b] flex items-center justify-center font-bold text-lg text-[#001f3f]">{user?.name.charAt(0)}</div><div><p className="text-sm font-bold leading-none">{user?.name}</p><p className="text-[11px] text-white/50">@{user?.username}</p></div></div><button onClick={handleLogout} className="flex items-center gap-2 text-xs text-white/40 hover:text-white transition-colors"><LogOut size={14} /> Sign Out</button></div>
         <div className="px-4 mb-8"><p className="px-2 text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3">Viewing</p><div className="space-y-1">{[{k:'both',c:'#ffffff'},{k:'harper',c:'#f59e0b'},{k:'anthony',c:'#1080ad'}].map(item => (<button key={item.k} onClick={() => { setViewingCenter(item.k); localStorage.setItem('wellnessCenter', item.k); }} className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all ${viewingCenter === item.k ? 'bg-white/20 font-bold' : 'text-white/60 hover:bg-white/5'}`}><span className="w-1.5 h-6 rounded-full" style={{ backgroundColor: item.c }} />{item.k === 'both' ? 'Both Centers' : `${item.k.charAt(0).toUpperCase() + item.k.slice(1)}`}</button>))}</div></div>
-        <nav className="flex-1 px-4 space-y-1">{[{id:'dashboard',label:'Dashboard',icon:<LayoutDashboard size={18}/>},{id:'members',label:'Members',icon:<Users size={18}/>},{id:'classes',label:'Classes',icon:<Calendar size={18}/>},{id:'badge',label:'Staff Check-In',icon:<QrCode size={18}/>},{id:'notif',label:'Notifications',icon:<Bell size={18}/>},{id:'visitors',label:'Visitors',icon:<Eye size={18}/>},{id:'corporate',label:'Corporate',icon:<Briefcase size={18}/>},{id:'reports',label:'Reports',icon:<FileText size={18}/>}].map(item => (<button key={item.id} onClick={() => { setActiveTab(item.id); setKioskInput(''); }} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all ${activeTab === item.id ? 'bg-[#1080ad] text-white font-bold' : 'text-white/60 hover:bg-white/5'}`}>{item.icon} {item.label}{item.id === 'notif' && stats.overdue > 0 && <span className="ml-auto w-5 h-5 rounded-full bg-red-500 text-[10px] flex items-center justify-center font-bold tracking-tight">{stats.overdue}</span>}</button>))}</nav>
+        <nav className="flex-1 px-4 space-y-1">{[{id:'dashboard',label:'Dashboard',icon:<LayoutDashboard size={18}/>},{id:'members',label:'Members',icon:<Users size={18}/>},{id:'classes',label:'Classes',icon:<Calendar size={18}/>},{id:'badge',label:'Staff Check-In',icon:<QrCode size={18}/>},{id:'notif',label:'Notifications',icon:<Bell size={18}/>},{id:'visitors',label:'Visitors',icon:<Eye size={18}/>},{id:'corporate',label:'Corporate',icon:<Briefcase size={18}/>},{id:'reports',label:'Reports',icon:<FileText size={18}/>},{id:'help',label:'Help & Training',icon:<HelpCircle size={18}/>}].map(item => (<button key={item.id} onClick={() => { setActiveTab(item.id); setKioskInput(''); }} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all ${activeTab === item.id ? 'bg-[#1080ad] text-white font-bold' : 'text-white/60 hover:bg-white/5'}`}>{item.icon} {item.label}{item.id === 'notif' && stats.overdue > 0 && <span className="ml-auto w-5 h-5 rounded-full bg-red-500 text-[10px] flex items-center justify-center font-bold tracking-tight">{stats.overdue}</span>}</button>))}</nav>
       </aside>
 
       <main className="flex-1 p-10 h-screen overflow-y-auto relative print:m-0 print:p-0 print:h-auto print:overflow-visible">
-        <div className="mb-10 print:hidden"><h2 className="text-3xl font-bold text-[#001f3f] capitalize tracking-tight">{activeTab}</h2><p className="text-sm text-slate-400 font-medium">{viewingCenter === 'both' ? 'All Centers' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1) + ' Center'} · {currentDateString}</p></div>
+        <div className="mb-10 print:hidden"><h2 className="text-3xl font-bold text-[#001f3f] capitalize tracking-tight">{activeTab === 'notif' ? 'Notifications' : activeTab}</h2><p className="text-sm text-slate-400 font-medium">{viewingCenter === 'both' ? 'All Centers' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1) + ' Center'} · {currentDateString}</p></div>
 
         {activeTab === 'dashboard' && (() => {
           const today = new Date(); const todayStr = today.toDateString(); const weekFromNow = new Date(today.getTime() + 7*24*60*60*1000);
@@ -1026,6 +1026,69 @@ export default function WellnessHub() {
         {activeTab === 'notif' && (<div className="space-y-6"><div className="flex justify-between items-center mb-8"><div><h2 className="text-3xl font-bold text-[#001f3f] tracking-tight">Notifications</h2><p className="text-slate-400 font-medium">Payment reminders</p></div><button className="bg-[#dd6d22] text-white px-8 py-3 rounded-xl font-bold shadow-lg flex items-center gap-2"><Bell size={20}/> Send All Due</button></div><ProListCard title="Due for Reminder"><div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mt-4"><table className="w-full text-left border-collapse"><thead className="bg-slate-50 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b"><tr><th className="px-8 py-4 w-64">Member</th><th className="px-8 py-4 w-40">Type</th><th className="px-8 py-4 w-32">Status</th><th className="px-8 py-4 w-32">Due</th><th className="px-8 py-4 w-24">Actions</th></tr></thead><tbody className="text-sm">{scopedMembers.filter(m => m.status !== 'ACTIVE').map(m => (<tr key={m.id} className="border-b"><td className="px-8 py-5"><p className="font-bold text-slate-800">{m.firstName} {m.lastName}</p><p className="text-[11px] text-slate-400">{m.email}</p></td><td className="px-8 py-5"><span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black">{m.type}</span></td><td className="px-8 py-5"><span className={`px-3 py-1 rounded-full text-[10px] font-black ${m.status==='OVERDUE'?'bg-red-100 text-red-600':'bg-amber-100 text-amber-600'}`}>{m.status}</span></td><td className="px-8 py-5 text-slate-600 font-medium">{m.nextPayment}</td><td className="px-8 py-5 flex gap-2"><button className="p-2 bg-[#1080ad] text-white rounded-lg shadow-md"><Mail size={16}/></button><button className="p-2 bg-[#dd6d22] text-white rounded-lg shadow-md"><Phone size={16}/></button></td></tr>))}</tbody></table></div></ProListCard></div>)}
 
         {activeTab === 'badge' && (<div className="space-y-6"><div className="mb-8"><h2 className="text-3xl font-bold text-[#001f3f] tracking-tight mb-1">Staff Check-In</h2><p className="text-slate-400 font-medium">Log a check-in manually or via scanner.</p></div><div className="flex gap-8"><div className="bg-white p-12 rounded-3xl shadow-sm border border-slate-200 flex-1 text-center"><p className="text-sm font-bold text-slate-400 mb-4">Enter Name or ID:</p><div className="relative w-full max-w-sm mx-auto mb-10"><div className="flex gap-4"><input className="flex-1 p-4 border rounded-xl outline-none text-xl text-center bg-slate-100 focus:border-[#1080ad] focus:bg-white transition-colors" placeholder="e.g. Smith" value={kioskInput} onChange={(e) => setKioskInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { processCheckIn(kioskInput, "Staff Scan/Entry"); setKioskInput(''); } }} /><button onClick={() => { processCheckIn(kioskInput, "Staff Scan/Entry"); setKioskInput(''); }} className="bg-[#001f3f] text-white px-8 rounded-xl font-bold hover:bg-blue-900 transition-colors shadow-sm">Check In</button></div>{kioskMatches.length > 0 && (<div className="absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 overflow-hidden text-left">{kioskMatches.map(m => (<button key={m._type + (m.airtableId || m.id)} onClick={() => { processCheckIn(m.id, "Staff Override Entry"); setKioskInput(''); }} className="w-full p-4 border-b border-slate-100 last:border-0 hover:bg-blue-50 transition-colors flex justify-between items-center group"><div><p className="font-bold text-[#001f3f] text-lg">{m.firstName} {m.lastName}</p><p className="text-[10px] text-slate-400 uppercase tracking-widest">{m.phone||'No Phone'}</p></div><div className="bg-[#1080ad] text-white px-3 py-1 rounded-lg text-xs font-bold shadow-sm group-hover:scale-105 transition-transform">Select</div></button>))}</div>)}</div>{kioskMessage.text && (<div className={`mt-8 p-4 rounded-xl text-center font-bold text-lg ${kioskMessage.type==='success'?'bg-green-100 text-green-700':kioskMessage.type==='warning'?'bg-yellow-100 text-yellow-700':'bg-red-100 text-red-700'}`}>{kioskMessage.text}{kioskMessage.subtext && <p className="text-sm mt-1">{kioskMessage.subtext}</p>}</div>)}</div></div></div>)}
+
+        {/* --- NEW HELP & TRAINING TAB --- */}
+        {activeTab === 'help' && (
+          <div className="max-w-4xl mx-auto space-y-8">
+            <div className="mb-8">
+              <h2 className="text-3xl font-bold text-[#001f3f] tracking-tight">Help & Training</h2>
+              <p className="text-slate-400 font-medium">Director's manual and frequently asked questions for the custom app features.</p>
+            </div>
+
+            <ProListCard title="General Membership Management">
+              <div className="space-y-6">
+                <div>
+                  <h4 className="font-bold text-slate-800 text-lg mb-2">How do I add a family member?</h4>
+                  <p className="text-slate-600 text-sm leading-relaxed mb-2">There are two ways to add members to a family group:</p>
+                  <ul className="list-disc pl-6 text-slate-600 text-sm space-y-1">
+                    <li><strong>Option 1 (New Family):</strong> Click "Add Member" and select the `FAMILY` plan. After you save the first member, the success screen will offer a blue "Add Family Member" button to keep adding people under that exact same family plan.</li>
+                    <li><strong>Option 2 (Existing Family):</strong> Find the primary member on the dashboard and click their row to open their profile. Click the purple <span className="font-bold">"Add to Family"</span> button at the bottom. This will automatically link the new person to their family group.</li>
+                  </ul>
+                </div>
+                
+                <div className="border-t border-slate-100 pt-6">
+                  <h4 className="font-bold text-slate-800 text-lg mb-2">How do I print a payment reminder letter?</h4>
+                  <p className="text-slate-600 text-sm leading-relaxed">Open a member's profile card and click the grey <span className="font-bold">"Print Letter"</span> button at the bottom. It will generate a custom PDF addressed to them. The layout is specifically designed so that if you fold the paper in thirds, their address will perfectly align with a standard windowed envelope.</p>
+                </div>
+
+                <div className="border-t border-slate-100 pt-6">
+                  <h4 className="font-bold text-slate-800 text-lg mb-2">What if someone forgets their PIN?</h4>
+                  <p className="text-slate-600 text-sm leading-relaxed">Open their profile card and click the yellow <span className="font-bold">"Reset PIN"</span> button at the bottom. The system will instantly generate a new, random 4-digit code and display it on your screen to give to the member.</p>
+                </div>
+              </div>
+            </ProListCard>
+
+            <ProListCard title="Corporate & Usage-Based Billing">
+              <div className="space-y-6">
+                <div>
+                  <h4 className="font-bold text-slate-800 text-lg mb-2">How do I charge a corporate partner based on usage?</h4>
+                  <p className="text-slate-600 text-sm leading-relaxed mb-2">Some partners (like the City of Harper) only pay for employees who actually use the gym. To generate their invoice:</p>
+                  <ol className="list-decimal pl-6 text-slate-600 text-sm space-y-1">
+                    <li>Go to the <strong>Corporate</strong> tab.</li>
+                    <li>Select the billing period (e.g., Q1 2026) from the dropdown at the top right.</li>
+                    <li>Check the <strong>"Usage-Based Billing"</strong> box on that company's card.</li>
+                    <li>Click <strong>Invoice</strong>. The system will automatically scan that quarter, find exactly who visited, calculate the total owed based on active months, and print a fully itemized invoice for their HR department.</li>
+                  </ol>
+                </div>
+                
+                <div className="border-t border-slate-100 pt-6">
+                  <h4 className="font-bold text-slate-800 text-lg mb-2">How do I update a company's mailing address or HR contact?</h4>
+                  <p className="text-slate-600 text-sm leading-relaxed">Go to the Corporate tab and click the small blue <span className="font-bold">"Edit"</span> button next to the company's name. A window will pop up allowing you to change their HR Contact Name, Email, and Full Mailing Address. This new address will immediately be applied to all future printed invoices.</p>
+                </div>
+              </div>
+            </ProListCard>
+
+            <ProListCard title="Visitors & Passes">
+              <div className="space-y-6">
+                <div>
+                  <h4 className="font-bold text-slate-800 text-lg mb-2">How do I renew an expired visitor pass?</h4>
+                  <p className="text-slate-600 text-sm leading-relaxed">If a visitor comes back and wants to buy another Day Pass or Courtesy Pass, go to the <strong>Visitors</strong> tab. Find their name in the list, hover your mouse over the purple <span className="font-bold">"Renew Pass"</span> button on the far right, and click the type of pass they are getting. It will instantly generate a new active pass with a fresh expiration date and PIN.</p>
+                </div>
+              </div>
+            </ProListCard>
+          </div>
+        )}
+
       </main>
 
       {/* VISITOR DETAIL MODAL */}
