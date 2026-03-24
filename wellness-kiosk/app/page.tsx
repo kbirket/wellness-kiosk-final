@@ -59,6 +59,7 @@ export default function WellnessHub() {
   const [usageBasedCorps, setUsageBasedCorps] = useState(() => { try { return JSON.parse(localStorage.getItem('wellnessUsagePrefs')) || {}; } catch(e) { return {}; } });
   const [expandedCorpId, setExpandedCorpId] = useState(null);
   const [editingCorp, setEditingCorp] = useState(null);
+  const [corpPaymentModal, setCorpPaymentModal] = useState(null);
   
   const [showAddVisitorModal, setShowAddVisitorModal] = useState(false);
   const [selectedVisitor, setSelectedVisitor] = useState(null);
@@ -755,20 +756,17 @@ export default function WellnessHub() {
                  const isPaid = !!paidMatch;
                  const corpPayMethod = paidMatch && paidMatch.includes(':') ? paidMatch.split(':')[1] : '';
 
-                 const togglePayment = async () => {
-                    let newPaidMonths = corp.paidMonths || '';
+           const togglePayment = async () => {
                     if (isPaid) {
+                       let newPaidMonths = corp.paidMonths || '';
                        newPaidMonths = newPaidMonths.split(',').filter(mn => !mn.startsWith(reportMonth)).join(',');
+                       setCorporatePartners(prev => prev.map(c => c.id === corp.id ? { ...c, paidMonths: newPaidMonths } : c));
+                       try {
+                          await fetch('/api/update-corporate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ recordId: corp.id, paidMonths: newPaidMonths }) });
+                       } catch (err) { alert('Failed to sync payment status to Airtable.'); }
                     } else {
-                       const method = window.prompt(`How is ${corp.name} paying for ${displayPeriod}?\n(e.g., Check, ACH, Card)`);
-                       if (method === null) return; // User cancelled
-                       const entry = `${reportMonth}:${method.trim() || 'Unknown'}`;
-                       newPaidMonths = newPaidMonths ? `${newPaidMonths},${entry}` : entry;
+                       setCorpPaymentModal({ ...corp, reportMonth, displayPeriod });
                     }
-                    setCorporatePartners(prev => prev.map(c => c.id === corp.id ? { ...c, paidMonths: newPaidMonths } : c));
-                    try {
-                       await fetch('/api/update-corporate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ recordId: corp.id, paidMonths: newPaidMonths }) });
-                    } catch (err) { alert('Failed to sync payment status to Airtable.'); }
                  };
 
                  const downloadCSV = () => {
@@ -1641,6 +1639,39 @@ export default function WellnessHub() {
               ))}
             </div>
             <button onClick={() => setPaymentModal(null)} className="w-full text-slate-400 text-sm font-bold hover:text-slate-600">Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* CORPORATE PAYMENT MODAL */}
+      {corpPaymentModal && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-8 relative shadow-2xl">
+            <button onClick={() => setCorpPaymentModal(null)} className="absolute top-4 right-4 text-slate-300 hover:text-red-500"><X size={20}/></button>
+            <div className="text-center mb-6">
+              <Briefcase size={40} className="text-[#8b5cf6] mx-auto mb-3" />
+              <h3 className="text-xl font-black text-[#001f3f]">Log Corporate Payment</h3>
+              <p className="text-sm text-slate-400 mt-1">{corpPaymentModal.name} • {corpPaymentModal.displayPeriod}</p>
+            </div>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Payment Method</p>
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              {['Check', 'ACH', 'Card', 'Cash'].map(m => (
+                <button key={m} onClick={async () => {
+                  const entry = `${corpPaymentModal.reportMonth}:${m}`;
+                  const newPaidMonths = corpPaymentModal.paidMonths ? `${corpPaymentModal.paidMonths},${entry}` : entry;
+                  
+                  setCorporatePartners(prev => prev.map(c => c.id === corpPaymentModal.id ? { ...c, paidMonths: newPaidMonths } : c));
+                  setCorpPaymentModal(null);
+                  
+                  try {
+                    await fetch('/api/update-corporate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ recordId: corpPaymentModal.id, paidMonths: newPaidMonths }) });
+                  } catch (err) { 
+                    alert('Failed to sync payment status to Airtable.'); 
+                  }
+                }} className="bg-slate-50 hover:bg-[#8b5cf6] hover:text-white text-[#001f3f] font-bold py-4 rounded-xl border border-slate-200 transition-all text-sm">{m}</button>
+              ))}
+            </div>
+            <button onClick={() => setCorpPaymentModal(null)} className="w-full text-slate-400 text-sm font-bold hover:text-slate-600">Cancel</button>
           </div>
         </div>
       )}
