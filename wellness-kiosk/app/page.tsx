@@ -55,12 +55,14 @@ export default function WellnessHub() {
     return `${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
   });
   
-const [usageBasedCorps, setUsageBasedCorps] = useState(() => { 
-    try { return JSON.parse(localStorage.getItem('wellnessUsagePrefs')) || {}; } catch(e) { return {}; } 
-  });
-  useEffect(() => { localStorage.setItem('wellnessUsagePrefs', JSON.stringify(usageBasedCorps)); }, [usageBasedCorps]);  const [expandedCorpId, setExpandedCorpId] = useState(null);
+  const [usageBasedCorps, setUsageBasedCorps] = useState(() => { try { return JSON.parse(localStorage.getItem('wellnessUsagePrefs')) || {}; } catch(e) { return {}; } });
+  const [expandedCorpId, setExpandedCorpId] = useState(null);
+  const [editingCorp, setEditingCorp] = useState(null);
+  
   const [showAddVisitorModal, setShowAddVisitorModal] = useState(false);
   const [selectedVisitor, setSelectedVisitor] = useState(null);
+
+  useEffect(() => { localStorage.setItem('wellnessUsagePrefs', JSON.stringify(usageBasedCorps)); }, [usageBasedCorps]);
 
   useEffect(() => {
     setShowAllMemberVisits(false);
@@ -783,7 +785,9 @@ const [usageBasedCorps, setUsageBasedCorps] = useState(() => {
 
                     const rows = enrichedMembers.map(mem => `<tr><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${mem.firstName} ${mem.lastName}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; font-family: monospace; color: #64748b;">${mem.id}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${mem.type}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: center; font-weight: bold; color: ${mem.periodVisits > 0 ? '#1080ad' : '#94a3b8'};">${mem.periodVisits}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: center;">${mem.activeMonthsCount}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: ${mem.memberOwed > 0 ? '#16a34a' : '#94a3b8'};">$${mem.memberOwed.toFixed(2)}</td></tr>`).join('');
 
-                    const html = `<!DOCTYPE html><html><head><title>Corporate Invoice - ${corp.name} - ${displayPeriod}</title><style>@media print{body{margin:0}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:40px}.hdr{background:#003d6b;padding:20px 44px;display:flex;justify-content:space-between;align-items:center;border-radius:8px 8px 0 0}.hdr-logo{height:40px}.hdr-text{text-align:right;color:white}.hdr-title{font-size:24px;font-weight:900;margin:0}.hdr-sub{font-size:12px;color:#8bb8d9;margin-top:4px;line-height:1.4}.accent{height:4px;background:linear-gradient(to right,#dba51f,#dd6d22);margin-bottom:40px}.bill-to{margin-bottom:30px}.bill-to h2{margin:0 0 5px 0;font-size:14px;color:#64748b;text-transform:uppercase;letter-spacing:1px}.bill-to p{margin:0;font-size:18px;font-weight:900;color:#003d6b}.summary{display:flex;gap:40px;margin-bottom:30px;background:#f8fafc;padding:20px;border-radius:8px;border:1px solid #e2e8f0}.sum-box{text-align:left}.sum-lbl{font-size:10px;font-weight:bold;color:#64748b;text-transform:uppercase;letter-spacing:1px}.sum-val{font-size:24px;font-weight:900;color:#003d6b;margin-top:5px}.sum-val.due{color:#16a34a}table{width:100%;border-collapse:collapse;margin-bottom:30px;font-size:12px}th{background:#003d6b;color:white;text-align:left;padding:12px 10px;font-size:10px;text-transform:uppercase;letter-spacing:1px}th.right{text-align:right}th.center{text-align:center}.total-row td{background:#fff;border-top:2px solid #003d6b;padding-top:20px;font-size:14px}.total-lbl{text-align:right;font-weight:900;color:#1e293b;text-transform:uppercase}.total-val{font-size:20px;font-weight:900;color:#16a34a;text-align:right}.sign{margin-top:40px;font-size:14px}.sign-name{font-weight:bold;color:#003d6b;margin-top:5px}.sign-title{color:#64748b;font-size:12px}</style></head><body><div class="hdr"><img src="${LOGO_URL}" class="hdr-logo" /><div class="hdr-text"><h1 class="hdr-title">Corporate Invoice</h1><div class="hdr-sub">${centerName}<br/>${centerAddr} | ${centerPhone}</div></div></div><div class="accent"></div><div class="bill-to"><h2>Billed To:</h2><p>${corp.name}</p><p style="font-size: 14px; font-weight: normal; color: #475569; margin-top: 4px;">Attn: ${corp.contactName || 'Benefits Administrator'}<br/>${corp.address ? `${corp.address}<br/>${corp.city}, ${corp.state} ${corp.zip}` : 'Address not on file'}</p></div><div class="summary"><div class="sum-box"><div class="sum-lbl">Billing Period</div><div class="sum-val" style="font-size: 18px;">${displayPeriod}</div></div><div class="sum-box"><div class="sum-lbl">${isUsageBased ? 'Active Employees' : 'Total Enrolled'}</div><div class="sum-val" style="font-size: 18px;">${activeMembersCount}</div></div><div class="sum-box"><div class="sum-lbl">Total Amount Due</div><div class="sum-val due" style="font-size: 18px;">$${totalOwed.toFixed(2)}</div></div></div><table><thead><tr><th>Employee Name</th><th>Member ID</th><th>Plan Type</th><th class="center">Period Visits</th><th class="center">Months Billed</th><th class="right">Amount Billed</th></tr></thead><tbody>${rows}</tbody><tfoot><tr class="total-row"><td colspan="5" class="total-lbl">Total Corporate Responsibility:</td><td class="total-val">$${totalOwed.toFixed(2)}</td></tr></tfoot></table><div class="sign"><p>Thank you for partnering with Patterson Health Center to keep your team healthy!</p><div class="sign-name">${directorName}</div><div class="sign-title">Director, ${centerName}</div></div></body></html>`;
+                    const addressBlock = corp.address ? `${corp.address}<br/>${corp.city}, ${corp.state} ${corp.zip}` : 'Address not on file';
+
+                    const html = `<!DOCTYPE html><html><head><title>Corporate Invoice - ${corp.name} - ${displayPeriod}</title><style>@media print{body{margin:0}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:40px}.hdr{background:#003d6b;padding:20px 44px;display:flex;justify-content:space-between;align-items:center;border-radius:8px 8px 0 0}.hdr-logo{height:40px}.hdr-text{text-align:right;color:white}.hdr-title{font-size:24px;font-weight:900;margin:0}.hdr-sub{font-size:12px;color:#8bb8d9;margin-top:4px;line-height:1.4}.accent{height:4px;background:linear-gradient(to right,#dba51f,#dd6d22);margin-bottom:40px}.bill-to{margin-bottom:30px}.bill-to h2{margin:0 0 5px 0;font-size:14px;color:#64748b;text-transform:uppercase;letter-spacing:1px}.bill-to p{margin:0;font-size:18px;font-weight:900;color:#003d6b}.summary{display:flex;gap:40px;margin-bottom:30px;background:#f8fafc;padding:20px;border-radius:8px;border:1px solid #e2e8f0}.sum-box{text-align:left}.sum-lbl{font-size:10px;font-weight:bold;color:#64748b;text-transform:uppercase;letter-spacing:1px}.sum-val{font-size:24px;font-weight:900;color:#003d6b;margin-top:5px}.sum-val.due{color:#16a34a}table{width:100%;border-collapse:collapse;margin-bottom:30px;font-size:12px}th{background:#003d6b;color:white;text-align:left;padding:12px 10px;font-size:10px;text-transform:uppercase;letter-spacing:1px}th.right{text-align:right}th.center{text-align:center}.total-row td{background:#fff;border-top:2px solid #003d6b;padding-top:20px;font-size:14px}.total-lbl{text-align:right;font-weight:900;color:#1e293b;text-transform:uppercase}.total-val{font-size:20px;font-weight:900;color:#16a34a;text-align:right}.sign{margin-top:40px;font-size:14px}.sign-name{font-weight:bold;color:#003d6b;margin-top:5px}.sign-title{color:#64748b;font-size:12px}</style></head><body><div class="hdr"><img src="${LOGO_URL}" class="hdr-logo" /><div class="hdr-text"><h1 class="hdr-title">Corporate Invoice</h1><div class="hdr-sub">${centerName}<br/>${centerAddr} | ${centerPhone}</div></div></div><div class="accent"></div><div class="bill-to"><h2>Billed To:</h2><p>${corp.name}</p><p style="font-size: 14px; font-weight: normal; color: #475569; margin-top: 4px;">Attn: ${corp.contactName || 'Benefits Administrator'}<br/>${addressBlock}</p></div><div class="summary"><div class="sum-box"><div class="sum-lbl">Billing Period</div><div class="sum-val" style="font-size: 18px;">${displayPeriod}</div></div><div class="sum-box"><div class="sum-lbl">${isUsageBased ? 'Active Employees' : 'Total Enrolled'}</div><div class="sum-val" style="font-size: 18px;">${activeMembersCount}</div></div><div class="sum-box"><div class="sum-lbl">Total Amount Due</div><div class="sum-val due" style="font-size: 18px;">$${totalOwed.toFixed(2)}</div></div></div><table><thead><tr><th>Employee Name</th><th>Member ID</th><th>Plan Type</th><th class="center">Period Visits</th><th class="center">Months Billed</th><th class="right">Amount Billed</th></tr></thead><tbody>${rows}</tbody><tfoot><tr class="total-row"><td colspan="5" class="total-lbl">Total Corporate Responsibility:</td><td class="total-val">$${totalOwed.toFixed(2)}</td></tr></tfoot></table><div class="sign"><p>Thank you for partnering with Patterson Health Center to keep your team healthy!</p><div class="sign-name">${directorName}</div><div class="sign-title">Director, ${centerName}</div></div></body></html>`;
                     const w = window.open('', '_blank'); w.document.write(html); w.document.close(); setTimeout(() => w.print(), 500);
                  };
 
@@ -792,9 +796,12 @@ const [usageBasedCorps, setUsageBasedCorps] = useState(() => {
                      <div>
                        <div className="flex justify-between items-start mb-1">
                          <h3 className="font-black text-[#001f3f] text-xl">{corp.name}</h3>
-                         <span className={`px-3 py-1 rounded-full text-[10px] font-black tracking-widest ${isPaid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                           {isPaid ? 'PAID' : 'UNPAID'}
-                         </span>
+                         <div className="flex items-center gap-2">
+                           <button onClick={() => setEditingCorp(corp)} className="bg-blue-50 text-[#1080ad] hover:bg-blue-100 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase transition-colors">Edit</button>
+                           <span className={`px-3 py-1 rounded-full text-[10px] font-black tracking-widest ${isPaid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                             {isPaid ? 'PAID' : 'UNPAID'}
+                           </span>
+                         </div>
                        </div>
                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1 mb-4"><Mail size={12}/> {corp.contactEmail || 'No Email on file'}</p>
                        
@@ -814,7 +821,7 @@ const [usageBasedCorps, setUsageBasedCorps] = useState(() => {
                        </div>
                        
                        <label className="flex items-center gap-2 mb-6 cursor-pointer group w-fit">
-                          <input type="checkbox" checked={isUsageBased} onChange={(e) => setUsageBasedCorps(prev => ({...prev, [corp.id]: e.target.checked}))}className="w-4 h-4 text-[#1080ad] rounded border-slate-300 cursor-pointer" />
+                          <input type="checkbox" checked={isUsageBased} onChange={(e) => setUsageBasedCorps(prev => ({...prev, [corp.id]: e.target.checked}))} className="w-4 h-4 text-[#1080ad] rounded border-slate-300 cursor-pointer" />
                           <span className="text-xs font-bold text-slate-500 uppercase tracking-widest group-hover:text-[#1080ad] transition-colors">Usage-Based Billing</span>
                        </label>
 
@@ -1047,6 +1054,49 @@ const [usageBasedCorps, setUsageBasedCorps] = useState(() => {
               <button onClick={() => setSelectedVisitor(null)} className="flex-1 bg-slate-100 text-[#001f3f] py-4 rounded-xl font-bold text-sm hover:bg-slate-200 transition-colors">Close</button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* EDIT CORPORATE MODAL */}
+      {editingCorp && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-[#001f3f]/90 backdrop-blur-md">
+           <div className="bg-white rounded-[2rem] w-full max-w-lg p-10 relative shadow-2xl">
+              <button onClick={() => setEditingCorp(null)} className="absolute top-6 right-6 text-slate-300 hover:text-red-500 transition-all"><X size={24}/></button>
+              <h2 className="text-3xl font-black text-[#001f3f] mb-2 tracking-tight">Edit Partner Info</h2>
+              <p className="text-slate-500 font-medium mb-8">Update contact and billing details for {editingCorp.name}.</p>
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                const updates = {
+                  recordId: editingCorp.id,
+                  contactName: e.target.c_contactName.value,
+                  contactEmail: e.target.c_contactEmail.value,
+                  address: e.target.c_address.value,
+                  city: e.target.c_city.value,
+                  state: e.target.c_state.value,
+                  zip: e.target.c_zip.value
+                };
+                try {
+                  const res = await fetch('/api/update-corporate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates) });
+                  setCorporatePartners(prev => prev.map(c => c.id === editingCorp.id ? { ...c, ...updates } : c));
+                  setEditingCorp(null);
+                } catch(err) {
+                  alert('Network error updating partner.');
+                }
+              }} className="space-y-4">
+                <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">HR Contact Name</label><input id="c_contactName" defaultValue={editingCorp.contactName} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]" /></div>
+                <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Contact Email</label><input id="c_contactEmail" type="email" defaultValue={editingCorp.contactEmail} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]" /></div>
+                <div className="col-span-2"><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Street Address</label><input id="c_address" defaultValue={editingCorp.address} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]" /></div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="col-span-1"><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">City</label><input id="c_city" defaultValue={editingCorp.city} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]" /></div>
+                  <div className="col-span-1"><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">State</label><input id="c_state" defaultValue={editingCorp.state} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]" /></div>
+                  <div className="col-span-1"><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Zip</label><input id="c_zip" defaultValue={editingCorp.zip} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]" /></div>
+                </div>
+                <div className="flex gap-3 mt-8">
+                  <button type="submit" className="flex-1 bg-[#1080ad] text-white py-4 rounded-xl font-bold hover:bg-blue-800 transition-colors">Save Changes</button>
+                  <button type="button" onClick={() => setEditingCorp(null)} className="flex-1 bg-slate-100 text-slate-600 py-4 rounded-xl font-bold hover:bg-slate-200 transition-colors">Cancel</button>
+                </div>
+              </form>
+           </div>
         </div>
       )}
 
