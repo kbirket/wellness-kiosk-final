@@ -1,29 +1,29 @@
 import { NextResponse } from 'next/server';
-export const dynamic = 'force-dynamic';
 
 export async function POST(request) {
-  const baseId = process.env.AIRTABLE_BASE_ID;
-  const token = process.env.AIRTABLE_PAT;
-  // NOTE: If your table in Airtable is named something else, change 'Corporate Partners' below!
-  const tableName = 'Corporate Partners';
-
   try {
     const body = await request.json();
-    const response = await fetch(`https://api.airtable.com/v0/${baseId}/${tableName}/${body.recordId}`, {
+    const { recordId, paidMonths, contactName, contactEmail, address, city, state, zip } = body;
+
+    const fields = {};
+    if (paidMonths !== undefined) fields['Paid Months'] = paidMonths;
+    if (contactName !== undefined) fields['Contact Name'] = contactName;
+    if (contactEmail !== undefined) fields['Contact Email'] = contactEmail;
+    if (address !== undefined) fields['Street Address'] = address;
+    if (city !== undefined) fields['City'] = city;
+    if (state !== undefined) fields['State'] = state;
+    if (zip !== undefined) fields['Zip'] = zip;
+
+    const res = await fetch(`https://api.airtable.com/v0/${process.env.AIRTABLE_BASE_ID}/Corporate%20Partners/${recordId}`, {
       method: 'PATCH',
       headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.AIRTABLE_API_KEY}`,
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        fields: {
-          "Paid Months": body.paidMonths
-        }
-      })
+      body: JSON.stringify({ fields })
     });
 
-    const data = await response.json();
-    if (data.error) return NextResponse.json({ success: false, error: data.error.message }, { status: 400 });
+    if (!res.ok) throw new Error('Airtable update failed');
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
