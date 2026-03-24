@@ -54,6 +54,7 @@ export default function WellnessHub() {
     return `${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
   });
   
+  const [usageBasedCorps, setUsageBasedCorps] = useState({});
   const [showAddVisitorModal, setShowAddVisitorModal] = useState(false);
   const [selectedVisitor, setSelectedVisitor] = useState(null);
 
@@ -65,12 +66,11 @@ export default function WellnessHub() {
       'SENIOR': { 'Month-to-Month': 22, 'Auto-Draft': 20, '6-Month Prepay': 125, '12-Month Prepay': 238 },
       'SENIOR CITIZEN': { 'Month-to-Month': 22, 'Auto-Draft': 20, '6-Month Prepay': 125, '12-Month Prepay': 238 }, 
       'SENIOR FAMILY': { 'Month-to-Month': 40, 'Auto-Draft': 36, '6-Month Prepay': 228, '12-Month Prepay': 432 },
-      'STUDENT': { 'Month-to-Month': 20, 'Auto-Draft': 18, '6-Month Prepay': 114, '12-Month Prepay': 216 },
-      'CLASS ONLY': { 'Month-to-Month': 10, 'Auto-Draft': 10, '6-Month Prepay': 60, '12-Month Prepay': 120 }
+      'STUDENT': { 'Month-to-Month': 20, 'Auto-Draft': 18, '6-Month Prepay': 114, '12-Month Prepay': 216 }
     };
-    if (['CORPORATE', 'CORPORATE SELF PAY'].includes(p)) return 25;
+    if (p === 'CORPORATE') return 25;
     if (p === 'CORPORATE FAMILY') return 45;
-    if (['MILITARY', 'HD6', 'HD6 FAMILY', 'HCHF', 'FIRST DAY FREE', 'HERITAGE ESTATES'].includes(p)) return 0;
+    if (['MILITARY', 'HD6', 'HCHF', 'FIRST DAY FREE'].includes(p)) return 0;
     return r[p] ? (r[p][b] || r[p]['Month-to-Month']) : 0;
   };
 
@@ -151,40 +151,18 @@ export default function WellnessHub() {
       senior: scopedMembers.filter(m => m.type === 'SENIOR' || m.type === 'SENIOR CITIZEN').length, 
       seniorFamily: scopedMembers.filter(m => m.type === 'SENIOR FAMILY').length, 
       student: scopedMembers.filter(m => m.type.includes('STUDENT')).length, 
-      corporate: scopedMembers.filter(m => m.type.includes('CORPORATE')).length, 
+      corporate: scopedMembers.filter(m => m.type === 'CORPORATE').length, 
+      corporateFamily: scopedMembers.filter(m => m.type === 'CORPORATE FAMILY').length, 
       dayPass: scopedMembers.filter(m => m.type.includes('DAY PASS')).length, 
       staff: scopedMembers.filter(m => m.type.includes('HD6') || m.type.includes('HCHF')).length, 
-      military: scopedMembers.filter(m => m.type.includes('MILITARY')).length,
-      classOnly: scopedMembers.filter(m => m.type === 'CLASS ONLY').length,
-      heritage: scopedMembers.filter(m => m.type === 'HERITAGE ESTATES').length
+      military: scopedMembers.filter(m => m.type.includes('MILITARY')).length 
   };
   
-  const planChartData = [
-      {label:'Single',value:reportStats.single,color:'#1080ad'},
-      {label:'Family',value:reportStats.family,color:'#f59e0b'},
-      {label:'Senior',value:reportStats.senior+reportStats.seniorFamily,color:'#16a34a'},
-      {label:'Corporate',value:reportStats.corporate,color:'#ef4444'},
-      {label:'Class Only',value:reportStats.classOnly,color:'#8b5cf6'},
-      {label:'Other',value:reportStats.staff+reportStats.heritage+reportStats.military+reportStats.student+reportStats.dayPass,color:'#64748b'}
-  ];
-  
+  const planChartData = [{label:'Single',value:reportStats.single,color:'#1080ad'},{label:'Family',value:reportStats.family,color:'#f59e0b'},{label:'Senior',value:reportStats.senior+reportStats.seniorFamily,color:'#16a34a'},{label:'Student',value:reportStats.student,color:'#8b5cf6'},{label:'Corporate',value:reportStats.corporate+reportStats.corporateFamily,color:'#ef4444'},{label:'Other (Staff/Mil/Pass)',value:reportStats.staff+reportStats.military+reportStats.dayPass,color:'#64748b'}];
   const statusChartData = [{label:'Active',value:stats.active,color:'#16a34a'},{label:'Expiring Soon',value:stats.expiring,color:'#f59e0b'},{label:'Overdue / Locked',value:stats.overdue,color:'#ef4444'}];
   const familyMembers = activeMember ? members.filter(m => m.id !== activeMember.id && ((m.email && m.email.toLowerCase() === activeMember.email.toLowerCase()) || (m.phone && m.phone === activeMember.phone))) : [];
 
   const handleUpdateProfile = async () => { setIsUpdating(true); const newEmail = document.getElementById('edit_email').value.trim(); const newPhone = document.getElementById('edit_phone').value.trim(); setActiveMember({...activeMember, email: newEmail, phone: newPhone}); setEditMode(false); try { await fetch('/api/update-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: activeMember.airtableId, email: newEmail, phone: newPhone }) }); } catch (err) { alert("App updated locally."); } setIsUpdating(false); };
-
-  const handleRenewVisitor = async (visitor, newPassType) => {
-    const confirmRenew = window.confirm(`Renew ${visitor.firstName} ${visitor.lastName} with a new ${newPassType}?`);
-    if (!confirmRenew) return;
-    try {
-      const res = await fetch('/api/renew-visitor', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visitorAirtableId: visitor.airtableId, newPassType, previousPassType: visitor.passType, previousExpiration: visitor.expirationDate, existingNotes: visitor.notes }) });
-      const result = await res.json();
-      if (result.success) {
-        setVisitors(prev => prev.map(v => v.airtableId === visitor.airtableId ? { ...v, passType: result.newPassType, expirationDate: result.newExpiration, amountPaid: result.amountPaid, purchaseDate: new Date().toISOString().slice(0, 10), notes: result.updatedNotes, orientationComplete: true } : v));
-        alert(`Pass renewed!\n\nNew pass: ${result.newPassType}\nExpires: ${new Date(result.newExpiration + 'T00:00:00').toLocaleDateString('en-US', {month:'long',day:'numeric',year:'numeric'})}${result.amountPaid > 0 ? `\nAmount: $${result.amountPaid}` : '\nCourtesy — no charge'}`);
-      } else { alert('Error: ' + result.error); }
-    } catch (err) { alert('Renewal failed.'); }
-  };
 
   const handleAddMemberSubmit = async (e) => {
     e.preventDefault(); setIsAdding(true); setNewMemberPin(null);
@@ -193,8 +171,12 @@ export default function WellnessHub() {
     const sponsor = isCorporate ? (selectedSponsor === '__other__' ? customSponsor : selectedSponsor) : '';
     const address = e.target.address?.value || ''; const city = e.target.city?.value || ''; const mstate = e.target.mstate?.value || 'KS'; const mzip = e.target.mzip?.value || '';
     const billing = e.target.billing?.value || 'Month-to-Month'; const access247 = e.target.access247?.checked || false; const startDate = document.getElementById('startDate').value; const badgeNumber = e.target.badgenum?.value || '';
-    const discountCode = e.target.discount?.value || ''; const discountExpiration = e.target.discount_exp?.value || '';
-    const basePrice = getBaseRate(plan, billing); const discountMatch = discountCode.match(/\$(\d+)/); const discountAmount = discountMatch ? parseInt(discountMatch[1], 10) : 0;
+    const discountCode = e.target.discount?.value || '';
+    const discountExpiration = e.target.discount_exp?.value || '';
+
+    const basePrice = getBaseRate(plan, billing);
+    const discountMatch = discountCode.match(/\$(\d+)/);
+    const discountAmount = discountMatch ? parseInt(discountMatch[1], 10) : 0;
     const finalMonthlyRate = Math.max(0, basePrice - discountAmount);
 
     if (isFamily && !familyFlow) {
@@ -202,21 +184,34 @@ export default function WellnessHub() {
         const res = await fetch('/api/add-family-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName, lastName, email, phone, plan, center, corporateSponsor: sponsor, needsOrientation, startDate, address, city, state: mstate, zip: mzip, billingMethod: billing, access247, badgeNumber, discountCode, discountExpiration, monthlyRate: finalMonthlyRate }) });
         const result = await res.json();
         if (result.success) { setFamilyFlow({ familyRecordId: result.familyRecordId, familyName: result.familyName, lastName, plan, center, email, phone, corporateSponsor: sponsor, addedMembers: [{ name: `${firstName} ${lastName}`, pin: result.pin, isPrimary: true }] }); setNewMemberPin({ name: `${firstName} ${lastName}`, pin: result.pin }); } else { alert('Error: ' + result.error); }
-      } catch (err) { alert('Network error.'); }
+      } catch (err) { alert('Network error. Please try again.'); }
     } else if (isFamily && familyFlow) {
       try {
         const res = await fetch('/api/add-family-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName, lastName: familyFlow.lastName, email: email || familyFlow.email, phone: phone || familyFlow.phone, plan: familyFlow.plan, center: familyFlow.center, familyRecordId: familyFlow.familyRecordId, corporateSponsor: familyFlow.corporateSponsor, needsOrientation, address, city, state: mstate, zip: mzip, access247, badgeNumber, discountCode, discountExpiration, monthlyRate: finalMonthlyRate }) });
         const result = await res.json();
         if (result.success) { const updated = { ...familyFlow, addedMembers: [...familyFlow.addedMembers, { name: `${firstName} ${familyFlow.lastName}`, pin: result.pin, isPrimary: false }] }; setFamilyFlow(updated); setNewMemberPin({ name: `${firstName} ${familyFlow.lastName}`, pin: result.pin }); } else { alert('Error: ' + result.error); }
-      } catch (err) { alert('Network error.'); }
+      } catch (err) { alert('Network error. Please try again.'); }
     } else {
       try {
         const res = await fetch('/api/add-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName, lastName, email, phone, plan, center, corporateSponsor: sponsor, needsOrientation, address, city, state: mstate, zip: mzip, billingMethod: billing, access247, badgeNumber, startDate, discountCode, discountExpiration, monthlyRate: finalMonthlyRate }) });
         const result = await res.json();
         if (result.success) { setNewMemberPin({ name: `${firstName} ${lastName}`, pin: result.pin || '1111' }); } else { alert('Error: ' + result.error); }
-      } catch (err) { alert('Network error.'); }
+      } catch (err) { alert('Network error. Please try again.'); }
     }
     setIsAdding(false);
+  };
+
+  const handleRenewVisitor = async (visitor, newPassType) => {
+    const confirmRenew = window.confirm(`Renew ${visitor.firstName} ${visitor.lastName} for a new ${newPassType}?`);
+    if (!confirmRenew) return;
+    try {
+      const res = await fetch('/api/add-visitor', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName: visitor.firstName, lastName: visitor.lastName, email: visitor.email, phone: visitor.phone, address: visitor.address, city: visitor.city, state: visitor.state, zip: visitor.zip, passType: newPassType, center: viewingCenter === 'both' ? 'Anthony Wellness Center' : viewingCenter === 'harper' ? 'Harper Wellness Center' : 'Anthony Wellness Center', referringProvider: visitor.referringProvider, notes: `Renewed on ${new Date().toLocaleDateString()}` }) });
+      const result = await res.json();
+      if (result.success) {
+        alert(`Pass Renewed!\n\nNew PIN: ${result.pin}\nExpires: ${result.expirationDate}`);
+        fetch('/api/get-visitors').then(r => r.json()).then(data => { if (data.records) setVisitors(data.records.map(r => ({ airtableId: r.id, firstName: r.fields['First Name'] || '', lastName: r.fields['Last Name'] || '', email: r.fields['Email'] || '', phone: r.fields['Phone'] || '', passType: r.fields['Pass Type'] || '', amountPaid: r.fields['Amount Paid'] || 0, referringProvider: r.fields['Referring Provider'] || '', purchaseDate: r.fields['Purchase Date'] || '', expirationDate: r.fields['Expiration Date'] || '', center: r.fields['Center'] || '', pin: r.fields['PIN'] || '', orientationComplete: !!r.fields['Orientation Complete'], totalVisits: r.fields['Total Visits'] || 0, address: r.fields['Street Address'] || '', city: r.fields['City'] || '', state: r.fields['State'] || '', zip: r.fields['Zip'] || '', notes: r.fields['Notes'] || '' }))); });
+      }
+    } catch (err) { alert('Renewal failed.'); }
   };
 
   const handleDeleteMember = async () => { if (!user || user.role !== 'admin') { alert('Only System Admins can delete members.'); return; } if (!window.confirm(`Permanently delete ${selectedMember.firstName} ${selectedMember.lastName}?`)) return; setIsDeleting(true); try { const res = await fetch('/api/delete-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: selectedMember.airtableId }) }); const result = await res.json(); if (result.success) { setMembers(prev => prev.filter(m => m.airtableId !== selectedMember.airtableId)); setSelectedMember(null); } else { alert('Error: ' + result.error); } } catch (err) { alert('Network error.'); } setIsDeleting(false); };
@@ -235,6 +230,22 @@ export default function WellnessHub() {
   if (!isMounted) return <div className="min-h-screen bg-[#001f3f]" />;
 
   if (view === 'landing') { return (<div className="min-h-screen bg-[#001f3f] flex items-center justify-center font-sans p-6 relative"><div className="text-center max-w-6xl w-full relative z-10"><img src={LOGO_URL} alt="Logo" className="h-40 mx-auto mb-16 opacity-100 drop-shadow-2xl" /><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"><button onClick={() => { setView('kiosk'); setViewingCenter(viewingCenter === 'both' ? 'anthony' : viewingCenter); setKioskInput(''); }} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group"><Smartphone size={56} className="text-[#1080ad] group-hover:scale-110 transition-transform" /><span className="text-xl font-bold">Public Kiosk</span></button><button onClick={() => setView('member_login')} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group"><UserCircle size={56} className="text-[#16a34a] group-hover:scale-110 transition-transform" /><span className="text-xl font-bold">Member Portal</span></button><button onClick={() => setView('corp_login')} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group"><Briefcase size={56} className="text-[#8b5cf6] group-hover:scale-110 transition-transform" /><span className="text-xl font-bold">Corporate Portal</span></button><button onClick={() => setView('login')} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group border-b-4 border-b-[#f59e0b]"><ShieldCheck size={56} className="text-[#f59e0b] group-hover:scale-110 transition-transform" /><span className="text-xl font-bold">Director Portal</span></button></div></div><button onClick={() => {setView('secret_scanner'); setViewingCenter('both');}} className="absolute bottom-6 right-6 opacity-10 hover:opacity-50 transition-opacity p-4"><Lock size={20} className="text-white"/></button></div>); }
+
+  if (view === 'login') { 
+    return (
+      <div className="min-h-screen bg-[#001f3f] flex items-center justify-center p-4 font-sans">
+        <div className="bg-white rounded-[3rem] shadow-2xl p-12 w-full max-w-md border-t-8 border-[#f59e0b]">
+          <div className="flex justify-center mb-6"><ShieldCheck size={64} className="text-[#f59e0b]" /></div>
+          <h2 className="text-4xl font-black text-center text-slate-900 mb-2 tracking-tight">Director Access</h2>
+          <p className="text-slate-400 mb-10 text-center font-medium tracking-tight">Log in to manage your wellness center.</p>
+          <input type="text" placeholder="Username" id="u_in" className="w-full p-5 bg-slate-100 rounded-2xl mb-4 outline-none border-2 border-transparent focus:border-[#f59e0b]/40 text-lg" onKeyDown={(e) => e.key === 'Enter' && handleLogin()} />
+          <input type="password" placeholder="Password" id="p_in" className="w-full p-5 bg-slate-100 rounded-2xl mb-8 outline-none border-2 border-transparent focus:border-[#f59e0b]/40 text-lg" onKeyDown={(e) => e.key === 'Enter' && handleLogin()} />
+          <button onClick={handleLogin} className="w-full bg-[#f59e0b] text-white p-5 rounded-2xl font-bold text-xl shadow-xl hover:bg-amber-600 transition-all">Sign In</button>
+          <button onClick={() => setView('landing')} className="w-full mt-6 text-slate-400 font-bold hover:text-slate-600 transition-colors">Return to Home</button>
+        </div>
+      </div>
+    ); 
+  }
 
   if (view === 'corp_login') { return (<div className="min-h-screen bg-[#001f3f] flex items-center justify-center p-4 font-sans"><div className="bg-white rounded-[3rem] shadow-2xl p-12 w-full max-w-md border-t-8 border-[#8b5cf6]"><div className="flex justify-center mb-6"><Briefcase size={64} className="text-[#8b5cf6]" /></div><h2 className="text-4xl font-black text-center text-slate-900 mb-2 tracking-tight">Partner Login</h2><p className="text-slate-400 mb-10 text-center font-medium tracking-tight">Access your employee wellness roster.</p><input type="text" placeholder="Company Username" id="c_in" className="w-full p-5 bg-slate-100 rounded-2xl mb-4 outline-none border-2 border-transparent focus:border-purple-500/20 text-lg" onKeyDown={(e) => e.key === 'Enter' && handleCorpLogin()} /><input type="password" placeholder="Access PIN" id="c_pin" className="w-full p-5 bg-slate-100 rounded-2xl mb-8 outline-none border-2 border-transparent focus:border-purple-500/20 text-lg" onKeyDown={(e) => e.key === 'Enter' && handleCorpLogin()} /><button onClick={handleCorpLogin} className="w-full bg-[#8b5cf6] text-white p-5 rounded-2xl font-bold text-xl shadow-xl hover:bg-purple-700 transition-all">Sign In</button><button onClick={() => setView('landing')} className="w-full mt-6 text-slate-400 font-bold hover:text-slate-600 transition-colors">Return to Home</button></div></div>); }
 
@@ -293,7 +304,12 @@ export default function WellnessHub() {
       
       <div className="flex justify-center mb-8">
         <label className="flex items-center gap-4 bg-white border-2 border-slate-200 rounded-2xl px-8 py-5 cursor-pointer hover:border-[#1080ad] hover:bg-blue-50 transition-all shadow-sm group">
-          <input type="checkbox" checked={kioskMode === 'Class'} onChange={(e) => setKioskMode(e.target.checked ? 'Class' : 'Gym')} className="w-7 h-7 rounded-md border-2 border-slate-300 text-[#1080ad] focus:ring-[#1080ad] cursor-pointer" />
+          <input 
+            type="checkbox" 
+            checked={kioskMode === 'Class'} 
+            onChange={(e) => setKioskMode(e.target.checked ? 'Class' : 'Gym')} 
+            className="w-7 h-7 rounded-md border-2 border-slate-300 text-[#1080ad] focus:ring-[#1080ad] cursor-pointer" 
+          />
           <span className="font-bold text-slate-700 text-xl select-none group-hover:text-[#001f3f] transition-colors">I am attending a class today</span>
         </label>
       </div>
@@ -307,8 +323,21 @@ export default function WellnessHub() {
 
   if (view === 'member_portal' && activeMember) { const myHistoricalVisits = visits.filter(v => v.name.toLowerCase() === (activeMember.firstName + ' ' + activeMember.lastName).toLowerCase()).slice(0, 10); return (<div className="min-h-screen bg-[#f0f2f5] font-sans pb-20 md:pb-0"><nav className="bg-[#001f3f] text-white p-4 shadow-md flex justify-between items-center sticky top-0 z-10"><div className="flex items-center gap-3"><img src={LOGO_URL} alt="Logo" className="h-6" /><span className="font-bold tracking-tight border-l border-white/20 pl-3">Wellness Portal</span></div><button onClick={() => { setActiveMember(null); setView('landing'); }} className="bg-red-500/20 text-red-100 hover:bg-red-500 hover:text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold transition-all"><LogOut size={16}/> Logout</button></nav><main className="max-w-md mx-auto p-4 space-y-6 mt-6"><div><h1 className="text-3xl font-black text-[#001f3f] tracking-tight mb-1">Hi, {activeMember.firstName}!</h1><p className="text-slate-500 font-medium">Welcome to your digital access portal.</p></div><div className="bg-white rounded-3xl shadow-lg border border-slate-100 p-8 flex flex-col items-center justify-center relative overflow-hidden"><div className="absolute top-0 left-0 w-full h-2 bg-[#1080ad]"></div><h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Scan to Check-In</h2><div className="bg-white p-4 rounded-2xl shadow-inner border border-slate-100 mb-6 flex items-center justify-center"><QRCode data={activeMember.id} size={220} /></div><p className="text-2xl font-black text-[#001f3f] tracking-widest">{activeMember.id}</p><span className={`mt-4 px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase ${getStoplight(activeMember) === 'green' ? 'bg-green-100 text-green-700' : getStoplight(activeMember) === 'yellow' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>{getStoplight(activeMember) === 'green' ? 'ACTIVE MEMBER' : getStoplight(activeMember) === 'yellow' ? 'PAYMENT DUE' : 'ACCOUNT LOCKED'}</span></div><div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6"><h3 className="font-bold text-[#001f3f] mb-4 flex items-center gap-2"><Activity size={18} className="text-[#f59e0b]"/> Lifetime Visits</h3><div className="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-4"><span className="text-sm font-bold text-slate-500">Total Check-ins</span><span className="text-3xl font-black text-[#1080ad]">{activeMember.visits}</span></div><h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-6 mb-3">Recent Activity</h4>{myHistoricalVisits.length > 0 ? (<div className="space-y-2">{myHistoricalVisits.map((v, i) => (<div key={i} className="flex justify-between items-center bg-blue-50 p-3 rounded-xl border border-blue-100"><span className="text-sm font-bold text-slate-700 flex items-center gap-2"><CheckCircle size={14} className="text-[#1080ad]"/> {v.center}</span><span className="text-xs font-bold text-slate-500">{new Date(v.time).toLocaleDateString()}</span></div>))}</div>) : (<div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-center"><p className="text-xs font-bold text-slate-400">Head to the gym to log your next workout!</p></div>)}</div>{familyMembers.length > 0 && (<div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6"><h3 className="font-bold text-[#001f3f] mb-4 flex items-center gap-2"><Users size={18} className="text-[#16a34a]"/> Linked Family Accounts</h3><div className="space-y-3">{familyMembers.map(fm => (<button key={fm.id} onClick={() => setActiveMember(fm)} className="w-full flex items-center justify-between bg-slate-50 p-4 rounded-2xl hover:bg-slate-100 transition-colors border border-slate-100"><div className="flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-[#1080ad] text-white flex items-center justify-center font-bold text-xs">{fm.firstName.charAt(0)}</div><div className="text-left"><p className="font-bold text-slate-800 text-sm leading-tight">{fm.firstName} {fm.lastName}</p><p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{fm.id}</p></div></div><ChevronRight size={16} className="text-slate-400" /></button>))}</div></div>)}<div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6"><h3 className="font-bold text-[#001f3f] mb-4 flex items-center gap-2"><CreditCard size={18} className="text-[#1080ad]"/> Account Info</h3><div className="space-y-4"><div className="flex justify-between items-center border-b border-slate-50 pb-4"><span className="text-sm font-bold text-slate-400 uppercase tracking-tight">Plan Type</span><span className="font-bold text-slate-800">{activeMember.type}</span></div><div className="flex justify-between items-center border-b border-slate-50 pb-4"><span className="text-sm font-bold text-slate-400 uppercase tracking-tight">Home Center</span><span className="font-bold text-slate-800">{activeMember.center}</span></div>{activeMember.access247 && (<div className="flex justify-between items-center border-b border-slate-50 pb-4"><span className="text-sm font-bold text-slate-400 uppercase tracking-tight">24/7 Access</span><span className="font-bold text-[#f59e0b]">Active — Badge #{activeMember.badgeNumber || 'N/A'}</span></div>)}<div className="flex justify-between items-center pb-2"><span className="text-sm font-bold text-slate-400 uppercase tracking-tight">Next Payment</span><span className={`font-bold ${getStoplight(activeMember) !== 'green' ? 'text-red-500' : 'text-slate-800'}`}>{activeMember.nextPayment || 'N/A'}</span></div></div></div><div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6"><div className="flex justify-between items-center mb-4"><h3 className="font-bold text-[#001f3f] flex items-center gap-2"><UserCircle size={18} className="text-[#f59e0b]"/> Contact Info</h3><button onClick={() => setEditMode(!editMode)} className="text-xs font-bold text-[#1080ad] bg-blue-50 px-3 py-1 rounded-lg">{editMode ? 'Cancel' : 'Edit'}</button></div>{!editMode ? (<div className="space-y-4"><div className="flex justify-between items-center border-b border-slate-50 pb-4"><span className="text-sm font-bold text-slate-400 uppercase tracking-tight">Email</span><span className="font-bold text-slate-800 truncate pl-4">{activeMember.email || 'N/A'}</span></div><div className="flex justify-between items-center pb-2"><span className="text-sm font-bold text-slate-400 uppercase tracking-tight">Phone</span><span className="font-bold text-slate-800">{activeMember.phone || 'N/A'}</span></div></div>) : (<div className="space-y-4"><div><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Email</label><input id="edit_email" defaultValue={activeMember.email} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]" /></div><div><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Phone</label><input id="edit_phone" defaultValue={activeMember.phone} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]" /></div><button onClick={handleUpdateProfile} disabled={isUpdating} className="w-full bg-[#001f3f] text-white py-3 rounded-xl font-bold text-sm hover:bg-blue-900 transition-colors flex justify-center">{isUpdating ? 'Saving...' : 'Save Changes'}</button></div>)}</div></main></div>); }
 
-  if (view === 'login') { return (<div className="min-h-screen bg-[#001f3f] flex items-center justify-center p-4 font-sans"><div className="bg-white rounded-[3rem] shadow-2xl p-12 w-full max-w-md"><h2 className="text-4xl font-black text-slate-900 mb-2 tracking-tight">Director Login</h2><p className="text-slate-400 mb-10 font-medium tracking-tight">Enter director credentials to proceed.</p><input type="text" placeholder="Username" id="u_in" className="w-full p-5 bg-slate-100 rounded-2xl mb-4 outline-none border-2 border-transparent focus:border-blue-500/20 text-lg" onKeyDown={(e) => e.key === 'Enter' && handleLogin()} /><input type="password" placeholder="Password" id="p_in" className="w-full p-5 bg-slate-100 rounded-2xl mb-8 outline-none border-2 border-transparent focus:border-blue-500/20 text-lg" onKeyDown={(e) => e.key === 'Enter' && handleLogin()} /><button onClick={handleLogin} className="w-full bg-[#001f3f] text-white p-5 rounded-2xl font-bold text-xl shadow-xl hover:bg-blue-900 transition-all">Sign In</button><button onClick={() => setView('landing')} className="w-full mt-6 text-slate-400 font-bold">Cancel</button></div></div>); }
+  const PeriodSelector = ({ value, onChange }) => (
+    <select value={value} onChange={onChange} className="p-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] font-bold text-slate-700 cursor-pointer shadow-sm">
+      <optgroup label="Monthly">
+        {['01-2026','02-2026','03-2026','04-2026','05-2026','06-2026','07-2026','08-2026','09-2026','10-2026','11-2026','12-2026'].map(v => { const [m, y] = v.split('-'); return <option key={v} value={v}>{new Date(y, m - 1).toLocaleDateString('en-US', {month: 'long', year: 'numeric'})}</option>; })}
+      </optgroup>
+      <optgroup label="Quarterly">
+        <option value="Q1-2026">Q1 2026 (Jan - Mar)</option>
+        <option value="Q2-2026">Q2 2026 (Apr - Jun)</option>
+        <option value="Q3-2026">Q3 2026 (Jul - Sep)</option>
+        <option value="Q4-2026">Q4 2026 (Oct - Dec)</option>
+      </optgroup>
+    </select>
+  );
 
+  // MAIN DIRECTOR DASHBOARD
   return (
     <div className="flex min-h-screen bg-[#f0f2f5] font-sans text-slate-800">
       <aside className="w-64 bg-[#001f3f] text-white flex flex-col min-h-screen relative z-10 print:hidden">
@@ -346,11 +375,17 @@ export default function WellnessHub() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 relative"><h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Search size={14}/> Quick Member Lookup</h3><div className="relative"><input className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] text-sm" placeholder="Type a name, ID, or email..." value={quickSearch} onChange={e => setQuickSearch(e.target.value)} />{quickResults.length > 0 && (<div className="absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 overflow-hidden">{quickResults.map(m => (<button key={m.id} onClick={() => { setSelectedMember(m); setQuickSearch(''); }} className="w-full p-4 border-b border-slate-50 last:border-0 hover:bg-blue-50 transition-colors flex justify-between items-center text-left"><div><p className="font-bold text-[#001f3f]">{m.firstName} {m.lastName}</p><p className="text-[10px] text-slate-400">{m.id} · {m.type}</p></div><span className={`px-2 py-1 rounded-full text-[9px] font-black ${getStoplight(m)==='green'?'bg-green-100 text-green-600':getStoplight(m)==='yellow'?'bg-yellow-100 text-yellow-600':'bg-red-100 text-red-600'}`}>{getStoplight(m)==='green'?'ACTIVE':getStoplight(m)==='yellow'?'GRACE':'LOCKED'}</span></button>))}</div>)}</div></div><div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between"><h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><FileText size={14}/> Quick Export</h3><div className="space-y-3"><button onClick={exportTodaysLog} className="w-full bg-[#1080ad] text-white py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors shadow-sm"><Download size={16}/> Export Today's Check-in Log</button><button onClick={handleExportCSV} className="w-full bg-slate-100 text-[#001f3f] py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-slate-200 transition-colors"><Download size={16}/> Export Full Member List</button></div></div></div>
               
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* CARD 1: TODAY'S CHECK-INS */}
                 <ProListCard title="Today's Check-ins">
                   {(() => {
                     const todayStr = new Date().toDateString();
                     const todayVisits = filteredVisits.filter(v => new Date(v.time).toDateString() === todayStr);
-                    const todayByPlan = todayVisits.reduce((acc, v) => { acc[v.type] = (acc[v.type] || 0) + 1; return acc; }, {});
+
+                    const todayByPlan = todayVisits.reduce((acc, v) => {
+                      acc[v.type] = (acc[v.type] || 0) + 1;
+                      return acc;
+                    }, {});
+
                     const displayedVisits = showAllCheckins ? todayVisits : todayVisits.slice(0, 5);
 
                     return (
@@ -358,7 +393,10 @@ export default function WellnessHub() {
                         {Object.keys(todayByPlan).length > 0 && (
                           <div className="flex flex-wrap gap-2 pb-4 border-b border-slate-100">
                             {Object.entries(todayByPlan).sort((a,b) => b[1] - a[1]).map(([plan, count]) => (
-                              <div key={plan} className="bg-slate-50 border border-slate-200 px-3 py-1 rounded-lg flex items-center gap-2"><span className="text-[10px] font-bold text-slate-500 uppercase">{plan}</span><span className="text-sm font-black text-[#001f3f]">{count}</span></div>
+                              <div key={plan} className="bg-slate-50 border border-slate-200 px-3 py-1 rounded-lg flex items-center gap-2">
+                                <span className="text-[10px] font-bold text-slate-500 uppercase">{plan}</span>
+                                <span className="text-sm font-black text-[#001f3f]">{count}</span>
+                              </div>
                             ))}
                           </div>
                         )}
@@ -370,33 +408,55 @@ export default function WellnessHub() {
                               <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
                                 <div>
                                   <p className="font-bold text-slate-800">{v.name}</p>
-                                  <p className="text-[11px] font-bold text-[#f59e0b] uppercase">{v.center?.toLowerCase() === 'harper' ? 'Harper Wellness Center' : v.center?.toLowerCase() === 'anthony' ? 'Anthony Wellness Center' : v.center} • {v.type}</p>
+                                  <p className="text-[11px] font-bold text-[#f59e0b] uppercase">
+                                    {v.center?.toLowerCase() === 'harper' ? 'Harper Wellness Center' : v.center?.toLowerCase() === 'anthony' ? 'Anthony Wellness Center' : v.center} • {v.type}
+                                  </p>
                                 </div>
-                                <div className="flex items-center gap-2 text-slate-400 text-xs font-medium"><Clock size={14}/> {new Date(v.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                                <div className="flex items-center gap-2 text-slate-400 text-xs font-medium">
+                                  <Clock size={14}/> {new Date(v.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                </div>
                               </div>
                             ))
                           )}
                         </div>
                         {todayVisits.length > 5 && (
-                          <button onClick={() => setShowAllCheckins(!showAllCheckins)} className="w-full py-2 mt-2 text-sm font-bold text-[#1080ad] hover:text-[#001f3f] transition-colors bg-blue-50/50 rounded-lg border border-blue-100 hover:bg-blue-50">{showAllCheckins ? 'Collapse List ↑' : `See All ${todayVisits.length} Check-ins →`}</button>
+                          <button
+                            onClick={() => setShowAllCheckins(!showAllCheckins)}
+                            className="w-full py-2 mt-2 text-sm font-bold text-[#1080ad] hover:text-[#001f3f] transition-colors bg-blue-50/50 rounded-lg border border-blue-100 hover:bg-blue-50"
+                          >
+                            {showAllCheckins ? 'Collapse List ↑' : `See All ${todayVisits.length} Check-ins →`}
+                          </button>
                         )}
                       </div>
                     );
                   })()}
                 </ProListCard>
-                <ProListCard title="Account Health"><div className="py-4"><DonutChart data={statusChartData} totalLabel="Accounts" /></div></ProListCard>
+
+                {/* CARD 2: ACCOUNT HEALTH */}
+                <ProListCard title="Account Health">
+                  <div className="py-4">
+                    <DonutChart data={statusChartData} totalLabel="Accounts" />
+                  </div>
+                </ProListCard>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <ProListCard title="Membership Breakdown"><div className="py-4"><DonutChart data={planChartData} totalLabel="Members" /></div></ProListCard>
+                <ProListCard title="Membership Breakdown">
+                  <div className="py-4">
+                    <DonutChart data={planChartData} totalLabel="Members" />
+                  </div>
+                </ProListCard>
                 <ProListCard title="Peak Hours Heatmap">
                   <div className="flex items-end justify-between h-48 mt-8 gap-2">
                     {heatmapData.map((count,i) => { 
-                      const hp = count===0?5:(count/maxVisits)*100; const hl = (i+6)>12?`${(i+6)-12}P`:`${i+6}A`; 
+                      const hp = count===0?5:(count/maxVisits)*100; 
+                      const hl = (i+6)>12?`${(i+6)-12}P`:`${i+6}A`; 
                       return (
                         <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
                           <div className="w-full bg-blue-100 rounded-t-md relative flex items-end justify-center group-hover:bg-blue-200 transition-colors" style={{height:'100%'}}>
-                            <div className="w-full bg-[#1080ad] rounded-t-md transition-all duration-500 relative" style={{height:`${hp}%`}}><span className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold text-[#001f3f] opacity-0 group-hover:opacity-100 transition-opacity">{count}</span></div>
+                            <div className="w-full bg-[#1080ad] rounded-t-md transition-all duration-500 relative" style={{height:`${hp}%`}}>
+                              <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold text-[#001f3f] opacity-0 group-hover:opacity-100 transition-opacity">{count}</span>
+                            </div>
                           </div>
                           <span className="text-[10px] font-bold text-slate-400">{hl}</span>
                         </div>
@@ -405,6 +465,7 @@ export default function WellnessHub() {
                   </div>
                 </ProListCard>
               </div>
+
             </div>
           );
         })()}
@@ -581,81 +642,180 @@ export default function WellnessHub() {
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <table className="w-full text-left border-collapse">
               <thead className="bg-slate-50 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b"><tr><th className="px-6 py-4">Visitor</th><th className="px-4 py-4">Pass Type</th><th className="px-4 py-4">Referring Provider</th><th className="px-4 py-4">Expires</th><th className="px-4 py-4">Status</th><th className="px-4 py-4">Visits</th><th className="px-4 py-4">Actions</th></tr></thead>
-              <tbody className="text-sm">{visitors.length === 0 ? (<tr><td colSpan="7" className="text-center py-12 text-slate-400 font-medium italic">No visitors yet.</td></tr>) : visitors.map(v => { const expired = new Date(v.expirationDate + 'T23:59:59') < new Date(); return (<tr key={v.airtableId} className="border-b hover:bg-slate-50/80"><td className="px-6 py-4"><p className="font-bold text-slate-800 cursor-pointer hover:text-[#1080ad]" onClick={() => setSelectedVisitor(v)}>{v.firstName} {v.lastName}</p><p className="text-[11px] text-slate-400">{v.email || v.phone || 'No contact info'}{!v.orientationComplete && <span className="ml-2 px-2 py-0.5 rounded text-[9px] font-black bg-blue-100 text-blue-700 uppercase">Needs Orientation</span>}</p></td><td className="px-4 py-4"><span className={`px-3 py-1 rounded-full text-[10px] font-black ${v.passType === 'Day Pass' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>{v.passType}</span></td><td className="px-4 py-4 text-slate-600 text-xs">{v.referringProvider || '—'}</td><td className="px-4 py-4 text-xs"><span className={expired ? 'text-red-500 font-bold' : 'text-slate-600'}>{v.expirationDate ? new Date(v.expirationDate + 'T00:00:00').toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'}) : 'N/A'}</span></td><td className="px-4 py-4"><span className={`px-3 py-1 rounded-full text-[10px] font-black ${expired ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>{expired ? 'EXPIRED' : 'ACTIVE'}</span></td><td className="px-4 py-4 font-black text-[#1080ad]">{v.totalVisits}</td><td className="px-4 py-4 flex gap-2">{!v.orientationComplete && (<button onClick={async () => { try { const res = await fetch('/api/update-visitor-orientation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visitorAirtableId: v.airtableId }) }); const result = await res.json(); if (result.success) { setVisitors(prev => prev.map(vis => vis.airtableId === v.airtableId ? {...vis, orientationComplete: true} : vis)); } else { alert('Error: ' + result.error); } } catch (err) { alert('Network error.'); } }} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-bold hover:bg-blue-700 transition-colors" title="Mark Orientation Complete">Orient</button>)}</td></tr>); })}</tbody>
+              <tbody className="text-sm">{visitors.length === 0 ? (<tr><td colSpan="7" className="text-center py-12 text-slate-400 font-medium italic">No visitors yet.</td></tr>) : visitors.map(v => { const expired = new Date(v.expirationDate + 'T23:59:59') < new Date(); return (<tr key={v.airtableId} className="border-b hover:bg-slate-50/80"><td className="px-6 py-4"><p className="font-bold text-slate-800 cursor-pointer hover:text-[#1080ad]" onClick={() => setSelectedVisitor(v)}>{v.firstName} {v.lastName}</p><p className="text-[11px] text-slate-400">{v.email || v.phone || 'No contact info'}{!v.orientationComplete && <span className="ml-2 px-2 py-0.5 rounded text-[9px] font-black bg-blue-100 text-blue-700 uppercase">Needs Orientation</span>}</p></td><td className="px-4 py-4"><span className={`px-3 py-1 rounded-full text-[10px] font-black ${v.passType === 'Day Pass' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>{v.passType}</span></td><td className="px-4 py-4 text-slate-600 text-xs">{v.referringProvider || '—'}</td><td className="px-4 py-4 text-xs"><span className={expired ? 'text-red-500 font-bold' : 'text-slate-600'}>{v.expirationDate ? new Date(v.expirationDate + 'T00:00:00').toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'}) : 'N/A'}</span></td><td className="px-4 py-4"><span className={`px-3 py-1 rounded-full text-[10px] font-black ${expired ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>{expired ? 'EXPIRED' : 'ACTIVE'}</span></td><td className="px-4 py-4 font-black text-[#1080ad]">{v.totalVisits}</td><td className="px-4 py-4 flex gap-2">
+                {!v.orientationComplete && (<button onClick={async () => { try { const res = await fetch('/api/update-visitor-orientation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visitorAirtableId: v.airtableId }) }); const result = await res.json(); if (result.success) { setVisitors(prev => prev.map(vis => vis.airtableId === v.airtableId ? {...vis, orientationComplete: true} : vis)); } else { alert('Error: ' + result.error); } } catch (err) { alert('Network error.'); } }} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-bold hover:bg-blue-700 transition-colors" title="Mark Orientation Complete">Orient</button>)}
+                <div className="relative group/renew">
+                  <button className="px-3 py-1.5 bg-purple-600 text-white rounded-lg text-[10px] font-bold hover:bg-purple-700 transition-colors">Renew Pass</button>
+                  <div className="absolute right-0 top-full mt-1 hidden group-hover/renew:block bg-white border border-slate-200 shadow-xl rounded-xl z-50 overflow-hidden w-40">
+                    <button onClick={() => handleRenewVisitor(v, 'Day Pass')} className="w-full text-left px-4 py-2 text-[10px] font-bold text-slate-600 hover:bg-slate-50 border-b border-slate-100">Day Pass ($5)</button>
+                    <button onClick={() => handleRenewVisitor(v, '2-Week Courtesy')} className="w-full text-left px-4 py-2 text-[10px] font-bold text-slate-600 hover:bg-slate-50 border-b border-slate-100">2-Week Courtesy</button>
+                    <button onClick={() => handleRenewVisitor(v, 'Month Courtesy')} className="w-full text-left px-4 py-2 text-[10px] font-bold text-slate-600 hover:bg-slate-50">Month Courtesy</button>
+                  </div>
+                </div>
+              </td></tr>); })}</tbody>
             </table>
           </div>
           {visitors.filter(v => new Date(v.expirationDate + 'T23:59:59') < new Date() && (v.email || v.phone)).length > 0 && (
             <ProListCard title="Conversion Leads — Expired Passes with Contact Info">
               <p className="text-sm text-slate-400 mb-4">These visitors had passes that expired. They have contact info and could be converted to full members.</p>
-              <div className="space-y-3">{visitors.filter(v => new Date(v.expirationDate + 'T23:59:59') < new Date() && (v.email || v.phone)).map(v => (<div key={v.airtableId} className="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-100"><div><p className="font-bold text-slate-800">{v.firstName} {v.lastName}</p><p className="text-[11px] text-slate-400">{v.email} {v.phone ? `· ${v.phone}` : ''}</p><p className="text-[10px] text-purple-500 font-bold">{v.passType} · Referred by {v.referringProvider || 'N/A'} · {v.totalVisits} visit{v.totalVisits !== 1 ? 's' : ''}</p></div><div className="flex gap-2"><button className="p-2 bg-[#1080ad] text-white rounded-lg shadow-md" title="Email"><Mail size={16}/></button><button className="p-2 bg-[#dd6d22] text-white rounded-lg shadow-md" title="Call"><Phone size={16}/></button><div className="relative group/renew"><button className="px-3 py-1.5 bg-purple-600 text-white rounded-lg text-[10px] font-bold hover:bg-purple-700 transition-colors">Renew Pass</button><div className="absolute right-0 top-full mt-1 hidden group-hover/renew:block bg-white border border-slate-200 shadow-xl rounded-xl z-50 overflow-hidden w-40"><button onClick={() => handleRenewVisitor(v, 'Day Pass')} className="w-full text-left px-4 py-2 text-[10px] font-bold text-slate-600 hover:bg-slate-50 border-b border-slate-100">Day Pass ($5)</button><button onClick={() => handleRenewVisitor(v, '2-Week Courtesy')} className="w-full text-left px-4 py-2 text-[10px] font-bold text-slate-600 hover:bg-slate-50 border-b border-slate-100">2-Week Courtesy</button><button onClick={() => handleRenewVisitor(v, 'Month Courtesy')} className="w-full text-left px-4 py-2 text-[10px] font-bold text-slate-600 hover:bg-slate-50">Month Courtesy</button></div></div></div></div>))}</div>
+              <div className="space-y-3">{visitors.filter(v => new Date(v.expirationDate + 'T23:59:59') < new Date() && (v.email || v.phone)).map(v => (<div key={v.airtableId} className="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-100"><div><p className="font-bold text-slate-800">{v.firstName} {v.lastName}</p><p className="text-[11px] text-slate-400">{v.email} {v.phone ? `· ${v.phone}` : ''}</p><p className="text-[10px] text-purple-500 font-bold">{v.passType} · Referred by {v.referringProvider || 'N/A'} · {v.totalVisits} visit{v.totalVisits !== 1 ? 's' : ''}</p></div><div className="flex gap-2"><button className="p-2 bg-[#1080ad] text-white rounded-lg shadow-md" title="Email"><Mail size={16}/></button><button className="p-2 bg-[#dd6d22] text-white rounded-lg shadow-md" title="Call"><Phone size={16}/></button></div></div>))}</div>
             </ProListCard>
           )}
         </div>)}
 
         {activeTab === 'corporate' && (() => {
-          const [month, year] = reportMonth.split('-'); const y = parseInt(year); const m = parseInt(month) - 1;
-          const currentMonthVisits = visits.filter(v => { if (!v.time) return false; const d = new Date(v.time); return d.getFullYear() === y && d.getMonth() === m; });
-          const displayMonth = new Date(y, m).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+          const [periodStr, yearStr] = reportMonth.split('-');
+          const y = parseInt(yearStr);
+          let targetMonths = [];
+          let displayPeriod = '';
+
+          if (periodStr.startsWith('Q')) {
+              const q = parseInt(periodStr.replace('Q', ''));
+              targetMonths = [ (q-1)*3, (q-1)*3 + 1, (q-1)*3 + 2 ];
+              displayPeriod = `Q${q} ${y}`;
+          } else {
+              targetMonths = [ parseInt(periodStr) - 1 ];
+              displayPeriod = new Date(y, targetMonths[0]).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+          }
+
+          const currentPeriodVisits = visits.filter(v => {
+            if (!v.time) return false;
+            const d = new Date(v.time);
+            return d.getFullYear() === y && targetMonths.includes(d.getMonth());
+          });
 
           return (
           <div className="space-y-6">
             <div className="flex justify-between items-center mb-8">
-              <div><h2 className="text-3xl font-bold text-[#001f3f] tracking-tight">Corporate Partners</h2><p className="text-slate-400 font-medium">Manage corporate sponsorships and billing rosters.</p></div>
-              <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-200"><select value={reportMonth} onChange={(e) => setReportMonth(e.target.value)} className="p-2 bg-transparent border-none outline-none font-bold text-[#1080ad] cursor-pointer">{['01-2026','02-2026','03-2026','04-2026','05-2026','06-2026','07-2026','08-2026','09-2026','10-2026','11-2026','12-2026'].map(v => { const [m, y] = v.split('-'); return <option key={v} value={v}>{new Date(y, m - 1).toLocaleDateString('en-US', {month: 'long', year: 'numeric'})}</option>; })}</select></div>
+              <div>
+                <h2 className="text-3xl font-bold text-[#001f3f] tracking-tight">Corporate Partners</h2>
+                <p className="text-slate-400 font-medium">Manage corporate sponsorships and billing rosters.</p>
+              </div>
+              <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-200">
+                  <PeriodSelector value={reportMonth} onChange={(e) => setReportMonth(e.target.value)} />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {corporatePartners.map(corp => {
+                 const isUsageBased = !!usageBasedCorps[corp.id];
                  const corpMembers = members.filter(mem => mem.sponsorName === corp.sponsorMatch);
-                 const activeMembers = corpMembers.filter(mem => mem.status === 'ACTIVE');
-                 const totalOwed = activeMembers.reduce((sum, mem) => sum + (parseFloat(String(mem.monthlyRate).replace(/[^0-9.]/g, '')) || 0), 0);
-                 const getMonthlyVisits = (mem) => currentMonthVisits.filter(v => v.name.toLowerCase() === `${mem.firstName} ${mem.lastName}`.toLowerCase()).length;
-                 const totalMonthlyVisits = corpMembers.reduce((sum, mem) => sum + getMonthlyVisits(mem), 0);
-                 const isPaid = corp.paidMonths && corp.paidMonths.includes(reportMonth);
                  
+                 let totalOwed = 0;
+                 let totalPeriodVisits = 0;
+
+                 // SMART BILLING ENGINE
+                 const enrichedMembers = corpMembers.map(mem => {
+                     const memVisits = currentPeriodVisits.filter(v => v.name.toLowerCase() === `${mem.firstName} ${mem.lastName}`.toLowerCase());
+                     totalPeriodVisits += memVisits.length;
+                     
+                     const rate = parseFloat(String(mem.monthlyRate).replace(/[^0-9.]/g, '')) || 0;
+                     let memberOwed = 0;
+                     let activeMonthsCount = 0;
+
+                     if (isUsageBased) {
+                         // Check each month in the selected period (1 month or 3 months for a quarter)
+                         targetMonths.forEach(mIdx => {
+                             const visitedInMonth = memVisits.some(v => new Date(v.time).getMonth() === mIdx);
+                             if (visitedInMonth) {
+                                 memberOwed += rate;
+                                 activeMonthsCount++;
+                             }
+                         });
+                     } else {
+                         // Standard Flat Billing
+                         if (mem.status === 'ACTIVE') {
+                             memberOwed = rate * targetMonths.length;
+                             activeMonthsCount = targetMonths.length;
+                         }
+                     }
+                     totalOwed += memberOwed;
+                     return { ...mem, periodVisits: memVisits.length, memberOwed, activeMonthsCount };
+                 });
+
+                 const activeMembersCount = enrichedMembers.filter(m => m.memberOwed > 0 || m.status === 'ACTIVE').length;
+
+                 const isPaid = corp.paidMonths && corp.paidMonths.includes(reportMonth);
                  const togglePayment = async () => {
                     let newPaidMonths = corp.paidMonths || '';
-                    if (isPaid) newPaidMonths = newPaidMonths.split(',').filter(mn => mn !== reportMonth).join(',');
-                    else newPaidMonths = newPaidMonths ? `${newPaidMonths},${reportMonth}` : reportMonth;
+                    if (isPaid) {
+                       newPaidMonths = newPaidMonths.split(',').filter(mn => mn !== reportMonth).join(',');
+                    } else {
+                       newPaidMonths = newPaidMonths ? `${newPaidMonths},${reportMonth}` : reportMonth;
+                    }
                     setCorporatePartners(prev => prev.map(c => c.id === corp.id ? { ...c, paidMonths: newPaidMonths } : c));
-                    try { await fetch('/api/update-corporate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ recordId: corp.id, paidMonths: newPaidMonths }) }); } catch (err) { alert('Failed to sync payment status to Airtable.'); }
+                    try {
+                       await fetch('/api/update-corporate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ recordId: corp.id, paidMonths: newPaidMonths }) });
+                    } catch (err) { alert('Failed to sync payment status to Airtable.'); }
                  };
 
                  const downloadCSV = () => {
                     if (corpMembers.length === 0) { alert('No employees enrolled for this partner.'); return; }
-                    const headers = ["Employee Name", "Member ID", "Plan Type", "Status", "Monthly Visits", "Monthly Amount"];
-                    const rows = corpMembers.map(mem => `"${mem.firstName} ${mem.lastName}","${mem.id}","${mem.type}","${mem.status}","${getMonthlyVisits(mem)}","$${parseFloat(String(mem.monthlyRate).replace(/[^0-9.]/g, '')) || 0}"`);
-                    rows.push(`"","","","","",""`); rows.push(`"","","","","TOTAL DUE:","$${totalOwed.toFixed(2)}"`);
+                    const headers = ["Employee Name", "Member ID", "Plan Type", "Period Visits", "Months Billed", "Total Billed"];
+                    const rows = enrichedMembers.map(mem => `"${mem.firstName} ${mem.lastName}","${mem.id}","${mem.type}","${mem.periodVisits}","${mem.activeMonthsCount}","$${mem.memberOwed.toFixed(2)}"`);
+                    rows.push(`"","","","","",""`);
+                    rows.push(`"","","","","TOTAL DUE:","$${totalOwed.toFixed(2)}"`);
                     const csv = [headers.join(','), ...rows].join('\n');
                     const b = new Blob([csv],{type:'text/csv'}); const u = window.URL.createObjectURL(b); const a = document.createElement('a'); a.href=u; a.download=`${corp.name.replace(/\s+/g, '_')}_Invoice_${reportMonth}.csv`; a.click(); window.URL.revokeObjectURL(u);
                  };
 
                  const printInvoice = () => {
                     if (corpMembers.length === 0) { alert('No employees enrolled for this partner.'); return; }
-                    const isHarper = viewingCenter === 'harper'; const centerName = isHarper ? 'Harper Wellness Center' : 'Anthony Wellness Center'; const centerAddr = isHarper ? '615 W 12th St, Harper, KS 67058' : '309 W Main St, Anthony, KS 67003'; const centerPhone = isHarper ? '(620) 896-1202' : '(620) 842-5190'; const directorName = isHarper ? 'Patrick Johnson' : 'Deanna Smithhisler'; 
-                    const rows = corpMembers.map(mem => `<tr><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${mem.firstName} ${mem.lastName}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; font-family: monospace; color: #64748b;">${mem.id}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${mem.type}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: center; color: #1080ad; font-weight: bold;">${getMonthlyVisits(mem)}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: ${mem.status === 'ACTIVE' ? '#1e293b' : '#dc2626'};">$${parseFloat(String(mem.monthlyRate).replace(/[^0-9.]/g, '')) || 0}</td></tr>`).join('');
-                    const html = `<!DOCTYPE html><html><head><title>Corporate Invoice - ${corp.name} - ${displayMonth}</title><style>@media print{body{margin:0}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:40px}.hdr{background:#003d6b;padding:20px 44px;display:flex;justify-content:space-between;align-items:center;border-radius:8px 8px 0 0}.hdr-logo{height:40px}.hdr-text{text-align:right;color:white}.hdr-title{font-size:24px;font-weight:900;margin:0}.hdr-sub{font-size:12px;color:#8bb8d9;margin-top:4px;line-height:1.4}.accent{height:4px;background:linear-gradient(to right,#dba51f,#dd6d22);margin-bottom:40px}.bill-to{margin-bottom:30px}.bill-to h2{margin:0 0 5px 0;font-size:14px;color:#64748b;text-transform:uppercase;letter-spacing:1px}.bill-to p{margin:0;font-size:18px;font-weight:900;color:#003d6b}.summary{display:flex;gap:40px;margin-bottom:30px;background:#f8fafc;padding:20px;border-radius:8px;border:1px solid #e2e8f0}.sum-box{text-align:left}.sum-lbl{font-size:10px;font-weight:bold;color:#64748b;text-transform:uppercase;letter-spacing:1px}.sum-val{font-size:24px;font-weight:900;color:#003d6b;margin-top:5px}.sum-val.due{color:#16a34a}table{width:100%;border-collapse:collapse;margin-bottom:30px;font-size:12px}th{background:#003d6b;color:white;text-align:left;padding:12px 10px;font-size:10px;text-transform:uppercase;letter-spacing:1px}th.right{text-align:right}th.center{text-align:center}.total-row td{background:#fff;border-top:2px solid #003d6b;padding-top:20px;font-size:14px}.total-lbl{text-align:right;font-weight:900;color:#1e293b;text-transform:uppercase}.total-val{font-size:20px;font-weight:900;color:#16a34a;text-align:right}.sign{margin-top:40px;font-size:14px}.sign-name{font-weight:bold;color:#003d6b;margin-top:5px}.sign-title{color:#64748b;font-size:12px}</style></head><body><div class="hdr"><img src="${LOGO_URL}" class="hdr-logo" /><div class="hdr-text"><h1 class="hdr-title">Corporate Invoice</h1><div class="hdr-sub">${centerName}<br/>${centerAddr} | ${centerPhone}</div></div></div><div class="accent"></div><div class="bill-to"><h2>Billed To:</h2><p>${corp.name}</p><p style="font-size: 14px; font-weight: normal; color: #475569; margin-top: 4px;">Attn: ${corp.contactName || 'Benefits Administrator'}</p></div><div class="summary"><div class="sum-box"><div class="sum-lbl">Billing Period</div><div class="sum-val" style="font-size: 18px;">${displayMonth}</div></div><div class="sum-box"><div class="sum-lbl">Total Enrolled</div><div class="sum-val" style="font-size: 18px;">${corpMembers.length}</div></div><div class="sum-box"><div class="sum-lbl">Total Amount Due</div><div class="sum-val due" style="font-size: 18px;">$${totalOwed.toFixed(2)}</div></div></div><table><thead><tr><th>Employee Name</th><th>Member ID</th><th>Plan Type</th><th class="center">Monthly Visits</th><th class="right">Monthly Rate</th></tr></thead><tbody>${rows}</tbody><tfoot><tr class="total-row"><td colspan="4" class="total-lbl">Total Corporate Responsibility:</td><td class="total-val">$${totalOwed.toFixed(2)}</td></tr></tfoot></table><div class="sign"><p>Thank you for partnering with Patterson Health Center to keep your team healthy!</p><div class="sign-name">${directorName}</div><div class="sign-title">Director, ${centerName}</div></div></body></html>`;
+                    const isHarper = viewingCenter === 'harper'; 
+                    const centerName = isHarper ? 'Harper Wellness Center' : 'Anthony Wellness Center'; 
+                    const centerAddr = isHarper ? '615 W 12th St, Harper, KS 67058' : '309 W Main St, Anthony, KS 67003'; 
+                    const centerPhone = isHarper ? '(620) 896-1202' : '(620) 842-5190'; 
+                    const directorName = isHarper ? 'Patrick Johnson' : 'Deanna Smithhisler'; 
+
+                    const rows = enrichedMembers.map(mem => `<tr><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${mem.firstName} ${mem.lastName}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; font-family: monospace; color: #64748b;">${mem.id}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${mem.type}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: center; font-weight: bold; color: ${mem.periodVisits > 0 ? '#1080ad' : '#94a3b8'};">${mem.periodVisits}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: center;">${mem.activeMonthsCount}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: ${mem.memberOwed > 0 ? '#16a34a' : '#94a3b8'};">$${mem.memberOwed.toFixed(2)}</td></tr>`).join('');
+
+                    const html = `<!DOCTYPE html><html><head><title>Corporate Invoice - ${corp.name} - ${displayPeriod}</title><style>@media print{body{margin:0}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:40px}.hdr{background:#003d6b;padding:20px 44px;display:flex;justify-content:space-between;align-items:center;border-radius:8px 8px 0 0}.hdr-logo{height:40px}.hdr-text{text-align:right;color:white}.hdr-title{font-size:24px;font-weight:900;margin:0}.hdr-sub{font-size:12px;color:#8bb8d9;margin-top:4px;line-height:1.4}.accent{height:4px;background:linear-gradient(to right,#dba51f,#dd6d22);margin-bottom:40px}.bill-to{margin-bottom:30px}.bill-to h2{margin:0 0 5px 0;font-size:14px;color:#64748b;text-transform:uppercase;letter-spacing:1px}.bill-to p{margin:0;font-size:18px;font-weight:900;color:#003d6b}.summary{display:flex;gap:40px;margin-bottom:30px;background:#f8fafc;padding:20px;border-radius:8px;border:1px solid #e2e8f0}.sum-box{text-align:left}.sum-lbl{font-size:10px;font-weight:bold;color:#64748b;text-transform:uppercase;letter-spacing:1px}.sum-val{font-size:24px;font-weight:900;color:#003d6b;margin-top:5px}.sum-val.due{color:#16a34a}table{width:100%;border-collapse:collapse;margin-bottom:30px;font-size:12px}th{background:#003d6b;color:white;text-align:left;padding:12px 10px;font-size:10px;text-transform:uppercase;letter-spacing:1px}th.right{text-align:right}th.center{text-align:center}.total-row td{background:#fff;border-top:2px solid #003d6b;padding-top:20px;font-size:14px}.total-lbl{text-align:right;font-weight:900;color:#1e293b;text-transform:uppercase}.total-val{font-size:20px;font-weight:900;color:#16a34a;text-align:right}.sign{margin-top:40px;font-size:14px}.sign-name{font-weight:bold;color:#003d6b;margin-top:5px}.sign-title{color:#64748b;font-size:12px}</style></head><body><div class="hdr"><img src="${LOGO_URL}" class="hdr-logo" /><div class="hdr-text"><h1 class="hdr-title">Corporate Invoice</h1><div class="hdr-sub">${centerName}<br/>${centerAddr} | ${centerPhone}</div></div></div><div class="accent"></div><div class="bill-to"><h2>Billed To:</h2><p>${corp.name}</p><p style="font-size: 14px; font-weight: normal; color: #475569; margin-top: 4px;">Attn: ${corp.contactName || 'Benefits Administrator'}</p></div><div class="summary"><div class="sum-box"><div class="sum-lbl">Billing Period</div><div class="sum-val" style="font-size: 18px;">${displayPeriod}</div></div><div class="sum-box"><div class="sum-lbl">${isUsageBased ? 'Active Employees' : 'Total Enrolled'}</div><div class="sum-val" style="font-size: 18px;">${activeMembersCount}</div></div><div class="sum-box"><div class="sum-lbl">Total Amount Due</div><div class="sum-val due" style="font-size: 18px;">$${totalOwed.toFixed(2)}</div></div></div><table><thead><tr><th>Employee Name</th><th>Member ID</th><th>Plan Type</th><th class="center">Period Visits</th><th class="center">Months Billed</th><th class="right">Amount Billed</th></tr></thead><tbody>${rows}</tbody><tfoot><tr class="total-row"><td colspan="5" class="total-lbl">Total Corporate Responsibility:</td><td class="total-val">$${totalOwed.toFixed(2)}</td></tr></tfoot></table><div class="sign"><p>Thank you for partnering with Patterson Health Center to keep your team healthy!</p><div class="sign-name">${directorName}</div><div class="sign-title">Director, ${centerName}</div></div></body></html>`;
                     const w = window.open('', '_blank'); w.document.write(html); w.document.close(); setTimeout(() => w.print(), 500);
                  };
 
                  return (
                    <div key={corp.id} className={`bg-white p-6 rounded-2xl shadow-sm border flex flex-col justify-between transition-all ${isPaid ? 'border-green-300' : 'border-slate-200'}`}>
                      <div>
-                       <div className="flex justify-between items-start mb-1"><h3 className="font-black text-[#001f3f] text-xl">{corp.name}</h3><span className={`px-3 py-1 rounded-full text-[10px] font-black tracking-widest ${isPaid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{isPaid ? 'PAID' : 'UNPAID'}</span></div>
-                       <p className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1 mb-4"><Mail size={12}/> {corp.contactEmail || 'No Email on file'}</p>
-                       <div className="space-y-2 mb-6">
-                         <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-100"><span className="text-xs font-bold text-slate-500 uppercase">Enrolled</span><span className="text-lg font-black text-[#001f3f]">{corpMembers.length}</span></div>
-                         <div className="flex justify-between items-center bg-blue-50 p-3 rounded-lg border border-blue-100"><span className="text-xs font-bold text-blue-600 uppercase">Visits ({displayMonth.split(' ')[0]})</span><span className="text-lg font-black text-[#1080ad]">{totalMonthlyVisits}</span></div>
-                         <div className="flex justify-between items-center bg-green-50 p-3 rounded-lg border border-green-100"><span className="text-xs font-bold text-green-600 uppercase">Total Owed</span><span className="text-lg font-black text-[#16a34a]">${totalOwed.toFixed(2)}</span></div>
+                       <div className="flex justify-between items-start mb-1">
+                         <h3 className="font-black text-[#001f3f] text-xl">{corp.name}</h3>
+                         <span className={`px-3 py-1 rounded-full text-[10px] font-black tracking-widest ${isPaid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                           {isPaid ? 'PAID' : 'UNPAID'}
+                         </span>
                        </div>
+                       <p className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1 mb-4"><Mail size={12}/> {corp.contactEmail || 'No Email on file'}</p>
+                       
+                       <div className="space-y-2 mb-6">
+                         <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-100">
+                           <span className="text-xs font-bold text-slate-500 uppercase">Enrolled</span>
+                           <span className="text-lg font-black text-[#001f3f]">{corpMembers.length}</span>
+                         </div>
+                         <div className="flex justify-between items-center bg-blue-50 p-3 rounded-lg border border-blue-100">
+                           <span className="text-xs font-bold text-blue-600 uppercase">Visits ({displayPeriod.split(' ')[0]})</span>
+                           <span className="text-lg font-black text-[#1080ad]">{totalPeriodVisits}</span>
+                         </div>
+                         <div className="flex justify-between items-center bg-green-50 p-3 rounded-lg border border-green-100">
+                           <span className="text-xs font-bold text-green-600 uppercase">Total Owed</span>
+                           <span className="text-lg font-black text-[#16a34a]">${totalOwed.toFixed(2)}</span>
+                         </div>
+                       </div>
+                       
+                       <label className="flex items-center gap-2 mb-6 cursor-pointer group w-fit">
+                          <input type="checkbox" checked={isUsageBased} onChange={() => setUsageBasedCorps(prev => ({...prev, [corp.id]: !prev[corp.id]}))} className="w-4 h-4 text-[#1080ad] rounded border-slate-300 cursor-pointer" />
+                          <span className="text-xs font-bold text-slate-500 uppercase tracking-widest group-hover:text-[#1080ad] transition-colors">Usage-Based Billing</span>
+                       </label>
                      </div>
+
                      <div className="flex flex-col gap-2">
                        <div className="flex gap-2">
                          <button onClick={printInvoice} className="flex-1 bg-[#16a34a] text-white py-3 rounded-xl text-sm font-bold shadow-sm flex items-center justify-center gap-2 hover:bg-green-700 transition-colors"><Printer size={16}/> Invoice</button>
                          <button onClick={downloadCSV} className="bg-slate-100 text-[#001f3f] px-4 py-3 rounded-xl text-sm font-bold shadow-sm flex items-center justify-center hover:bg-slate-200 transition-colors" title="Download Spreadsheet CSV"><Download size={16}/></button>
-                         {corp.contactEmail && (<a href={`mailto:${corp.contactEmail}?subject=${corp.name} Wellness Roster & Invoice - ${displayMonth}&body=Hello ${corp.contactName || 'Partner'},\n\nPlease find attached your updated wellness center roster and invoice for ${displayMonth}.\n\nTotal Enrolled: ${corpMembers.length}\nTotal Due: $${totalOwed.toFixed(2)}\n\nThank you for partnering with us to keep your team healthy!\n\n- Patterson Health Center`} className="bg-slate-100 text-slate-600 px-4 py-3 rounded-xl hover:bg-slate-200 transition-colors flex items-center justify-center" title="Draft Email to Partner"><Mail size={16}/></a>)}
+                         {corp.contactEmail && (
+                           <a href={`mailto:${corp.contactEmail}?subject=${corp.name} Wellness Roster & Invoice - ${displayPeriod}&body=Hello ${corp.contactName || 'Partner'},\n\nPlease find attached your updated wellness center roster and invoice for ${displayPeriod}.\n\nTotal Due: $${totalOwed.toFixed(2)}\n\nThank you for partnering with us to keep your team healthy!\n\n- Patterson Health Center`} className="bg-slate-100 text-slate-600 px-4 py-3 rounded-xl hover:bg-slate-200 transition-colors flex items-center justify-center" title="Draft Email to Partner"><Mail size={16}/></a>
+                         )}
                        </div>
-                       <button onClick={togglePayment} className={`w-full py-3 rounded-xl text-sm font-bold shadow-sm transition-colors border ${isPaid ? 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50' : 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100'}`}>{isPaid ? 'Mark as Unpaid' : 'Mark as Paid'}</button>
+                       <button onClick={togglePayment} className={`w-full py-3 rounded-xl text-sm font-bold shadow-sm transition-colors border ${isPaid ? 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50' : 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100'}`}>
+                         {isPaid ? 'Mark as Unpaid' : 'Mark as Paid'}
+                       </button>
                      </div>
                    </div>
                  );
@@ -665,102 +825,127 @@ export default function WellnessHub() {
         )})()}
 
         {activeTab === 'reports' && (() => {
-          const [month, year] = reportMonth.split('-'); const y = parseInt(year); const m = parseInt(month) - 1; 
-          const monthlyVisits = visits.filter(v => { if (!v.time) return false; const d = new Date(v.time); return d.getFullYear() === y && d.getMonth() === m; });
-          const newMembersThisMonth = members.filter(mem => { if (!mem.startDate) return false; const d = new Date(mem.startDate); return d.getFullYear() === y && d.getMonth() === m; });
-          const visitCounts = monthlyVisits.reduce((acc, v) => { const name = v.name; acc[name] = (acc[name] || 0) + 1; return acc; }, {});
+          const [periodStr, yearStr] = reportMonth.split('-');
+          const y = parseInt(yearStr);
+          let targetMonths = [];
+          if (periodStr.startsWith('Q')) {
+              const q = parseInt(periodStr.replace('Q', ''));
+              targetMonths = [ (q-1)*3, (q-1)*3 + 1, (q-1)*3 + 2 ];
+          } else {
+              targetMonths = [ parseInt(periodStr) - 1 ];
+          }
+
+          const currentPeriodVisits = visits.filter(v => {
+            if (!v.time) return false;
+            const d = new Date(v.time);
+            return d.getFullYear() === y && targetMonths.includes(d.getMonth());
+          });
+
+          const newMembersThisPeriod = members.filter(mem => {
+            if (!mem.startDate) return false;
+            const d = new Date(mem.startDate);
+            return d.getFullYear() === y && targetMonths.includes(d.getMonth());
+          });
+
+          const visitCounts = currentPeriodVisits.reduce((acc, v) => {
+            const name = v.name;
+            acc[name] = (acc[name] || 0) + 1;
+            return acc;
+          }, {});
           const topMembers = Object.entries(visitCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
-          const twentyOneDaysAgo = new Date(); twentyOneDaysAgo.setDate(twentyOneDaysAgo.getDate() - 21);
-          const slippingAway = members.filter(mem => { const memberVisits = visits.filter(v => v.name.toLowerCase() === (mem.firstName + ' ' + mem.lastName).toLowerCase()); if (memberVisits.length === 0) return true; const lastVisit = new Date(Math.max(...memberVisits.map(v => new Date(v.time)))); return lastVisit < twentyOneDaysAgo; }).slice(0, 5);
-          const visitsByPlan = monthlyVisits.reduce((acc, v) => { acc[v.type] = (acc[v.type] || 0) + 1; return acc; }, {});
+
+          const twentyOneDaysAgo = new Date();
+          twentyOneDaysAgo.setDate(twentyOneDaysAgo.getDate() - 21);
+          const slippingAway = members.filter(mem => {
+            const memberVisits = visits.filter(v => v.name.toLowerCase() === (mem.firstName + ' ' + mem.lastName).toLowerCase());
+            if (memberVisits.length === 0) return true; 
+            const lastVisit = new Date(Math.max(...memberVisits.map(v => new Date(v.time))));
+            return lastVisit < twentyOneDaysAgo;
+          }).slice(0, 5);
+
+          const visitsByPlan = currentPeriodVisits.reduce((acc, v) => {
+            acc[v.type] = (acc[v.type] || 0) + 1;
+            return acc;
+          }, {});
 
           return (
             <div className="max-w-7xl mx-auto space-y-6">
               <div className="flex justify-between items-center mb-6">
-                <div><h2 className="text-2xl font-black text-[#001f3f]">Monthly Summary Report</h2><p className="text-sm text-slate-500">Filter your facility data by month.</p></div>
+                <div>
+                  <h2 className="text-2xl font-black text-[#001f3f]">Facility Summary Report</h2>
+                  <p className="text-sm text-slate-500">Filter your facility data by month or quarter.</p>
+                </div>
                 <div className="flex gap-4">
-                  <select 
-                    value={reportMonth} 
-                    onChange={(e) => setReportMonth(e.target.value)} 
-                    className="p-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] font-bold text-slate-700 cursor-pointer shadow-sm"
-                  >
-                    {['01-2026','02-2026','03-2026','04-2026','05-2026','06-2026','07-2026','08-2026','09-2026','10-2026','11-2026','12-2026'].map(v => { const [m, y] = v.split('-'); return <option key={v} value={v}>{new Date(y, m - 1).toLocaleDateString('en-US', {month: 'long', year: 'numeric'})}</option>; })}
-                  </select>
-                  
+                  <PeriodSelector value={reportMonth} onChange={(e) => setReportMonth(e.target.value)} />
                   <button onClick={() => {
-                    if (monthlyVisits.length === 0) { alert('No visits to export for this month.'); return; }
-                    const csv = ["Date,Time,Name,Center,Plan Type,Check-In Method",...monthlyVisits.map(v => `"${new Date(v.time).toLocaleDateString()}","${new Date(v.time).toLocaleTimeString()}","${v.name}","${v.center}","${v.type}","${v.method || 'General Workout'}"`)].join('\n');
-                    const b = new Blob([csv],{type:'text/csv'}); const u = window.URL.createObjectURL(b); const a = document.createElement('a'); a.href=u; a.download=`Monthly_Visits_${reportMonth}.csv`; a.click(); window.URL.revokeObjectURL(u);
+                    if (currentPeriodVisits.length === 0) { alert('No visits to export for this period.'); return; }
+                    const csv = ["Date,Time,Name,Center,Plan Type,Check-In Method",...currentPeriodVisits.map(v => `"${new Date(v.time).toLocaleDateString()}","${new Date(v.time).toLocaleTimeString()}","${v.name}","${v.center}","${v.type}","${v.method || 'General Workout'}"`)].join('\n');
+                    const b = new Blob([csv],{type:'text/csv'}); const u = window.URL.createObjectURL(b); const a = document.createElement('a'); a.href=u; a.download=`Visits_${reportMonth}.csv`; a.click(); window.URL.revokeObjectURL(u);
                   }} className="px-4 py-2 bg-[#1080ad] text-white rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-blue-800"><Download size={16}/> Visits CSV</button>
 
                   <button onClick={() => {
                     if (scopedMembers.length === 0) { alert('No members found.'); return; }
                     const centerName = viewingCenter === 'both' ? 'All Centers' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1) + ' Wellness Center';
                     const totalRevenue = scopedMembers.reduce((sum, m) => { if (m.status !== 'ACTIVE') return sum; const rate = parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0; return sum + rate; }, 0);
-                    const rows = scopedMembers.map(m => { const base = getBaseRate(m.type, m.billingMethod || 'Month-to-Month'); return `<tr><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${m.firstName} ${m.lastName}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${m.type}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${m.billingMethod || 'N/A'}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">$${base}</td><td style="color: #16a34a; font-weight:bold; padding: 10px; border-bottom: 1px solid #e2e8f0;">${m.discountCode || 'None'}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">$${parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || '0'}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${m.nextPayment || 'N/A'}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;"><span style="color: ${m.status === 'ACTIVE' ? '#16a34a' : '#dc2626'}; font-weight: bold;">${m.status}</span></td></tr>`; }).join('');
-                    const html = `<!DOCTYPE html><html><head><title>Financial Roster - ${centerName}</title><style>@media print { body { margin: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } } body { font-family: Arial, sans-serif; color: #1e293b; margin: 0; padding: 40px; } .hdr { background: #003d6b; padding: 20px; display: flex; align-items: center; gap: 15px; border-radius: 8px 8px 0 0; } .hdr img { height: 40px; } .hdr-text { color: white; margin-left: auto; text-align: right; } .hdr-title { font-size: 24px; font-weight: 900; margin: 0; } .hdr-sub { font-size: 12px; color: #8bb8d9; text-transform: uppercase; letter-spacing: 1px; } .accent { height: 4px; background: linear-gradient(to right, #dba51f, #dd6d22); margin-bottom: 30px; } .summary { display: flex; gap: 40px; margin-bottom: 20px; background: #f8fafc; padding: 15px 20px; border-radius: 8px; border: 1px solid #e2e8f0; } .sum-box { text-align: left; } .sum-lbl { font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 1px; } .sum-val { font-size: 20px; font-weight: 900; color: #003d6b; margin-top: 5px; } table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 12px; } th { background: #003d6b; color: white; text-align: left; padding: 12px 10px; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; } td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; } tr:nth-child(even) { background-color: #f8fafc; } .total-row td { background: #fff; border-top: 2px solid #003d6b; border-bottom: none; padding-top: 20px; font-size: 14px; } .total-lbl { text-align: right; font-weight: 900; color: #1e293b; text-transform: uppercase; letter-spacing: 1px; } .total-val { font-size: 20px; font-weight: 900; color: #16a34a; text-align: left; padding-left: 12px;}</style></head><body><div class="hdr"><img src="${LOGO_URL}" /><div class="hdr-text"><h1 class="hdr-title">Financial Roster</h1><div class="hdr-sub">${centerName} • ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div></div></div><div class="accent"></div><div class="summary"><div class="sum-box"><div class="sum-lbl">Total Members</div><div class="sum-val">${scopedMembers.length}</div></div><div class="sum-box"><div class="sum-lbl">Active Accounts</div><div class="sum-val" style="color: #16a34a;">${scopedMembers.filter(m=>m.status==='ACTIVE').length}</div></div><div class="sum-box"><div class="sum-lbl">Overdue / Locked</div><div class="sum-val" style="color: #dc2626;">${scopedMembers.filter(m=>m.status!=='ACTIVE').length}</div></div></div><table><thead><tr><th>Member Name</th><th>Plan Type</th><th>Billing Method</th><th>Base Rate</th><th>Discount</th><th>Final Rate</th><th>Next Payment</th><th>Status</th></tr></thead><tbody>${rows}</tbody><tfoot><tr class="total-row"><td colspan="5" class="total-lbl">Expected Monthly Revenue (Active Members):</td><td colspan="3" class="total-val">$${totalRevenue.toFixed(2)}</td></tr></tfoot></table></body></html>`;
-                    const w = window.open('', '_blank'); w.document.write(html); w.document.close(); setTimeout(() => w.print(), 500);
-                  }} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-slate-200"><Printer size={16}/> Print Roster</button>
-
-                  <button onClick={async () => {
-                    const centerName = viewingCenter === 'both' ? 'All Centers' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1) + ' Wellness Center';
-                    const [month, year] = reportMonth.split('-');
-                    const y = parseInt(year); const m = parseInt(month) - 1; 
-                    const displayMonth = new Date(y, m).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
                     
-                    try {
-                      const res = await fetch('/api/get-payments');
-                      const data = await res.json();
-                      if (!data.records) { alert('Could not find payments. Make sure api/get-payments/route.js is created!'); return; }
-                      
-                      const monthlyPayments = data.records.map(p => ({ memberId: (p.fields['Member'] || [])[0], amount: p.fields['Amount'] || 0, date: p.fields['Payment Date'], method: p.fields['Payment Method'] || 'Unknown' })).filter(p => { if (!p.date) return false; const d = new Date(p.date); return d.getFullYear() === y && d.getMonth() === m; });
-                      
-                      if (monthlyPayments.length === 0) { alert('No payments logged for ' + displayMonth); return; }
-                      
-                      let totalCollected = 0;
-                      const rows = monthlyPayments.map(p => {
-                        const member = members.find(mem => mem.airtableId === p.memberId) || {};
-                        const name = member.firstName ? `${member.firstName} ${member.lastName}` : 'Unknown Member';
-                        const amt = parseFloat(p.amount) || 0;
-                        totalCollected += amt;
-                        return `<tr><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${name}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${member.type || 'N/A'}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #16a34a;">$${amt.toFixed(2)}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${p.method}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${new Date(p.date).toLocaleDateString()}</td></tr>`;
-                      }).join('');
+                    const rows = scopedMembers.map(m => {
+                      const base = getBaseRate(m.type, m.billingMethod || 'Month-to-Month');
+                      return `<tr><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${m.firstName} ${m.lastName}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${m.type}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${m.billingMethod || 'N/A'}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">$${base}</td><td style="color: #16a34a; font-weight:bold; padding: 10px; border-bottom: 1px solid #e2e8f0;">${m.discountCode || 'None'}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">$${parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || '0'}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${m.nextPayment || 'N/A'}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;"><span style="color: ${m.status === 'ACTIVE' ? '#16a34a' : '#dc2626'}; font-weight: bold;">${m.status}</span></td></tr>`;
+                    }).join('');
 
-                      const html = `<!DOCTYPE html><html><head><title>Transaction Log - ${displayMonth}</title><style>@media print { body { margin: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } } body { font-family: Arial, sans-serif; color: #1e293b; margin: 0; padding: 40px; } .hdr { background: #003d6b; padding: 20px; display: flex; align-items: center; gap: 15px; border-radius: 8px 8px 0 0; } .hdr img { height: 40px; } .hdr-text { color: white; margin-left: auto; text-align: right; } .hdr-title { font-size: 24px; font-weight: 900; margin: 0; } .hdr-sub { font-size: 12px; color: #8bb8d9; text-transform: uppercase; letter-spacing: 1px; } .accent { height: 4px; background: linear-gradient(to right, #dba51f, #dd6d22); margin-bottom: 30px; } .summary { display: flex; gap: 40px; margin-bottom: 20px; background: #f8fafc; padding: 15px 20px; border-radius: 8px; border: 1px solid #e2e8f0; } .sum-box { text-align: left; } .sum-lbl { font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 1px; } .sum-val { font-size: 20px; font-weight: 900; color: #003d6b; margin-top: 5px; } table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 12px; } th { background: #003d6b; color: white; text-align: left; padding: 12px 10px; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; } td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; } tr:nth-child(even) { background-color: #f8fafc; } .total-row td { background: #fff; border-top: 2px solid #003d6b; border-bottom: none; padding-top: 20px; font-size: 14px; } .total-lbl { text-align: right; font-weight: 900; color: #1e293b; text-transform: uppercase; letter-spacing: 1px; } .total-val { font-size: 20px; font-weight: 900; color: #16a34a; text-align: left; padding-left: 12px;}</style></head><body><div class="hdr"><img src="${LOGO_URL}" /><div class="hdr-text"><h1 class="hdr-title">Transaction Log</h1><div class="hdr-sub">${centerName} • ${displayMonth}</div></div></div><div class="accent"></div><div class="summary"><div class="sum-box"><div class="sum-lbl">Total Transactions</div><div class="sum-val">${monthlyPayments.length}</div></div><div class="sum-box"><div class="sum-lbl">Total Collected</div><div class="sum-val" style="color: #16a34a;">$${totalCollected.toFixed(2)}</div></div></div><table><thead><tr><th>Member Name</th><th>Plan Type</th><th>Amount Paid</th><th>Payment Method</th><th>Date Paid</th></tr></thead><tbody>${rows}</tbody><tfoot><tr class="total-row"><td colspan="2" class="total-lbl">Total Monthly Collections:</td><td colspan="3" class="total-val">$${totalCollected.toFixed(2)}</td></tr></tfoot></table></body></html>`;
-                      const w = window.open('', '_blank'); w.document.write(html); w.document.close(); setTimeout(() => w.print(), 500);
-                    } catch(err) { alert('Error fetching payments. Ensure api/get-payments/route.js exists!'); }
-                  }} className="px-4 py-2 bg-[#16a34a] text-white rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-green-700"><Printer size={16}/> Print Transactions</button>
-                  
-                  <button onClick={async () => { 
-                    try {
-                      const res = await fetch('/api/get-payments');
-                      const data = await res.json();
-                      const [month, year] = reportMonth.split('-');
-                      const y = parseInt(year); const m = parseInt(month) - 1;
-                      const monthlyPayments = data.records.map(p => ({ memberId: (p.fields['Member'] || [])[0], amount: p.fields['Amount'] || 0, date: p.fields['Payment Date'], method: p.fields['Payment Method'] || 'Unknown' })).filter(p => { if (!p.date) return false; const d = new Date(p.date); return d.getFullYear() === y && d.getMonth() === m; });
-                      if (monthlyPayments.length === 0) { alert('No payments logged for this month.'); return; }
-                      const csv = ["Member Name,Plan Type,Final Rate Paid,Payment Method,Payment Date", ...monthlyPayments.map(p => { const member = members.find(mem => mem.airtableId === p.memberId) || {}; return `"${member.firstName ? member.firstName + ' ' + member.lastName : 'Unknown'}","${member.type || 'N/A'}","$${parseFloat(p.amount).toFixed(2)}","${p.method}","${new Date(p.date).toLocaleDateString()}"`; })].join('\n'); 
-                      const b = new Blob([csv],{type:'text/csv'}); const u = window.URL.createObjectURL(b); const a = document.createElement('a'); a.href=u; a.download=`Transaction_Log_${reportMonth}.csv`; a.click(); window.URL.revokeObjectURL(u); 
-                    } catch(err) { alert('Error fetching payments. Ensure api/get-payments/route.js exists!'); }
-                  }} className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-slate-50"><Download size={16}/> Payments CSV</button>
+                    const html = `<!DOCTYPE html><html><head><title>Financial Roster - ${centerName}</title><style>@media print { body { margin: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } } body { font-family: Arial, sans-serif; color: #1e293b; margin: 0; padding: 40px; } .hdr { background: #003d6b; padding: 20px; display: flex; align-items: center; gap: 15px; border-radius: 8px 8px 0 0; } .hdr img { height: 40px; } .hdr-text { color: white; } .hdr-title { font-size: 24px; font-weight: 900; margin: 0; } .hdr-sub { font-size: 12px; color: #8bb8d9; text-transform: uppercase; letter-spacing: 1px; } .accent { height: 4px; background: linear-gradient(to right, #dba51f, #dd6d22); margin-bottom: 30px; } .summary { display: flex; gap: 40px; margin-bottom: 20px; background: #f8fafc; padding: 15px 20px; border-radius: 8px; border: 1px solid #e2e8f0; } .sum-box { text-align: left; } .sum-lbl { font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 1px; } .sum-val { font-size: 20px; font-weight: 900; color: #003d6b; margin-top: 5px; } table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 12px; } th { background: #003d6b; color: white; text-align: left; padding: 12px 10px; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; } td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; } tr:nth-child(even) { background-color: #f8fafc; } .total-row td { background: #fff; border-top: 2px solid #003d6b; border-bottom: none; padding-top: 20px; font-size: 14px; } .total-lbl { text-align: right; font-weight: 900; color: #1e293b; text-transform: uppercase; letter-spacing: 1px; } .total-val { font-size: 20px; font-weight: 900; color: #16a34a; text-align: left; padding-left: 12px;}</style></head><body><div class="hdr"><img src="${LOGO_URL}" /><div class="hdr-text"><h1 class="hdr-title">Financial Roster</h1><div class="hdr-sub">${centerName} • ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div></div></div><div class="accent"></div><div class="summary"><div class="sum-box"><div class="sum-lbl">Total Members</div><div class="sum-val">${scopedMembers.length}</div></div><div class="sum-box"><div class="sum-lbl">Active Accounts</div><div class="sum-val" style="color: #16a34a;">${scopedMembers.filter(m=>m.status==='ACTIVE').length}</div></div><div class="sum-box"><div class="sum-lbl">Overdue / Locked</div><div class="sum-val" style="color: #dc2626;">${scopedMembers.filter(m=>m.status!=='ACTIVE').length}</div></div></div><table><thead><tr><th>Member Name</th><th>Plan Type</th><th>Billing Method</th><th>Base Rate</th><th>Discount</th><th>Final Rate</th><th>Next Payment</th><th>Status</th></tr></thead><tbody>${rows}</tbody><tfoot><tr class="total-row"><td colspan="5" class="total-lbl">Expected Monthly Revenue (Active Members):</td><td colspan="3" class="total-val">$${totalRevenue.toFixed(2)}</td></tr></tfoot></table></body></html>`;
+                    const w = window.open('', '_blank'); w.document.write(html); w.document.close(); setTimeout(() => w.print(), 500);
+                  }} className="px-4 py-2 bg-[#16a34a] text-white rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-green-700"><Printer size={16}/> Print Financials</button>
+
+                  <button onClick={() => {
+                    if (scopedMembers.length === 0) { alert('No members found.'); return; }
+                    const csv = ["Member ID,First Name,Last Name,Plan Type,Billing Method,Monthly Rate,Status,Next Payment Due,Corporate Sponsor,Center",...scopedMembers.map(m => `"${m.id}","${m.firstName}","${m.lastName}","${m.type}","${m.billingMethod || 'N/A'}","${m.monthlyRate || '0'}","${m.status}","${m.nextPayment || 'N/A'}","${m.sponsorName || 'None'}","${m.center}"`)].join('\n');
+                    const b = new Blob([csv],{type:'text/csv'}); const u = window.URL.createObjectURL(b); const a = document.createElement('a'); a.href=u; a.download=`Financial_Roster_${reportMonth}.csv`; a.click(); window.URL.revokeObjectURL(u);
+                  }} className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-slate-50"><Download size={16}/> CSV</button>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-2">
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-blue-500"><p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Visits</p><p className="text-4xl font-black text-slate-800">{monthlyVisits.length}</p></div>
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-green-500"><p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">New Sign-Ups</p><p className="text-4xl font-black text-slate-800">{newMembersThisMonth.length}</p></div>
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-amber-500"><p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">24/7 Passes (New)</p><p className="text-4xl font-black text-slate-800">{newMembersThisMonth.filter(m => m.access247).length}</p></div>
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-purple-500"><p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Orientations</p><p className="text-4xl font-black text-slate-800">{newMembersThisMonth.filter(m => m.needsOrientation).length}</p></div>
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-blue-500">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Visits</p>
+                  <p className="text-4xl font-black text-slate-800">{currentPeriodVisits.length}</p>
+                </div>
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-green-500">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">New Sign-Ups</p>
+                  <p className="text-4xl font-black text-slate-800">{newMembersThisPeriod.length}</p>
+                </div>
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-amber-500">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">24/7 Passes (New)</p>
+                  <p className="text-4xl font-black text-slate-800">{newMembersThisPeriod.filter(m => m.access247).length}</p>
+                </div>
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-purple-500">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Orientations</p>
+                  <p className="text-4xl font-black text-slate-800">{newMembersThisPeriod.filter(m => m.needsOrientation).length}</p>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
                   <h3 className="text-md font-black text-[#001f3f] mb-4 flex items-center gap-2">🏆 Top Visitors ({reportMonth})</h3>
-                  {topMembers.length > 0 ? topMembers.map(([name, count], index) => ( <div key={name} className="flex justify-between items-center bg-slate-50 p-3 rounded-xl mb-2"><div className="flex items-center gap-3"><span className="w-6 h-6 rounded-full bg-amber-400 text-white flex items-center justify-center text-xs font-bold">{index + 1}</span><span className="font-bold text-slate-700">{name}</span></div><span className="text-sm font-bold text-blue-600">{count} visits</span></div> )) : <p className="text-sm text-slate-400">No visits recorded yet.</p>}
+                  {topMembers.length > 0 ? topMembers.map(([name, count], index) => (
+                    <div key={name} className="flex justify-between items-center bg-slate-50 p-3 rounded-xl mb-2">
+                      <div className="flex items-center gap-3">
+                        <span className="w-6 h-6 rounded-full bg-amber-400 text-white flex items-center justify-center text-xs font-bold">{index + 1}</span>
+                        <span className="font-bold text-slate-700">{name}</span>
+                      </div>
+                      <span className="text-sm font-bold text-blue-600">{count} visits</span>
+                    </div>
+                  )) : <p className="text-sm text-slate-400">No visits recorded yet.</p>}
                 </div>
+
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
                   <h3 className="text-md font-black text-[#001f3f] mb-4 flex items-center gap-2">⚠️ Slipping Away (21+ Days)</h3>
-                  {slippingAway.length > 0 ? slippingAway.map(m => ( <div key={m.email} className="flex justify-between items-center bg-red-50 p-3 rounded-xl mb-2"><span className="font-bold text-slate-700">{m.firstName} {m.lastName}</span><span className="text-xs font-bold text-red-600 uppercase">Needs Check-in</span></div> )) : <p className="text-sm text-slate-400">All active members have visited recently!</p>}
+                  {slippingAway.length > 0 ? slippingAway.map(m => (
+                    <div key={m.email} className="flex justify-between items-center bg-red-50 p-3 rounded-xl mb-2">
+                      <span className="font-bold text-slate-700">{m.firstName} {m.lastName}</span>
+                      <span className="text-xs font-bold text-red-600 uppercase">Needs Check-in</span>
+                    </div>
+                  )) : <p className="text-sm text-slate-400">All active members have visited recently!</p>}
                 </div>
               </div>
 
@@ -768,16 +953,30 @@ export default function WellnessHub() {
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
                   <h3 className="text-md font-black text-[#001f3f] mb-4">Standard Membership Visits</h3>
                   <div className="space-y-3">
-                    {[{l: 'Single', k: 'SINGLE'}, {l: 'Family', k: 'FAMILY'}, {l: 'Senior', k: 'SENIOR'}, {l: 'Student', k: 'STUDENT'}].map(plan => ( <div key={plan.k} className="flex justify-between items-center border-b border-slate-50 pb-2"><span className="text-sm font-semibold text-slate-600">{plan.l}</span><span className="font-black text-slate-800">{(visitsByPlan[plan.k] || 0) + (plan.k === 'SENIOR' ? (visitsByPlan['SENIOR CITIZEN'] || 0) : 0)}</span></div> ))}
+                    {[{l: 'Single', k: 'SINGLE'}, {l: 'Family', k: 'FAMILY'}, {l: 'Senior', k: 'SENIOR'}, {l: 'Student', k: 'STUDENT'}].map(plan => (
+                      <div key={plan.k} className="flex justify-between items-center border-b border-slate-50 pb-2">
+                        <span className="text-sm font-semibold text-slate-600">{plan.l}</span>
+                        <span className="font-black text-slate-800">
+                          {(visitsByPlan[plan.k] || 0) + (plan.k === 'SENIOR' ? (visitsByPlan['SENIOR CITIZEN'] || 0) : 0)}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 </div>
+
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
                   <h3 className="text-md font-black text-[#001f3f] mb-4">Corporate & Military Visits</h3>
                   <div className="space-y-3">
-                    {['CORPORATE', 'CORPORATE FAMILY', 'ACTIVE MILITARY'].map(plan => ( <div key={plan} className="flex justify-between items-center border-b border-slate-50 pb-2"><span className="text-sm font-semibold text-slate-600">{plan}</span><span className="font-black text-slate-800">{visitsByPlan[plan] || 0}</span></div> ))}
+                    {['CORPORATE', 'CORPORATE FAMILY', 'ACTIVE MILITARY'].map(plan => (
+                      <div key={plan} className="flex justify-between items-center border-b border-slate-50 pb-2">
+                        <span className="text-sm font-semibold text-slate-600">{plan}</span>
+                        <span className="font-black text-slate-800">{visitsByPlan[plan] || 0}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
+
             </div>
           );
         })()}
@@ -931,7 +1130,7 @@ export default function WellnessHub() {
                      {!familyFlow && (
                        <>
                          <div className="grid grid-cols-2 gap-5">
-                            <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Plan Type</label><select id="plan" onChange={e => { const v = e.target.value; if (!v.includes('CORPORATE') && !v.includes('HD6') && !v.includes('HCHF')) { setSelectedSponsor(''); setCustomSponsor(''); } }} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors font-bold text-slate-700"><option value="SINGLE">Single</option><option value="FAMILY">Family</option><option value="SENIOR">Senior</option><option value="SENIOR FAMILY">Senior Family</option><option value="STUDENT">Student (14-22)</option><option value="CLASS ONLY">Class Only</option><option value="CORPORATE">Corporate</option><option value="CORPORATE FAMILY">Corporate Family</option><option value="CORPORATE SELF PAY">Corporate Self Pay</option><option value="HERITAGE ESTATES">Heritage Estates</option><option value="MILITARY">Military</option><option value="HD6">Staff (HD6)</option><option value="HD6 FAMILY">Staff Family (HD6)</option><option value="HCHF">Staff (HCHF)</option></select></div>
+                            <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Plan Type</label><select id="plan" onChange={e => { const v = e.target.value; if (!v.includes('CORPORATE') && !v.includes('HD6') && !v.includes('HCHF')) { setSelectedSponsor(''); setCustomSponsor(''); } }} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors font-bold text-slate-700"><option value="SINGLE">Single</option><option value="FAMILY">Family</option><option value="SENIOR">Senior</option><option value="SENIOR FAMILY">Senior Family</option><option value="STUDENT">Student (14-22)</option><option value="CORPORATE">Corporate</option><option value="CORPORATE FAMILY">Corporate Family</option><option value="MILITARY">Military</option><option value="HD6">Staff (HD6)</option><option value="HCHF">Staff (HCHF)</option></select></div>
                             <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Home Center</label><select id="center" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors font-bold text-slate-700"><option value="Anthony Wellness Center">Anthony</option><option value="Harper Wellness Center">Harper</option></select></div>
                          </div>
                          <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Billing Method</label>
@@ -1019,7 +1218,7 @@ export default function WellnessHub() {
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Plan Type</label>
-                        <select id="ed_plan" defaultValue={selectedMember.type} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad] font-bold"><option value="SINGLE">Single</option><option value="FAMILY">Family</option><option value="SENIOR">Senior</option><option value="SENIOR FAMILY">Senior Family</option><option value="STUDENT">Student (14-22)</option><option value="CLASS ONLY">Class Only</option><option value="CORPORATE">Corporate</option><option value="CORPORATE FAMILY">Corporate Family</option><option value="CORPORATE SELF PAY">Corporate Self Pay</option><option value="HERITAGE ESTATES">Heritage Estates</option><option value="MILITARY">Military</option><option value="HD6">Staff (HD6)</option><option value="HD6 FAMILY">Staff Family (HD6)</option><option value="HCHF">Staff (HCHF)</option></select>
+                        <select id="ed_plan" defaultValue={selectedMember.type} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad] font-bold"><option value="SINGLE">Single</option><option value="FAMILY">Family</option><option value="SENIOR">Senior</option><option value="SENIOR FAMILY">Senior Family</option><option value="STUDENT">Student (14-22)</option><option value="CORPORATE">Corporate</option><option value="CORPORATE FAMILY">Corporate Family</option><option value="MILITARY">Military</option><option value="HD6">Staff (HD6)</option><option value="HCHF">Staff (HCHF)</option></select>
                       </div>
                       <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Billing Method</label>
                         <select id="ed_billing" defaultValue={selectedMember.billingMethod || 'Month-to-Month'} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad] font-bold"><option value="Month-to-Month">Month-to-Month</option><option value="Auto-Draft">Auto-Draft</option><option value="6-Month Prepay">6-Month Prepay</option><option value="12-Month Prepay">12-Month Prepay</option></select>
@@ -1109,8 +1308,8 @@ export default function WellnessHub() {
                 <button key={m} onClick={async () => {
                   if (!window.confirm(`Log ${m} payment for ${paymentModal.firstName} ${paymentModal.lastName}?`)) return;
                   try {
-                    const finalAmount = parseFloat(String(paymentModal.monthlyRate).replace(/[^0-9.]/g, '')) || 0;
-                    const res = await fetch('/api/log-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: paymentModal.airtableId, memberName: `${paymentModal.firstName} ${paymentModal.lastName}`, method: m, currentDueDate: paymentModal.nextPayment, amount: finalAmount }) });
+                    const res = await fetch('/api/log-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: paymentModal.airtableId, memberName: `${paymentModal.firstName} ${paymentModal.lastName}`, method: m, currentDueDate: paymentModal.nextPayment }) });
+                    const result = await res.json();
                     if (result.success) {
                       setMembers(prev => prev.map(mem => mem.airtableId === paymentModal.airtableId ? { ...mem, status: 'ACTIVE', nextPayment: result.nextPaymentDue } : mem));
                       if (selectedMember && selectedMember.airtableId === paymentModal.airtableId) { setSelectedMember({ ...selectedMember, status: 'ACTIVE', nextPayment: result.nextPaymentDue }); }
