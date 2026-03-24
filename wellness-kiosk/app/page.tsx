@@ -82,8 +82,7 @@ export default function WellnessHub() {
     };
     if (p === 'CORPORATE') return 25;
     if (p === 'CORPORATE FAMILY') return 45;
-    if (['MILITARY', 'HD6', 'HCHF', 'FIRST DAY FREE'].includes(p)) return 0;
-    return r[p] ? (r[p][b] || r[p]['Month-to-Month']) : 0;
+if (['MILITARY', 'HD6', 'HD6 FAMILY', 'FIRST DAY FREE'].includes(p)) return 0;    return r[p] ? (r[p][b] || r[p]['Month-to-Month']) : 0;
   };
 
   const membersRef = useRef(members);
@@ -166,8 +165,7 @@ export default function WellnessHub() {
       corporate: scopedMembers.filter(m => m.type === 'CORPORATE').length, 
       corporateFamily: scopedMembers.filter(m => m.type === 'CORPORATE FAMILY').length, 
       dayPass: scopedMembers.filter(m => m.type.includes('DAY PASS')).length, 
-      staff: scopedMembers.filter(m => m.type.includes('HD6') || m.type.includes('HCHF')).length, 
-      military: scopedMembers.filter(m => m.type.includes('MILITARY')).length 
+staff: scopedMembers.filter(m => m.type.includes('HD6')).length,      military: scopedMembers.filter(m => m.type.includes('MILITARY')).length 
   };
   
   const planChartData = [{label:'Single',value:reportStats.single,color:'#1080ad'},{label:'Family',value:reportStats.family,color:'#f59e0b'},{label:'Senior',value:reportStats.senior+reportStats.seniorFamily,color:'#16a34a'},{label:'Student',value:reportStats.student,color:'#8b5cf6'},{label:'Corporate',value:reportStats.corporate+reportStats.corporateFamily,color:'#ef4444'},{label:'Other (Staff/Mil/Pass)',value:reportStats.staff+reportStats.military+reportStats.dayPass,color:'#64748b'}];
@@ -179,7 +177,7 @@ export default function WellnessHub() {
   const handleAddMemberSubmit = async (e) => {
     e.preventDefault(); setIsAdding(true); setNewMemberPin(null);
     const firstName = e.target.fname.value; const lastName = e.target.lname.value; const email = e.target.email.value; const phone = e.target.phone.value; const plan = e.target.plan.value; const center = e.target.center.value;
-    const needsOrientation = e.target.orientation?.checked || false; const isFamily = plan.includes('FAMILY'); const isCorporate = plan.includes('CORPORATE') || plan.includes('HD6') || plan.includes('HCHF');
+    const needsOrientation = e.target.orientation?.checked || false; const isFamily = plan.includes('FAMILY'); const isCorporate = plan.includes('CORPORATE') || plan.includes('HD6');
     const sponsor = isCorporate ? (selectedSponsor === '__other__' ? customSponsor : selectedSponsor) : '';
     const address = e.target.address?.value || ''; const city = e.target.city?.value || ''; const mstate = e.target.mstate?.value || 'KS'; const mzip = e.target.mzip?.value || '';
     const billing = e.target.billing?.value || 'Month-to-Month'; const access247 = e.target.access247?.checked || false; const startDate = document.getElementById('startDate').value; const badgeNumber = e.target.badgenum?.value || '';
@@ -1396,7 +1394,7 @@ export default function WellnessHub() {
                      {!familyFlow && (
                        <>
                          <div className="grid grid-cols-2 gap-5">
-                            <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Plan Type</label><select id="plan" onChange={e => { const v = e.target.value; if (!v.includes('CORPORATE') && !v.includes('HD6') && !v.includes('HCHF')) { setSelectedSponsor(''); setCustomSponsor(''); } }} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors font-bold text-slate-700"><option value="SINGLE">Single</option><option value="FAMILY">Family</option><option value="SENIOR">Senior</option><option value="SENIOR FAMILY">Senior Family</option><option value="STUDENT">Student (14-22)</option><option value="CORPORATE">Corporate</option><option value="CORPORATE FAMILY">Corporate Family</option><option value="MILITARY">Military</option><option value="HD6">Staff (HD6)</option><option value="HCHF">Staff (HCHF)</option></select></div>
+                            <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Plan Type</label><select id="plan" onChange={e => { const v = e.target.value; if (!v.includes('CORPORATE') && !v.includes('HD6') && !v.includes('HCHF')) { setSelectedSponsor(''); setCustomSponsor(''); } }} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors font-bold text-slate-700"><option value="SINGLE">Single</option><option value="FAMILY">Family</option><option value="SENIOR">Senior</option><option value="SENIOR FAMILY">Senior Family</option><option value="STUDENT">Student (14-22)</option><option value="CORPORATE">Corporate</option><option value="CORPORATE FAMILY">Corporate Family</option><option value="MILITARY">Military</option><option value="HD6">Staff (HD6)</option><option value="HD6 FAMILY">Staff Family (HD6)</option></select></div>
                             <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Home Center</label><select id="center" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors font-bold text-slate-700"><option value="Anthony Wellness Center">Anthony</option><option value="Harper Wellness Center">Harper</option></select></div>
                          </div>
                          <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Billing Method</label>
@@ -1519,7 +1517,7 @@ export default function WellnessHub() {
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Plan Type</label>
-                        <select id="ed_plan" defaultValue={selectedMember.type} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad] font-bold"><option value="SINGLE">Single</option><option value="FAMILY">Family</option><option value="SENIOR">Senior</option><option value="SENIOR FAMILY">Senior Family</option><option value="STUDENT">Student (14-22)</option><option value="CORPORATE">Corporate</option><option value="CORPORATE FAMILY">Corporate Family</option><option value="MILITARY">Military</option><option value="HD6">Staff (HD6)</option><option value="HCHF">Staff (HCHF)</option></select>
+                        <select id="ed_plan" defaultValue={selectedMember.type} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad] font-bold"><option value="SINGLE">Single</option><option value="FAMILY">Family</option><option value="SENIOR">Senior</option><option value="SENIOR FAMILY">Senior Family</option><option value="STUDENT">Student (14-22)</option><option value="CORPORATE">Corporate</option><option value="CORPORATE FAMILY">Corporate Family</option><option value="MILITARY">Military</option<option value="HD6">Staff (HD6)</option><option value="HD6 FAMILY">Staff Family (HD6)</option></select>
                       </div>
                       <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Billing Method</label>
                         <select id="ed_billing" defaultValue={selectedMember.billingMethod || 'Month-to-Month'} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad] font-bold"><option value="Month-to-Month">Month-to-Month</option><option value="Auto-Draft">Auto-Draft</option><option value="6-Month Prepay">6-Month Prepay</option><option value="12-Month Prepay">12-Month Prepay</option></select>
