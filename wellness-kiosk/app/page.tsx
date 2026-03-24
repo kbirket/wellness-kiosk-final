@@ -55,8 +55,10 @@ export default function WellnessHub() {
     return `${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
   });
   
-  const [usageBasedCorps, setUsageBasedCorps] = useState({});
-  const [expandedCorpId, setExpandedCorpId] = useState(null);
+const [usageBasedCorps, setUsageBasedCorps] = useState(() => { 
+    try { return JSON.parse(localStorage.getItem('wellnessUsagePrefs')) || {}; } catch(e) { return {}; } 
+  });
+  useEffect(() => { localStorage.setItem('wellnessUsagePrefs', JSON.stringify(usageBasedCorps)); }, [usageBasedCorps]);  const [expandedCorpId, setExpandedCorpId] = useState(null);
   const [showAddVisitorModal, setShowAddVisitorModal] = useState(false);
   const [selectedVisitor, setSelectedVisitor] = useState(null);
 
@@ -812,7 +814,7 @@ export default function WellnessHub() {
                        </div>
                        
                        <label className="flex items-center gap-2 mb-6 cursor-pointer group w-fit">
-                          <input type="checkbox" checked={isUsageBased} onChange={() => setUsageBasedCorps(prev => ({...prev, [corp.id]: !prev[corp.id]}))} className="w-4 h-4 text-[#1080ad] rounded border-slate-300 cursor-pointer" />
+                          <input type="checkbox" checked={isUsageBased} onChange={(e) => setUsageBasedCorps(prev => ({...prev, [corp.id]: e.target.checked}))}className="w-4 h-4 text-[#1080ad] rounded border-slate-300 cursor-pointer" />
                           <span className="text-xs font-bold text-slate-500 uppercase tracking-widest group-hover:text-[#1080ad] transition-colors">Usage-Based Billing</span>
                        </label>
 
