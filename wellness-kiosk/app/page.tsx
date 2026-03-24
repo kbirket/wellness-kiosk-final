@@ -46,6 +46,7 @@ export default function WellnessHub() {
   const [pinInput, setPinInput] = useState('');
   const [visitors, setVisitors] = useState([]);
   const [showAllCheckins, setShowAllCheckins] = useState(false);
+  const [showAllMemberVisits, setShowAllMemberVisits] = useState(false);
   const [activeClass, setActiveClass] = useState(null);
   const [kioskMode, setKioskMode] = useState('Gym');
   
@@ -57,6 +58,11 @@ export default function WellnessHub() {
   const [usageBasedCorps, setUsageBasedCorps] = useState({});
   const [showAddVisitorModal, setShowAddVisitorModal] = useState(false);
   const [selectedVisitor, setSelectedVisitor] = useState(null);
+
+  // Instantly collapse the visit list whenever a new member is selected
+  useEffect(() => {
+    setShowAllMemberVisits(false);
+  }, [selectedMember]);
 
   // --- CENTRAL PRICING ENGINE ---
   const getBaseRate = (p, b) => {
@@ -375,7 +381,6 @@ export default function WellnessHub() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 relative"><h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Search size={14}/> Quick Member Lookup</h3><div className="relative"><input className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] text-sm" placeholder="Type a name, ID, or email..." value={quickSearch} onChange={e => setQuickSearch(e.target.value)} />{quickResults.length > 0 && (<div className="absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 overflow-hidden">{quickResults.map(m => (<button key={m.id} onClick={() => { setSelectedMember(m); setQuickSearch(''); }} className="w-full p-4 border-b border-slate-50 last:border-0 hover:bg-blue-50 transition-colors flex justify-between items-center text-left"><div><p className="font-bold text-[#001f3f]">{m.firstName} {m.lastName}</p><p className="text-[10px] text-slate-400">{m.id} · {m.type}</p></div><span className={`px-2 py-1 rounded-full text-[9px] font-black ${getStoplight(m)==='green'?'bg-green-100 text-green-600':getStoplight(m)==='yellow'?'bg-yellow-100 text-yellow-600':'bg-red-100 text-red-600'}`}>{getStoplight(m)==='green'?'ACTIVE':getStoplight(m)==='yellow'?'GRACE':'LOCKED'}</span></button>))}</div>)}</div></div><div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between"><h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><FileText size={14}/> Quick Export</h3><div className="space-y-3"><button onClick={exportTodaysLog} className="w-full bg-[#1080ad] text-white py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors shadow-sm"><Download size={16}/> Export Today's Check-in Log</button><button onClick={handleExportCSV} className="w-full bg-slate-100 text-[#001f3f] py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-slate-200 transition-colors"><Download size={16}/> Export Full Member List</button></div></div></div>
               
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* CARD 1: TODAY'S CHECK-INS */}
                 <ProListCard title="Today's Check-ins">
                   {(() => {
                     const todayStr = new Date().toDateString();
@@ -432,7 +437,6 @@ export default function WellnessHub() {
                   })()}
                 </ProListCard>
 
-                {/* CARD 2: ACCOUNT HEALTH */}
                 <ProListCard title="Account Health">
                   <div className="py-4">
                     <DonutChart data={statusChartData} totalLabel="Accounts" />
@@ -714,7 +718,6 @@ export default function WellnessHub() {
                      let activeMonthsCount = 0;
 
                      if (isUsageBased) {
-                         // Check each month in the selected period (1 month or 3 months for a quarter)
                          targetMonths.forEach(mIdx => {
                              const visitedInMonth = memVisits.some(v => new Date(v.time).getMonth() === mIdx);
                              if (visitedInMonth) {
@@ -723,7 +726,6 @@ export default function WellnessHub() {
                              }
                          });
                      } else {
-                         // Standard Flat Billing
                          if (mem.status === 'ACTIVE') {
                              memberOwed = rate * targetMonths.length;
                              activeMonthsCount = targetMonths.length;
@@ -769,7 +771,7 @@ export default function WellnessHub() {
 
                     const rows = enrichedMembers.map(mem => `<tr><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${mem.firstName} ${mem.lastName}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; font-family: monospace; color: #64748b;">${mem.id}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${mem.type}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: center; font-weight: bold; color: ${mem.periodVisits > 0 ? '#1080ad' : '#94a3b8'};">${mem.periodVisits}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: center;">${mem.activeMonthsCount}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: ${mem.memberOwed > 0 ? '#16a34a' : '#94a3b8'};">$${mem.memberOwed.toFixed(2)}</td></tr>`).join('');
 
-                    const html = `<!DOCTYPE html><html><head><title>Corporate Invoice - ${corp.name} - ${displayPeriod}</title><style>@media print{body{margin:0}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:40px}.hdr{background:#003d6b;padding:20px 44px;display:flex;justify-content:space-between;align-items:center;border-radius:8px 8px 0 0}.hdr-logo{height:40px}.hdr-text{text-align:right;color:white}.hdr-title{font-size:24px;font-weight:900;margin:0}.hdr-sub{font-size:12px;color:#8bb8d9;margin-top:4px;line-height:1.4}.accent{height:4px;background:linear-gradient(to right,#dba51f,#dd6d22);margin-bottom:40px}.bill-to{margin-bottom:30px}.bill-to h2{margin:0 0 5px 0;font-size:14px;color:#64748b;text-transform:uppercase;letter-spacing:1px}.bill-to p{margin:0;font-size:18px;font-weight:900;color:#003d6b}.summary{display:flex;gap:40px;margin-bottom:30px;background:#f8fafc;padding:20px;border-radius:8px;border:1px solid #e2e8f0}.sum-box{text-align:left}.sum-lbl{font-size:10px;font-weight:bold;color:#64748b;text-transform:uppercase;letter-spacing:1px}.sum-val{font-size:24px;font-weight:900;color:#003d6b;margin-top:5px}.sum-val.due{color:#16a34a}table{width:100%;border-collapse:collapse;margin-bottom:30px;font-size:12px}th{background:#003d6b;color:white;text-align:left;padding:12px 10px;font-size:10px;text-transform:uppercase;letter-spacing:1px}th.right{text-align:right}th.center{text-align:center}.total-row td{background:#fff;border-top:2px solid #003d6b;padding-top:20px;font-size:14px}.total-lbl{text-align:right;font-weight:900;color:#1e293b;text-transform:uppercase}.total-val{font-size:20px;font-weight:900;color:#16a34a;text-align:right}.sign{margin-top:40px;font-size:14px}.sign-name{font-weight:bold;color:#003d6b;margin-top:5px}.sign-title{color:#64748b;font-size:12px}</style></head><body><div class="hdr"><img src="${LOGO_URL}" class="hdr-logo" /><div class="hdr-text"><h1 class="hdr-title">Corporate Invoice</h1><div class="hdr-sub">${centerName}<br/>${centerAddr} | ${centerPhone}</div></div></div><div class="accent"></div><div class="bill-to"><h2>Billed To:</h2><p>${corp.name}</p><p style="font-size: 14px; font-weight: normal; color: #475569; margin-top: 4px;">Attn: ${corp.contactName || 'Benefits Administrator'}</p></div><div class="summary"><div class="sum-box"><div class="sum-lbl">Billing Period</div><div class="sum-val" style="font-size: 18px;">${displayPeriod}</div></div><div class="sum-box"><div class="sum-lbl">${isUsageBased ? 'Active Employees' : 'Total Enrolled'}</div><div class="sum-val" style="font-size: 18px;">${activeMembersCount}</div></div><div class="sum-box"><div class="sum-lbl">Total Amount Due</div><div class="sum-val due" style="font-size: 18px;">$${totalOwed.toFixed(2)}</div></div></div><table><thead><tr><th>Employee Name</th><th>Member ID</th><th>Plan Type</th><th class="center">Period Visits</th><th class="center">Months Billed</th><th class="right">Amount Billed</th></tr></thead><tbody>${rows}</tbody><tfoot><tr class="total-row"><td colspan="5" class="total-lbl">Total Corporate Responsibility:</td><td class="total-val">$${totalOwed.toFixed(2)}</td></tr></tfoot></table><div class="sign"><p>Thank you for partnering with Patterson Health Center to keep your team healthy!</p><div class="sign-name">${directorName}</div><div class="sign-title">Director, ${centerName}</div></div></body></html>`;
+                    const html = `<!DOCTYPE html><html><head><title>Corporate Invoice - ${corp.name} - ${displayPeriod}</title><style>@media print{body{margin:0}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:40px}.hdr{background:#003d6b;padding:20px 44px;display:flex;justify-content:space-between;align-items:center;border-radius:8px 8px 0 0}.hdr-logo{height:40px}.hdr-text{text-align:right;color:white}.hdr-title{font-size:24px;font-weight:900;margin:0}.hdr-sub{font-size:12px;color:#8bb8d9;margin-top:4px;line-height:1.4}.accent{height:4px;background:linear-gradient(to right,#dba51f,#dd6d22);margin-bottom:40px}.bill-to{margin-bottom:30px}.bill-to h2{margin:0 0 5px 0;font-size:14px;color:#64748b;text-transform:uppercase;letter-spacing:1px}.bill-to p{margin:0;font-size:18px;font-weight:900;color:#003d6b}.summary{display:flex;gap:40px;margin-bottom:30px;background:#f8fafc;padding:20px;border-radius:8px;border:1px solid #e2e8f0}.sum-box{text-align:left}.sum-lbl{font-size:10px;font-weight:bold;color:#64748b;text-transform:uppercase;letter-spacing:1px}.sum-val{font-size:24px;font-weight:900;color:#003d6b;margin-top:5px}.sum-val.due{color:#16a34a}table{width:100%;border-collapse:collapse;margin-bottom:30px;font-size:12px}th{background:#003d6b;color:white;text-align:left;padding:12px 10px;font-size:10px;text-transform:uppercase;letter-spacing:1px}th.right{text-align:right}th.center{text-align:center}.total-row td{background:#fff;border-top:2px solid #003d6b;padding-top:20px;font-size:14px}.total-lbl{text-align:right;font-weight:900;color:#1e293b;text-transform:uppercase}.total-val{font-size:20px;font-weight:900;color:#16a34a;text-align:right}.sign{margin-top:40px;font-size:14px}.sign-name{font-weight:bold;color:#003d6b;margin-top:5px}.sign-title{color:#64748b;font-size:12px}</style></head><body><div class="hdr"><img src="${LOGO_URL}" class="hdr-logo" /><div class="hdr-text"><h1 class="hdr-title">Corporate Invoice</h1><div class="hdr-sub">${centerName}<br/>${centerAddr} | ${centerPhone}</div></div></div><div class="accent"></div><div class="bill-to"><h2>Billed To:</h2><p>${corp.name}</p><p style="font-size: 14px; font-weight: normal; color: #475569; margin-top: 4px;">Attn: ${corp.contactName || 'Benefits Administrator'}</p></div><div class="summary"><div class="sum-box"><div class="sum-lbl">Billing Period</div><div class="sum-val" style="font-size: 18px;">${displayPeriod}</div></div><div class="sum-box"><div class="sum-lbl">${isUsageBased ? 'Active Employees' : 'Total Enrolled'}</div><div class="sum-val" style="font-size: 18px;">${activeMembersCount}</div></div><div class="sum-box"><div class="sum-lbl">Total Amount Due</div><div class="sum-val due" style="font-size: 18px;">$${totalOwed.toFixed(2)}</div></div></div><table><thead><tr><th>Employee Name</th><th>Member ID</th><th>Plan Type</th><th class="center">Period Visits</th><th class="center">Months Billed</th><th class="right">Amount Billed</th></tr></thead><tbody>${rows}</tbody><tfoot><tr class="total-row"><td colspan="4" class="total-lbl">Total Corporate Responsibility:</td><td class="total-val">$${totalOwed.toFixed(2)}</td></tr></tfoot></table><div class="sign"><p>Thank you for partnering with Patterson Health Center to keep your team healthy!</p><div class="sign-name">${directorName}</div><div class="sign-title">Director, ${centerName}</div></div></body></html>`;
                     const w = window.open('', '_blank'); w.document.write(html); w.document.close(); setTimeout(() => w.print(), 500);
                  };
 
@@ -1206,25 +1208,37 @@ export default function WellnessHub() {
                         <p className="text-sm text-slate-600 bg-slate-50 p-4 rounded-xl border border-slate-100 whitespace-pre-wrap">{selectedMember.notes}</p>
                       </div>
                  )}
-                 
                  <div className="col-span-2 mt-6">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Recent Check-ins</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Check-in History</p>
                     {(() => {
-                      const memberVisits = visits.filter(v => v.name.toLowerCase() === `${selectedMember.firstName} ${selectedMember.lastName}`.toLowerCase()).slice(0, 5);
+                      const memberVisits = visits.filter(v => v.name.toLowerCase() === `${selectedMember.firstName} ${selectedMember.lastName}`.toLowerCase());
+                      const displayVisits = showAllMemberVisits ? memberVisits : memberVisits.slice(0, 5);
+                      
                       if (memberVisits.length === 0) return <p className="text-sm text-slate-500 bg-slate-50 p-4 rounded-xl border border-slate-100 italic">No recent visits on file.</p>;
+                      
                       return (
-                        <div className="space-y-2">
-                          {memberVisits.map((v, i) => (
-                            <div key={i} className="flex justify-between items-center bg-blue-50 p-3 rounded-xl border border-blue-100">
-                              <span className="font-bold text-slate-800 text-sm flex items-center gap-2">
-                                <CheckCircle size={14} className="text-[#1080ad]"/> {v.center} 
-                                <span className="text-xs font-medium text-slate-500 hidden md:inline ml-1">({v.method || 'General Workout'})</span>
-                              </span>
-                              <span className="font-bold text-[#1080ad] text-xs">
-                                {new Date(v.time).toLocaleDateString()} @ {new Date(v.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                              </span>
-                            </div>
-                          ))}
+                        <div>
+                          <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
+                            {displayVisits.map((v, i) => (
+                              <div key={i} className="flex justify-between items-center bg-blue-50 p-3 rounded-xl border border-blue-100">
+                                <span className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                                  <CheckCircle size={14} className="text-[#1080ad]"/> {v.center} 
+                                  <span className="text-xs font-medium text-slate-500 hidden md:inline ml-1">({v.method || 'General Workout'})</span>
+                                </span>
+                                <span className="font-bold text-[#1080ad] text-xs">
+                                  {new Date(v.time).toLocaleDateString()} @ {new Date(v.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                          {memberVisits.length > 5 && (
+                            <button 
+                              onClick={() => setShowAllMemberVisits(!showAllMemberVisits)} 
+                              className="w-full py-2 mt-3 text-sm font-bold text-[#1080ad] hover:text-[#001f3f] transition-colors bg-blue-50/50 rounded-lg border border-blue-100 hover:bg-blue-50"
+                            >
+                              {showAllMemberVisits ? 'Show Less ↑' : `See All ${memberVisits.length} Visits →`}
+                            </button>
+                          )}
                         </div>
                       );
                     })()}
