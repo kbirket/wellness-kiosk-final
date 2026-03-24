@@ -127,7 +127,7 @@ export default function WellnessHub() {
     }).catch(() => {});
   }, []);
 
-  useEffect(() => {
+useEffect(() => {
     setLoading(true);
     fetch('/api/members').then(res => res.json()).then(data => {
       if (data.error) { setApiError(data.error.message || JSON.stringify(data.error)); setLoading(false); return; }
@@ -137,6 +137,7 @@ export default function WellnessHub() {
           let rawPassword = String(r.fields['Password'] || '').trim();
           let finalPassword = (rawPassword === '' || rawPassword.includes('ERROR')) ? '1111' : rawPassword;
           return { airtableId: r.id, id: r.fields['Member ID'] || r.id, firstName: r.fields['First Name'] || 'Unknown', lastName: r.fields['Last Name'] || '', email: r.fields['Email'] || '', phone: r.fields['Phone'] || '', password: finalPassword, status: (r.fields['Membership Status'] || 'ACTIVE').toUpperCase(), type: String(planText).toUpperCase().trim(), center: r.fields['Home Center'] || 'Anthony', visits: Number(r.fields['Total Visits'] || 0), nextPayment: r.fields['Next Payment Due'] || null, sponsor: !!r.fields['Corporate Sponsor'], sponsorName: r.fields['Corporate Sponsor'] ? String(r.fields['Corporate Sponsor']).trim() : '', needsOrientation: !!r.fields['Needs Orientation'], familyName: r.fields['Family Name'] ? (Array.isArray(r.fields['Family Name']) ? r.fields['Family Name'][0] : r.fields['Family Name']) : '', billingMethod: r.fields['Billing Method'] || '', monthlyRate: r.fields['Monthly Rate'] || '', access247: !!r.fields['24/7 Access'], badgeNumber: r.fields['Badge Number'] || '', startDate: r.fields['Start Date'] || null, notes: r.fields['Notes'] || '', discountCode: r.fields['Discount Code'] || '', discountExpiration: r.fields['Discount Expiration'] || null, address: r.fields['Street Address'] || '', city: r.fields['City'] || '', state: r.fields['State'] || 'KS', zip: r.fields['Zip'] || '', paymentMethod: r.fields['Payment Method'] || '' };
+        });
         setMembers(mappedMembers); setApiError('');
         fetch('/api/get-visits').then(res => res.json()).then(visitData => {
           if (visitData.records) { const mappedVisits = visitData.records.map(v => { const linkedArray = v.fields['Member'] || v.fields['Members'] || []; const linkId = linkedArray[0]; const foundMember = mappedMembers.find(m => m.airtableId === linkId); const fallbackName = Array.isArray(v.fields['Name']) ? v.fields['Name'][0] : v.fields['Name'] || 'Unknown Member'; return { name: foundMember ? `${foundMember.firstName} ${foundMember.lastName}` : fallbackName, center: v.fields['Center'] || v.fields['Location'] || 'Both', time: v.fields['Time'] || v.fields['Date'] || v.createdTime, type: foundMember ? foundMember.type : 'Unknown', method: v.fields['Method'] || 'General' }; }); mappedVisits.sort((a,b) => new Date(b.time) - new Date(a.time)); setVisits(mappedVisits); }
@@ -1265,7 +1266,7 @@ export default function WellnessHub() {
                   <div className="flex gap-3 w-full">
                     {familyFlow && (<button onClick={() => { setNewMemberPin(null); }} className="flex-1 bg-[#1080ad] text-white px-6 py-4 rounded-xl font-bold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"><Plus size={16}/> Add Family Member</button>)}
                     
-                    {/* SILENT REFRESH DONE BUTTON */}
+                  {/* SILENT REFRESH DONE BUTTON */}
                     <button onClick={() => { 
                       setNewMemberPin(null); 
                       setShowAddModal(false); 
