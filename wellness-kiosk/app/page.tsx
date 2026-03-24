@@ -933,8 +933,8 @@ useEffect(() => {
                     
                     const rows = scopedMembers.map(m => {
                       const finalRate = parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0;
-                      // Looks for CC/Cash/Check, falls back to Auto-Draft/Month-to-Month
-                      const payMethod = m.paymentMethod || m.billingMethod || 'N/A'; 
+                      // No more fallback! Strictly shows the payment method, or "None Logged"
+                      const payMethod = m.paymentMethod ? m.paymentMethod : 'None Logged'; 
                       return `<tr><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${m.firstName} ${m.lastName}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${m.type}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${payMethod}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; font-weight:bold; color: #16a34a;">$${finalRate.toFixed(2)}</td></tr>`;
                     }).join('');
 
@@ -944,7 +944,7 @@ useEffect(() => {
 
                   <button onClick={() => {
                     if (scopedMembers.length === 0) { alert('No members found.'); return; }
-                    const csv = ["Member Name,Plan Type,Payment Method,Final Rate",...scopedMembers.map(m => `"${m.firstName} ${m.lastName}","${m.type}","${m.paymentMethod || m.billingMethod || 'N/A'}","$${parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || '0'}"`)].join('\n');
+                    const csv = ["Member Name,Plan Type,Payment Method,Final Rate",...scopedMembers.map(m => `"${m.firstName} ${m.lastName}","${m.type}","${m.paymentMethod ? m.paymentMethod : 'None Logged'}","$${parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || '0'}"`)].join('\n');
                     const b = new Blob([csv],{type:'text/csv'}); const u = window.URL.createObjectURL(b); const a = document.createElement('a'); a.href=u; a.download=`Financial_Roster_${reportMonth}.csv`; a.click(); window.URL.revokeObjectURL(u);
                   }} className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-slate-50"><Download size={16}/> CSV</button>
                 </div>
