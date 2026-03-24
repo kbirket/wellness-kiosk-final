@@ -310,7 +310,6 @@ export default function WellnessHub() {
   if (view === 'login') { return (<div className="min-h-screen bg-[#001f3f] flex items-center justify-center p-4 font-sans"><div className="bg-white rounded-[3rem] shadow-2xl p-12 w-full max-w-md"><h2 className="text-4xl font-black text-slate-900 mb-2 tracking-tight">Director Login</h2><p className="text-slate-400 mb-10 font-medium tracking-tight">Enter director credentials to proceed.</p><input type="text" placeholder="Username" id="u_in" className="w-full p-5 bg-slate-100 rounded-2xl mb-4 outline-none border-2 border-transparent focus:border-blue-500/20 text-lg" onKeyDown={(e) => e.key === 'Enter' && handleLogin()} /><input type="password" placeholder="Password" id="p_in" className="w-full p-5 bg-slate-100 rounded-2xl mb-8 outline-none border-2 border-transparent focus:border-blue-500/20 text-lg" onKeyDown={(e) => e.key === 'Enter' && handleLogin()} /><button onClick={handleLogin} className="w-full bg-[#001f3f] text-white p-5 rounded-2xl font-bold text-xl shadow-xl hover:bg-blue-900 transition-all">Sign In</button><button onClick={() => setView('landing')} className="w-full mt-6 text-slate-400 font-bold">Cancel</button></div></div>); }
 
   return (
-  return (
     <div className="flex min-h-screen bg-[#f0f2f5] font-sans text-slate-800">
       <aside className="w-64 bg-[#001f3f] text-white flex flex-col min-h-screen relative z-10 print:hidden">
         <div className="p-8 border-b border-white/10 flex justify-center"><img src={LOGO_URL} alt="Logo" className="h-10 opacity-90 drop-shadow-md" /></div>
