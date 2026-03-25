@@ -352,159 +352,209 @@ useEffect(() => {
 
   if (view === 'corp_login') { return (<div className="min-h-screen bg-[#001f3f] flex items-center justify-center p-4 font-sans"><div className="bg-white rounded-[3rem] shadow-2xl p-12 w-full max-w-md border-t-8 border-[#8b5cf6]"><div className="flex justify-center mb-6"><Briefcase size={64} className="text-[#8b5cf6]" /></div><h2 className="text-4xl font-black text-center text-slate-900 mb-2 tracking-tight">Partner Login</h2><p className="text-slate-400 mb-10 text-center font-medium tracking-tight">Access your employee wellness roster.</p><input type="text" placeholder="Company Username" id="c_in" className="w-full p-5 bg-slate-100 rounded-2xl mb-4 outline-none border-2 border-transparent focus:border-purple-500/20 text-lg" onKeyDown={(e) => e.key === 'Enter' && handleCorpLogin()} /><input type="password" placeholder="Access PIN" id="c_pin" className="w-full p-5 bg-slate-100 rounded-2xl mb-8 outline-none border-2 border-transparent focus:border-purple-500/20 text-lg" onKeyDown={(e) => e.key === 'Enter' && handleCorpLogin()} /><button onClick={handleCorpLogin} className="w-full bg-[#8b5cf6] text-white p-5 rounded-2xl font-bold text-xl shadow-xl hover:bg-purple-700 transition-all">Sign In</button><button onClick={() => setView('landing')} className="w-full mt-6 text-slate-400 font-bold hover:text-slate-600 transition-colors">Return to Home</button></div></div>); }
 
-/* --- PUBLIC KIOSK VIEW --- */
+/* --- PUBLIC KIOSK VIEW: PRO REDESIGN --- */
   if (view === 'kiosk') {
     const memberMatches = kioskInput.length >= 2 ? members.filter(m => (m.firstName + ' ' + m.lastName).toLowerCase().includes(kioskInput.toLowerCase()) || m.id.toLowerCase().includes(kioskInput.toLowerCase())).slice(0, 5) : [];
     
     return (
-      <div className="fixed inset-0 bg-[#001f3f] z-[100] flex flex-col font-sans overflow-hidden">
+      <div className="fixed inset-0 bg-[#001f3f] z-[100] flex flex-col font-sans overflow-hidden text-slate-900">
         <style>{`
-          @keyframes scan { 0% { top: 0%; } 100% { top: 100%; } }
+          @keyframes scan { 0% { top: 0%; opacity: 0.3; } 50% { opacity: 1; } 100% { top: 100%; opacity: 0.3; } }
+          @keyframes pulse-border { 0% { border-color: rgba(16, 128, 173, 0.4); } 50% { border-color: rgba(16, 128, 173, 1); } 100% { border-color: rgba(16, 128, 173, 0.4); } }
           .animate-scan {
             position: absolute;
             left: 0;
             width: 100%;
-            height: 4px;
-            background: #1080ad;
-            box-shadow: 0 0 15px #1080ad;
-            animation: scan 2s linear infinite;
+            height: 6px;
+            background: linear-gradient(to bottom, transparent, #1080ad, transparent);
+            box-shadow: 0 0 20px #1080ad;
+            animation: scan 2.5s ease-in-out infinite;
             z-index: 50;
           }
+          .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+          .medical-gradient { background: radial-gradient(circle at top left, #002d5a, #001226); }
         `}</style>
 
-        {/* Top Brand Bar */}
-        <div className="h-24 bg-white/5 backdrop-blur-md border-b border-white/10 flex items-center justify-between px-12 shrink-0">
-          <img src={LOGO_URL} alt="Logo" className="h-10 opacity-80" />
+        {/* Top Brand Bar - Slim & Elegant */}
+        <div className="h-20 bg-black/20 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-10 shrink-0 z-50">
+          <div className="flex items-center gap-4">
+            <img src={LOGO_URL} alt="Logo" className="h-8 brightness-110" />
+            <div className="h-6 w-px bg-white/20 hidden md:block"></div>
+            <span className="text-white/40 text-xs font-bold tracking-[0.3em] uppercase hidden md:block">Patterson Health</span>
+          </div>
           
-          {/* Password Protected Exit Button */}
           <button 
             onClick={() => {
-              const pw = prompt("Enter Director Code to Exit Kiosk:");
+              const pw = prompt("Staff Auth Required:");
               if (pw === "2026") { setView('landing'); }
-              else if (pw !== null) { alert("Invalid Code"); }
+              else if (pw !== null) { alert("Access Denied"); }
             }} 
-            className="text-white/20 hover:text-white/60 transition-colors p-2"
+            className="text-white/20 hover:text-white/100 hover:bg-white/5 p-3 rounded-full transition-all"
           >
-            <X size={24} />
+            <X size={28} />
           </button>
         </div>
 
-        {/* Area 1: Center Selection (The Splash Screen) */}
-        {viewingCenter === 'both' ? (
-          <div className="flex-1 flex flex-col md:flex-row">
-            <button 
-              onClick={() => { setViewingCenter('harper'); setIsScanning(true); }}
-              className="flex-1 bg-gradient-to-br from-[#f59e0b] to-[#dd6d22] text-white p-12 flex flex-col items-center justify-center group transition-all"
-            >
-              <MapPin size={80} className="mb-6 opacity-50 group-hover:scale-110 transition-transform" />
-              <h2 className="text-6xl font-black text-center">HARPER</h2>
-              <p className="text-xl font-bold mt-4 opacity-80">Touch to Check In</p>
-            </button>
-            <button 
-              onClick={() => { setViewingCenter('anthony'); setIsScanning(true); }}
-              className="flex-1 bg-gradient-to-br from-[#1080ad] to-[#003d6b] text-white p-12 flex flex-col items-center justify-center group transition-all"
-            >
-              <MapPin size={80} className="mb-6 opacity-50 group-hover:scale-110 transition-transform" />
-              <h2 className="text-6xl font-black text-center">ANTHONY</h2>
-              <p className="text-xl font-bold mt-4 opacity-80">Touch to Check In</p>
-            </button>
-          </div>
-        ) : (
-          /* Area 2: The Scanning / Search Screen */
-          <div className="flex-1 bg-white p-12 flex flex-col items-center justify-center relative text-slate-900">
-            
-            {/* Very Small Password Protected "Switch Centers" Button */}
-            <button 
-              onClick={() => {
-                const pw = prompt("Enter Director Code to Switch Centers:");
-                if (pw === "2026") { setViewingCenter('both'); setIsScanning(false); setKioskInput(''); }
-                else if (pw !== null) { alert("Invalid Code"); }
-              }} 
-              className="absolute top-6 left-6 flex items-center gap-2 text-[10px] font-black text-slate-300 hover:text-[#1080ad] tracking-widest uppercase transition-all border border-slate-100 px-3 py-1.5 rounded-lg shadow-sm"
-            >
-              <Lock size={10} /> Switch Centers
-            </button>
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col medical-gradient relative">
+          
+          {viewingCenter === 'both' ? (
+            /* Area 1: High-End Splash Screen */
+            <div className="flex-1 flex flex-col md:flex-row p-6 gap-6">
+              <button 
+                onClick={() => { setViewingCenter('harper'); setIsScanning(true); }}
+                className="flex-1 group relative overflow-hidden rounded-[3rem] transition-all duration-700 hover:scale-[1.01] shadow-2xl"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-[#f59e0b] to-[#dd6d22] opacity-80 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute top-0 right-0 p-12 opacity-10 group-hover:opacity-20 transition-all group-hover:scale-110">
+                  <MapPin size={240} />
+                </div>
+                <div className="relative z-10 p-16 flex flex-col items-center justify-center h-full text-white text-center">
+                  <span className="text-xs font-black tracking-[0.5em] mb-4 opacity-70">LOCATION ONE</span>
+                  <h2 className="text-7xl font-black tracking-tighter leading-tight drop-shadow-lg">HARPER<br/><span className="text-3xl font-light tracking-[0.2em] opacity-80">WELLNESS</span></h2>
+                  <div className="mt-12 px-12 py-5 bg-white text-[#dd6d22] rounded-full font-black text-2xl shadow-2xl scale-100 group-active:scale-95 transition-all">CHECK IN</div>
+                </div>
+              </button>
 
-            <h2 className="text-5xl font-black text-[#001f3f] mb-2 uppercase tracking-tight">{viewingCenter} Wellness</h2>
-            <p className="text-slate-400 text-xl font-medium mb-12">Scan Badge or Search Name</p>
-
-            <div className="flex gap-4 w-full max-w-2xl mb-12 h-24">
-               <button onClick={() => setIsScanning(true)} className="flex-1 bg-[#001f3f] text-white rounded-3xl font-bold text-xl flex items-center justify-center gap-4 shadow-xl active:scale-95 transition-all">
-                 <Camera size={32} /> Scan QR
-               </button>
-               <div className="flex-[1.5] relative">
-                 <input 
-                   className="w-full h-full p-6 bg-slate-100 rounded-3xl text-2xl font-bold outline-none border-4 border-transparent focus:border-[#1080ad] transition-all" 
-                   placeholder="Type Name..." 
-                   value={kioskInput} 
-                   onChange={(e) => setKioskInput(e.target.value)} 
-                 />
-                 {memberMatches.length > 0 && (
-                   <div className="absolute top-full left-0 right-0 mt-4 bg-white border shadow-2xl rounded-3xl overflow-hidden z-50">
-                     {memberMatches.map(m => (
-                       <button key={m.id} onClick={() => { setPinModal(m); setKioskInput(''); }} className="w-full p-6 text-left border-b hover:bg-blue-50 flex justify-between items-center">
-                         <span className="text-2xl font-bold">{m.firstName} {m.lastName}</span>
-                         <ChevronRight size={24} className="text-[#1080ad]"/>
-                       </button>
-                     ))}
-                   </div>
-                 )}
-               </div>
+              <button 
+                onClick={() => { setViewingCenter('anthony'); setIsScanning(true); }}
+                className="flex-1 group relative overflow-hidden rounded-[3rem] transition-all duration-700 hover:scale-[1.01] shadow-2xl"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-[#1080ad] to-[#003d6b] opacity-80 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute top-0 right-0 p-12 opacity-10 group-hover:opacity-20 transition-all group-hover:scale-110">
+                  <MapPin size={240} />
+                </div>
+                <div className="relative z-10 p-16 flex flex-col items-center justify-center h-full text-white text-center">
+                  <span className="text-xs font-black tracking-[0.5em] mb-4 opacity-70">LOCATION TWO</span>
+                  <h2 className="text-7xl font-black tracking-tighter leading-tight drop-shadow-lg">ANTHONY<br/><span className="text-3xl font-light tracking-[0.2em] opacity-80">WELLNESS</span></h2>
+                  <div className="mt-12 px-12 py-5 bg-white text-[#003d6b] rounded-full font-black text-2xl shadow-2xl scale-100 group-active:scale-95 transition-all">CHECK IN</div>
+                </div>
+              </button>
             </div>
+          ) : (
+            /* Area 2: The Modern Entry Screen */
+            <div className="flex-1 bg-[#f8fafc] flex flex-col items-center justify-center p-12 relative">
+              
+              {/* Subtle Switcher */}
+              <button 
+                onClick={() => {
+                  const pw = prompt("Staff Access:");
+                  if (pw === "2026") { setViewingCenter('both'); setIsScanning(false); setKioskInput(''); }
+                }} 
+                className="absolute top-8 left-8 flex items-center gap-2 text-[10px] font-black text-slate-300 hover:text-slate-500 tracking-[0.2em] uppercase transition-all bg-white px-4 py-2 rounded-full shadow-sm border border-slate-100"
+              >
+                <Lock size={12} className="opacity-50" /> Change Center
+              </button>
 
-            {kioskMessage.text && (
-              <div className={`p-8 rounded-3xl text-3xl font-black text-center ${kioskMessage.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                {kioskMessage.text}
-                <p className="text-lg font-bold mt-1">{kioskMessage.subtext}</p>
+              <div className="text-center mb-16">
+                <h2 className="text-6xl font-black text-[#001f3f] mb-4 tracking-tighter uppercase">
+                  Welcome to {viewingCenter}
+                </h2>
+                <div className="h-1.5 w-24 bg-[#1080ad] mx-auto rounded-full mb-6"></div>
+                <p className="text-slate-400 text-2xl font-medium italic">Empowering your health, every day.</p>
               </div>
-            )}
-          </div>
-        )}
 
-        {/* SCANNER OVERLAY (Full Screen Camera) */}
-        {isScanning && (
-          <div className="fixed inset-0 bg-black z-[200] flex flex-col items-center justify-center p-6">
-            <button onClick={() => setIsScanning(false)} className="absolute top-10 right-10 text-white bg-white/10 p-4 rounded-full hover:bg-white/20"><X size={40} /></button>
-            <h2 className="text-white text-3xl font-black mb-10 uppercase tracking-widest">Position QR in Frame</h2>
-            <div className="relative w-full max-w-lg aspect-square bg-slate-800 rounded-[3rem] overflow-hidden border-4 border-[#1080ad] shadow-[0_0_50px_rgba(16,128,173,0.5)]">
-               <div id="reader" className="w-full h-full"></div>
-               <div className="animate-scan"></div>
+              <div className="flex gap-8 w-full max-w-5xl h-32">
+                 <button onClick={() => setIsScanning(true)} className="flex-1 bg-[#001f3f] text-white rounded-[2.5rem] font-black text-2xl flex items-center justify-center gap-4 shadow-[0_20px_50px_rgba(0,31,63,0.3)] active:scale-95 transition-all hover:bg-[#002d5a]">
+                   <Camera size={36} className="text-[#1080ad]" /> SCAN BADGE
+                 </button>
+                 
+                 <div className="flex-[1.5] relative">
+                   <div className="absolute left-8 top-1/2 -translate-y-1/2 text-slate-300">
+                     <Search size={32} />
+                   </div>
+                   <input 
+                     className="w-full h-full p-8 pl-20 bg-white rounded-[2.5rem] text-3xl font-bold outline-none border-4 border-slate-100 focus:border-[#1080ad] transition-all shadow-xl placeholder:text-slate-200" 
+                     placeholder="Search by name..." 
+                     value={kioskInput} 
+                     onChange={(e) => setKioskInput(e.target.value)} 
+                   />
+                   
+                   {memberMatches.length > 0 && (
+                     <div className="absolute top-full left-0 right-0 mt-6 bg-white border border-slate-200 shadow-[0_30px_60px_rgba(0,0,0,0.15)] rounded-[3rem] overflow-hidden z-50 animate-in fade-in slide-in-from-top-4">
+                       {memberMatches.map(m => (
+                         <button key={m.id} onClick={() => { setPinModal(m); setKioskInput(''); }} className="w-full p-8 text-left border-b border-slate-50 last:border-0 hover:bg-blue-50 flex justify-between items-center transition-colors">
+                           <span className="text-3xl font-black text-[#001f3f]">{m.firstName} {m.lastName}</span>
+                           <div className="bg-[#1080ad]/10 text-[#1080ad] px-8 py-3 rounded-2xl font-black text-lg tracking-widest">SELECT</div>
+                         </button>
+                       ))}
+                     </div>
+                   )}
+                 </div>
+              </div>
+
+              {kioskMessage.text && (
+                <div className={`mt-16 px-16 py-10 rounded-[3rem] text-4xl font-black text-center shadow-2xl animate-in zoom-in-95 ${kioskMessage.type === 'success' ? 'bg-white text-green-600 border-b-8 border-green-500' : 'bg-white text-red-600 border-b-8 border-red-500'}`}>
+                  {kioskMessage.text}
+                  <p className="text-xl font-bold mt-2 text-slate-400 uppercase tracking-widest">{kioskMessage.subtext || 'Processing Data...'}</p>
+                </div>
+              )}
             </div>
-            <button onClick={() => setIsScanning(false)} className="mt-12 text-white/40 font-bold border border-white/10 px-8 py-3 rounded-full hover:text-white transition-all">Cancel Scan</button>
+          )}
+        </div>
+
+        {/* SCANNER OVERLAY - High-Tech Interface */}
+        {isScanning && (
+          <div className="fixed inset-0 bg-[#001226]/95 backdrop-blur-2xl z-[200] flex flex-col items-center justify-center p-6 animate-in fade-in duration-500">
+            <button onClick={() => setIsScanning(false)} className="absolute top-10 right-10 text-white/20 hover:text-white p-4 rounded-full transition-all hover:bg-white/5"><X size={60} /></button>
+            
+            <div className="mb-12 text-center">
+              <h2 className="text-white text-4xl font-black mb-4 tracking-[0.2em] uppercase">Security Scanner</h2>
+              <p className="text-[#1080ad] font-bold tracking-widest animate-pulse uppercase text-sm">Align QR Code within the markers</p>
+            </div>
+
+            <div className="relative w-full max-w-xl aspect-square glass rounded-[5rem] overflow-hidden border-2 border-white/10 shadow-[0_0_100px_rgba(0,0,0,0.5)]">
+               <div id="reader" className="w-full h-full scale-110"></div>
+               <div className="animate-scan"></div>
+               {/* Visual Framing Corners */}
+               <div className="absolute top-12 left-12 w-16 h-16 border-t-4 border-l-4 border-[#1080ad] rounded-tl-3xl opacity-50"></div>
+               <div className="absolute top-12 right-12 w-16 h-16 border-t-4 border-r-4 border-[#1080ad] rounded-tr-3xl opacity-50"></div>
+               <div className="absolute bottom-12 left-12 w-16 h-16 border-b-4 border-l-4 border-[#1080ad] rounded-bl-3xl opacity-50"></div>
+               <div className="absolute bottom-12 right-12 w-16 h-16 border-b-4 border-r-4 border-[#1080ad] rounded-br-3xl opacity-50"></div>
+            </div>
+
+            <button onClick={() => setIsScanning(false)} className="mt-16 text-white/40 font-black text-xl uppercase tracking-[0.3em] hover:text-white transition-all">Cancel Scanning</button>
           </div>
         )}
 
-        {/* PIN pad verification screen */}
+        {/* PIN VERIFICATION - Medical Style */}
         {pinModal && (
-          <div className="fixed inset-0 bg-[#001f3f]/95 z-[300] flex items-center justify-center p-6 backdrop-blur-md">
-            <div className="bg-white rounded-[3rem] p-12 w-full max-w-md text-center">
-              <h3 className="text-3xl font-black mb-2 text-slate-900">Verify Identity</h3>
-              <p className="text-slate-400 font-bold mb-8 uppercase tracking-widest">Hello, {pinModal.firstName}!</p>
+          <div className="fixed inset-0 bg-[#001f3f]/98 backdrop-blur-3xl z-[300] flex items-center justify-center p-6 animate-in zoom-in-95 duration-300">
+            <div className="bg-white rounded-[4rem] p-16 w-full max-w-xl text-center shadow-2xl border-t-[12px] border-[#1080ad]">
+              <h3 className="text-2xl font-light text-slate-400 mb-2 uppercase tracking-[0.2em]">Identify Verified</h3>
+              <h2 className="text-5xl font-black text-slate-900 mb-12 tracking-tight">Welcome, {pinModal.firstName}!</h2>
+              
+              <p className="text-xs font-black text-slate-300 mb-4 uppercase tracking-[0.3em]">Enter Secure PIN</p>
               <input 
                 type="password" maxLength={4} autoFocus 
-                className="w-full p-6 bg-slate-100 rounded-2xl text-center text-6xl tracking-[0.5em] font-black mb-8 outline-none border-4 text-slate-900 focus:border-[#1080ad]" 
+                className="w-full p-8 bg-slate-50 rounded-[2.5rem] text-center text-8xl tracking-[0.4em] font-black mb-12 outline-none border-4 border-slate-100 text-slate-900 focus:border-[#1080ad] focus:bg-white transition-all shadow-inner" 
                 onChange={(e) => {
                   if (e.target.value.length === 4) {
-                    if (e.target.value === pinModal.password) { processCheckIn(pinModal.id, "Kiosk"); setPinModal(null); }
-                    else { alert("Incorrect PIN"); e.target.value = ''; }
+                    if (e.target.value === pinModal.password) { 
+                      processCheckIn(pinModal.id, "Kiosk Search"); 
+                      setPinModal(null); 
+                      setViewingCenter('both');
+                    }
+                    else { alert("PIN Authorization Failed"); e.target.value = ''; }
                   }
                 }} 
               />
-              <button onClick={() => setPinModal(null)} className="text-slate-400 font-bold text-xl uppercase">Cancel</button>
+              <button onClick={() => setPinModal(null)} className="text-slate-300 font-black text-xl uppercase tracking-widest hover:text-red-500 transition-colors">Cancel</button>
             </div>
           </div>
         )}
 
-        {/* Footer instructions */}
-        <div className="h-20 bg-black/20 flex items-center justify-center shrink-0 mt-auto">
-          <p className="text-white/30 font-bold uppercase tracking-[0.3em] text-xs">
-            Patterson Health Center Wellness Hub
-          </p>
+        {/* Decorative Footer */}
+        <div className="h-10 bg-black/30 flex items-center justify-center shrink-0">
+          <div className="flex gap-8 items-center opacity-30">
+            <span className="text-[9px] text-white font-black tracking-[0.4em] uppercase">Patterson Wellness Hub 2026</span>
+            <div className="w-1 h-1 bg-white rounded-full"></div>
+            <span className="text-[9px] text-white font-black tracking-[0.4em] uppercase">Secure Access Terminal</span>
+          </div>
         </div>
       </div>
     );
   }
-
   /* --- MEMBER PORTAL LOGIN --- */
 if (view === 'member_login') {
   return (
