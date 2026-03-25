@@ -310,10 +310,10 @@ export default function WellnessHub() {
       </optgroup>
     </select>
   );
-
-  // MAIN DIRECTOR DASHBOARD
+// MAIN DIRECTOR DASHBOARD
   return (
-<section className="flex min-h-screen bg-[#f0f2f5] font-sans text-slate-800">
+    <>
+      <section className="flex min-h-screen bg-[#f0f2f5] font-sans text-slate-800">
   <aside className={(sidebarOpen ? 'translate-x-0' : '-translate-x-full') + ' md:translate-x-0 fixed md:relative z-40 w-64 bg-[#001f3f] text-white flex flex-col min-h-screen transition-transform duration-300 print:hidden'}>        <div className="p-8 border-b border-white/10 flex justify-center"><img src={LOGO_URL} alt="Logo" className="h-10 opacity-90 drop-shadow-md" /></div>
         <div className="p-6"><div className="flex items-center gap-3 mb-4"><div className="w-10 h-10 rounded-lg bg-[#f59e0b] flex items-center justify-center font-bold text-lg text-[#001f3f]">{user?.name.charAt(0)}</div><div><p className="text-sm font-bold leading-none">{user?.name}</p><p className="text-[11px] text-white/50">@{user?.username}</p></div></div><button onClick={handleLogout} className="flex items-center gap-2 text-xs text-white/40 hover:text-white transition-colors"><LogOut size={14} /> Sign Out</button></div>
         <div className="px-4 mb-8"><p className="px-2 text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3">Viewing</p><div className="space-y-1">{[{k:'both',c:'#ffffff'},{k:'harper',c:'#f59e0b'},{k:'anthony',c:'#1080ad'}].map(item => (<button key={item.k} onClick={() => { setViewingCenter(item.k); localStorage.setItem('wellnessCenter', item.k); }} className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all ${viewingCenter === item.k ? 'bg-white/20 font-bold' : 'text-white/60 hover:bg-white/5'}`}><span className="w-1.5 h-6 rounded-full" style={{ backgroundColor: item.c }} />{item.k === 'both' ? 'Both Centers' : `${item.k.charAt(0).toUpperCase() + item.k.slice(1)}`}</button>))}</div></div>
@@ -1138,5 +1138,6 @@ export default function WellnessHub() {
         </div>
       )}
     </section>
+      </>
   );
 }
