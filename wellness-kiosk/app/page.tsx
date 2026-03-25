@@ -51,6 +51,7 @@ export default function WellnessHub() {
   const [kioskMode, setKioskMode] = useState('Gym');
   const [expandedFaq, setExpandedFaq] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
+  
   const [reportMonth, setReportMonth] = useState(() => {
     const now = new Date();
     return `${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
@@ -63,6 +64,10 @@ export default function WellnessHub() {
   
   const [showAddVisitorModal, setShowAddVisitorModal] = useState(false);
   const [selectedVisitor, setSelectedVisitor] = useState(null);
+  const [memberSearch, setMemberSearch] = useState('');
+  const [memberPinStep, setMemberPinStep] = useState(null);
+  const [memberPinInput, setMemberPinInput] = useState('');
+  const [memberLoginError, setMemberLoginError] = useState('');
 
   useEffect(() => { localStorage.setItem('wellnessUsagePrefs', JSON.stringify(usageBasedCorps)); }, [usageBasedCorps]);
 
@@ -91,65 +96,25 @@ export default function WellnessHub() {
   const centerRef = useRef(viewingCenter);
   useEffect(() => { centerRef.current = viewingCenter; }, [viewingCenter]);
 
-// --- 1. THE SECURITY GUARD (Keep you logged in) ---
   useEffect(() => {
     setIsMounted(true);
     setCurrentDateString(new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }));
-    
     const savedToken = localStorage.getItem('wellnessToken');
-    if (savedToken && view === 'landing') { // Only auto-login if we are sitting on the landing page
-      fetch('/api/verify-session', { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify({ token: savedToken }) 
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.valid && data.type === 'director') {
-          setUser(data.user);
-          setSessionToken(savedToken);
-          setViewingCenter(data.user.center);
-          setView('dashboard'); // This sends you to the dashboard automatically
-        }
-      }).catch(() => {
-        console.log("Session expired or server down.");
-      });
+    const savedCenter = localStorage.getItem('wellnessCenter');
+    if (savedToken) {
+      fetch('/api/verify-session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: savedToken }) })
+      .then(res => res.json()).then(data => {
+        if (data.valid) { setSessionToken(savedToken); setLastActivity(Date.now()); if (data.type === 'director' && data.user) { setUser(data.user); setViewingCenter(data.user.center); setView('dashboard'); } else if (data.type === 'corporate' && data.corp) { setActiveCorp(data.corp); setView('corp_portal'); } }
+        else { localStorage.removeItem('wellnessToken'); localStorage.removeItem('wellnessCenter'); }
+      }).catch(() => { localStorage.removeItem('wellnessToken'); });
     }
+    if (savedCenter) setViewingCenter(savedCenter);
   }, []);
 
-  // --- 2. THE LOGIN BUTTON LOGIC ---
-  const handleLogin = async () => {
-    const u = document.getElementById('u_in').value.toLowerCase().trim();
-    const p = document.getElementById('p_in').value.trim();
-    
-    try {
-      const res = await fetch('/api/login', { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify({ username: u, password: p, loginType: 'director' }) 
-      });
-      const data = await res.json();
+  const handleLogin = async () => { const u = document.getElementById('u_in').value.toLowerCase().trim(); const p = document.getElementById('p_in').value.trim(); try { const res = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: u, password: p, loginType: 'director' }) }); const data = await res.json(); if (data.success) { setUser(data.user); setSessionToken(data.token); setViewingCenter(data.user.center); setLastActivity(Date.now()); localStorage.setItem('wellnessToken', data.token); localStorage.setItem('wellnessCenter', data.user.center); setView('dashboard'); } else { alert('Incorrect credentials.'); } } catch (err) { alert('Login failed. Please try again.'); } };
+  const handleCorpLogin = async () => { const u = document.getElementById('c_in').value.toLowerCase().trim(); const p = document.getElementById('c_pin').value.trim(); try { const res = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: u, password: p, loginType: 'corporate' }) }); const data = await res.json(); if (data.success) { setActiveCorp(data.corp); setSessionToken(data.token); setLastActivity(Date.now()); localStorage.setItem('wellnessToken', data.token); setView('corp_portal'); } else { alert('Incorrect corporate credentials.'); } } catch (err) { alert('Login failed. Please try again.'); } };
+  const handleLogout = () => { setUser(null); setActiveCorp(null); setSessionToken(null); localStorage.removeItem('wellnessToken'); localStorage.removeItem('wellnessCenter'); setView('landing'); };
 
-      if (data.success) {
-        // SAVE EVERYTHING FIRST
-        localStorage.setItem('wellnessToken', data.token);
-        localStorage.setItem('wellnessCenter', data.user.center);
-        
-        // UPDATE STATE
-        setUser(data.user);
-        setSessionToken(data.token);
-        setViewingCenter(data.user.center);
-        setLastActivity(Date.now());
-        
-        // NOW JUMP TO DASHBOARD
-        setView('dashboard'); 
-      } else {
-        alert('Incorrect Username or Password.');
-      }
-    } catch (err) {
-      alert('Login service is currently unavailable.');
-    }
-  };
   const SESSION_TIMEOUT = 8 * 60 * 60 * 1000;
   useEffect(() => { const u = () => setLastActivity(Date.now()); window.addEventListener('click', u); window.addEventListener('keydown', u); window.addEventListener('scroll', u); window.addEventListener('touchstart', u); return () => { window.removeEventListener('click', u); window.removeEventListener('keydown', u); window.removeEventListener('scroll', u); window.removeEventListener('touchstart', u); }; }, []);
   useEffect(() => { if (!user && !activeCorp) return; const interval = setInterval(() => { if (Date.now() - lastActivity > SESSION_TIMEOUT) { alert('Your session has expired due to inactivity. Please log in again.'); handleLogout(); } }, 60 * 1000); return () => clearInterval(interval); }, [user, activeCorp, lastActivity]);
@@ -270,15 +235,14 @@ export default function WellnessHub() {
   const handleResetPin = async (member) => { if (!window.confirm(`Reset PIN for ${member.firstName} ${member.lastName}?`)) return; try { const newPin = String(Math.floor(1000 + Math.random() * 9000)); await fetch('/api/update-pin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ recordId: member.airtableId, newPin }) }); setMembers(prev => prev.map(m => m.airtableId === member.airtableId ? { ...m, password: newPin } : m)); alert(`New PIN for ${member.firstName}: ${newPin}\n\nPlease give this to the member.`); } catch (err) { alert('Could not reset PIN.'); } };
   const getStoplight = (member) => { if (!member.nextPayment) return 'green'; const due = new Date(member.nextPayment); const diffDays = Math.ceil((new Date() - due) / (1000*60*60*24)); if (diffDays <= 0) return 'green'; if (diffDays <= 14) return 'yellow'; return 'red'; };
 
-  const processCheckIn = async (memberId, method = "Manual Entry") => { const id = memberId.toUpperCase().trim(); const m = membersRef.current.find(m => m.id === id); if(m) { if (m.needsOrientation) { setKioskMessage({ text: 'Orientation Required', type: 'error', subtext: 'Please see front desk to complete your orientation.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 5000); return false; } const light = getStoplight(m); if (light === 'red') { setKioskMessage({ text: 'Please see front desk.', type: 'error', subtext: 'We need to quickly update your account.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4500); return false; } const currentCenter = centerRef.current; const scanCenter = currentCenter === 'both' ? m.center : currentCenter.charAt(0).toUpperCase() + currentCenter.slice(1); const currentTime = new Date().toISOString(); try { const res = await fetch('/api/visits', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: m.airtableId, center: scanCenter, time: currentTime, method: method }) }); const result = await res.json(); if (!result.success) { setKioskMessage({ text: 'System Error', type: 'error', subtext: 'Please see the front desk.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4000); return false; } setVisits(prev => [{name: m.firstName + ' ' + m.lastName, center: scanCenter, time: currentTime, type: m.type, method: method}, ...prev]); setMembers(prev => prev.map(member => member.id === id ? { ...member, visits: member.visits + 1 } : member)); if (activeMember && activeMember.id === id) setActiveMember(prev => ({...prev, visits: prev.visits + 1})); if (light === 'yellow') { setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'warning', subtext: 'Please see the front desk at your convenience.' }); } else { setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'success', subtext: '' }); } setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 5000); return true; } catch (err) { setKioskMessage({ text: 'Network Error', type: 'error', subtext: 'Please try again.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4000); return false; } } else { setKioskMessage({ text: 'ID not found.', type: 'error', subtext: 'Please see front desk.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 5000); return false; } };
+  const processCheckIn = async (memberId, method = "Manual Entry") => { const id = memberId.toUpperCase().trim(); const m = membersRef.current.find(m => m.id === id); if(m) { if (m.needsOrientation) { setKioskMessage({ text: 'Orientation Required', type: 'error', subtext: 'Please see front desk to complete your orientation.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 5000); return false; } const light = getStoplight(m); if (light === 'red') { setKioskMessage({ text: 'Please see front desk.', type: 'error', subtext: 'We need to quickly update your account.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4500); return false; } const currentCenter = centerRef.current; const scanCenter = currentCenter === 'both' ? m.center : currentCenter.charAt(0).toUpperCase() + currentCenter.slice(1); const currentTime = new Date().toISOString(); try { const res = await fetch('/api/visits', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: m.airtableId, center: scanCenter, time: currentTime, method: method }) }); const result = await res.json(); if (!result.success) { setKioskMessage({ text: 'System Error', type: 'error', subtext: 'Please see the front desk.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4000); return false; } setVisits(prev => [{name: m.firstName + ' ' + m.lastName, center: scanCenter, time: currentTime, type: m.type, method: method}, ...prev]); setMembers(prev => prev.map(member => member.id === id ? { ...member, visits: member.visits + 1 } : member)); if (activeMember && activeMember.id === id) setActiveMember(prev => ({...prev, visits: prev.visits + 1})); if (light === 'yellow') { setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'warning', subtext: 'Please see the front desk at your convenience.' }); } else { setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'success', subtext: '' }); } setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 5000); return true; } catch (err) { setKioskMessage({ text: 'Network Error', type: 'error', subtext: 'Please try again.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4000); return false; } } else { setKioskMessage({ text: 'ID not found.', type: 'error', subtext: 'Please see front desk.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 3500); return false; } };
+
+  useEffect(() => { let scanner = null; if (view === 'secret_scanner' && scannerActive) { scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 280, height: 280} }, false); scanner.render((decodedText) => { processCheckIn(decodedText, "Camera Scan"); }, () => {}); } return () => { if(scanner) scanner.clear().catch(e => console.error(e)); }; }, [view, scannerActive]);
 
 // --- QR SCANNER ENGINE FOR KIOSK ---
   useEffect(() => {
     let scanner = null;
-    
-    // Only start the camera hardware if the user is on the Kiosk AND has clicked "Scan"
     if (view === 'kiosk' && isScanning) {
-      // Small delay to ensure the 'reader' DIV is rendered in the DOM
       const timer = setTimeout(() => {
         scanner = new Html5QrcodeScanner("reader", { 
           fps: 20, 
@@ -286,33 +250,17 @@ export default function WellnessHub() {
           aspectRatio: 1.0,
           showTorchButtonIfSupported: true 
         }, false);
-
         scanner.render((decodedText) => {
-          // 1. Process the check-in using the ID from the QR code
           processCheckIn(decodedText, "Kiosk Camera");
-          
-          // 2. Turn off the camera immediately to save power
           setIsScanning(false);
-          
-          // 3. Clean up the hardware
-          if (scanner) {
-            scanner.clear().catch(error => console.error("Failed to clear scanner", error));
-          }
-        }, (error) => {
-          // This fires constantly while looking for a QR code; leave empty to avoid console spam
-        });
+          if (scanner) { scanner.clear().catch(error => console.error("Failed to clear scanner", error)); }
+        }, (error) => {});
       }, 300);
-
       return () => clearTimeout(timer);
     }
+    return () => { if (scanner) { scanner.clear().catch(error => console.error("Scanner cleanup error", error)); } };
+  }, [view, isScanning]);
 
-    // Cleanup function when the component unmounts or view changes
-    return () => {
-      if (scanner) {
-        scanner.clear().catch(error => console.error("Scanner cleanup error", error));
-      }
-    };
-  }, [view, isScanning]); // Re-run whenever the view changes or scanning is toggled
   const handleExportCSV = () => { if (filteredMembers.length === 0) return; const headers = ["Member ID","First Name","Last Name","Email","Phone","Membership Type","Home Center","Status","Total Visits","Next Payment","Sponsor"]; const csvRows = [headers.join(','), ...filteredMembers.map(m => `"${m.id}","${m.firstName}","${m.lastName}","${m.email}","${m.phone}","${m.type}","${m.center}","${m.status}","${m.visits}","${m.nextPayment}","${m.sponsorName}"`)].join('\n'); const blob = new Blob([csvRows], { type: 'text/csv' }); const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `Wellness_Members_${new Date().toISOString().slice(0,10)}.csv`; a.click(); window.URL.revokeObjectURL(url); };
   
   const ProStatCard = ({ value, label, color }) => (<div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 print:shadow-none print:border-slate-300" style={{ borderLeft: `6px solid ${color}` }}><p className="text-5xl font-extrabold mb-1 print:text-3xl" style={{ color }}>{value}</p><p className="text-xs font-bold text-[#001f3f] uppercase tracking-tight print:text-[10px]">{label}</p></div>);
@@ -347,29 +295,6 @@ export default function WellnessHub() {
     );
   };
 
-useEffect(() => {
-  let scanner = null;
-  if (view === 'kiosk' && isScanning) {
-    const timer = setTimeout(() => {
-      scanner = new Html5QrcodeScanner("reader", { 
-        fps: 20, 
-        qrbox: { width: 250, height: 250 },
-        aspectRatio: 1.0 
-      }, false);
-      scanner.render((decodedText) => {
-        processCheckIn(decodedText, "Kiosk Camera");
-        setIsScanning(false);
-        scanner.clear();
-      }, () => {});
-    }, 300);
-    return () => { 
-      clearTimeout(timer); 
-      if(scanner) scanner.clear().catch(e => {}); 
-    };
-  }
-}, [view, isScanning]);
-
-
   if (!isMounted) return <div className="min-h-screen bg-[#001f3f]" />;
 
   if (view === 'landing') { return (<div className="min-h-screen bg-[#001f3f] flex items-center justify-center font-sans p-6 relative"><div className="text-center max-w-6xl w-full relative z-10"><img src={LOGO_URL} alt="Logo" className="h-40 mx-auto mb-16 opacity-100 drop-shadow-2xl" /><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"><button onClick={() => { setView('kiosk'); setViewingCenter(viewingCenter === 'both' ? 'anthony' : viewingCenter); setKioskInput(''); }} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group"><Smartphone size={56} className="text-[#1080ad] group-hover:scale-110 transition-transform" /><span className="text-xl font-bold">Public Kiosk</span></button><button onClick={() => setView('member_login')} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group"><UserCircle size={56} className="text-[#16a34a] group-hover:scale-110 transition-transform" /><span className="text-xl font-bold">Member Portal</span></button><button onClick={() => setView('corp_login')} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group"><Briefcase size={56} className="text-[#8b5cf6] group-hover:scale-110 transition-transform" /><span className="text-xl font-bold">Corporate Portal</span></button><button onClick={() => setView('login')} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group border-b-4 border-b-[#f59e0b]"><ShieldCheck size={56} className="text-[#f59e0b] group-hover:scale-110 transition-transform" /><span className="text-xl font-bold">Director Portal</span></button></div></div><button onClick={() => {setView('secret_scanner'); setViewingCenter('both');}} className="absolute bottom-6 right-6 opacity-10 hover:opacity-50 transition-opacity p-4"><Lock size={20} className="text-white"/></button></div>); }
@@ -390,10 +315,149 @@ useEffect(() => {
     ); 
   }
 
-  if (view === 'corp_login') { return (<div className="min-h-screen bg-[#001f3f] flex items-center justify-center p-4 font-sans"><div className="bg-white rounded-[3rem] shadow-2xl p-12 w-full max-w-md border-t-8 border-[#8b5cf6]"><div className="flex justify-center mb-6"><Briefcase size={64} className="text-[#8b5cf6]" /></div><h2 className="text-4xl font-black text-center text-slate-900 mb-2 tracking-tight">Partner Login</h2><p className="text-slate-400 mb-10 text-center font-medium tracking-tight">Access your employee wellness roster.</p><input type="text" placeholder="Company Username" id="c_in" className="w-full p-5 bg-slate-100 rounded-2xl mb-4 outline-none border-2 border-transparent focus:border-purple-500/20 text-lg" onKeyDown={(e) => e.key === 'Enter' && handleCorpLogin()} /><input type="password" placeholder="Access PIN" id="c_pin" className="w-full p-5 bg-slate-100 rounded-2xl mb-8 outline-none border-2 border-transparent focus:border-purple-500/20 text-lg" onKeyDown={(e) => e.key === 'Enter' && handleCorpLogin()} /><button onClick={handleCorpLogin} className="w-full bg-[#8b5cf6] text-white p-5 rounded-2xl font-bold text-xl shadow-xl hover:bg-purple-700 transition-all">Sign In</button><button onClick={() => setView('landing')} className="w-full mt-6 text-slate-400 font-bold hover:text-slate-600 transition-colors">Return to Home</button></div></div>); }
-/* --- PUBLIC KIOSK VIEW --- */
+  if (view === 'member_login') {
+    const searchResults = memberSearch.length >= 2 ? members.filter(m => (m.firstName + ' ' + m.lastName).toLowerCase().includes(memberSearch.toLowerCase()) || m.id.toLowerCase().includes(memberSearch.toLowerCase())).slice(0, 5) : [];
+    return (
+      <div className="min-h-screen bg-[#001f3f] flex items-center justify-center p-4 font-sans">
+        <div className="bg-white rounded-[3rem] shadow-2xl p-12 w-full max-w-md border-t-8 border-[#16a34a]">
+          <div className="flex justify-center mb-6"><UserCircle size={64} className="text-[#16a34a]" /></div>
+          <h2 className="text-4xl font-black text-center text-slate-900 mb-2 tracking-tight">Member Portal</h2>
+          <p className="text-slate-400 mb-10 text-center font-medium tracking-tight">View your membership details.</p>
+          {!memberPinStep ? (
+            <div>
+              <input type="text" placeholder="Search your name or Member ID" value={memberSearch} onChange={(e) => { setMemberSearch(e.target.value); setMemberLoginError(''); }} className="w-full p-5 bg-slate-100 rounded-2xl mb-2 outline-none border-2 border-transparent focus:border-[#16a34a]/40 text-lg" />
+              {searchResults.length > 0 && (
+                <div className="bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden mb-4">
+                  {searchResults.map(m => (
+                    <button key={m.id} onClick={() => { setMemberPinStep(m); setMemberPinInput(''); setMemberLoginError(''); }} className="w-full p-4 text-left border-b border-slate-100 last:border-0 hover:bg-[#16a34a]/5 flex justify-between items-center transition-all">
+                      <div>
+                        <span className="font-bold text-[#001f3f]">{m.firstName} {m.lastName}</span>
+                        <span className="text-xs text-slate-400 ml-2">{m.id}</span>
+                      </div>
+                      <ChevronRight size={16} className="text-slate-300" />
+                    </button>
+                  ))}
+                </div>
+              )}
+              {memberSearch.length >= 2 && searchResults.length === 0 && (
+                <p className="text-sm text-slate-400 text-center py-4">No members found.</p>
+              )}
+            </div>
+          ) : (
+            <div>
+              <div className="bg-[#16a34a]/5 rounded-2xl p-4 mb-6 text-center">
+                <p className="text-lg font-bold text-[#001f3f]">{memberPinStep.firstName} {memberPinStep.lastName}</p>
+                <p className="text-xs text-slate-400">{memberPinStep.id}</p>
+              </div>
+              <input type="password" placeholder="Enter your 4-digit PIN" maxLength={4} value={memberPinInput} onChange={(e) => {
+                const val = e.target.value;
+                setMemberPinInput(val);
+                setMemberLoginError('');
+                if (val.length === 4) {
+                  if (val === memberPinStep.password) {
+                    setActiveMember(memberPinStep);
+                    setView('member_portal');
+                    setMemberPinInput('');
+                    setMemberSearch('');
+                    setMemberPinStep(null);
+                  } else {
+                    setMemberLoginError('Incorrect PIN. Please try again.');
+                    setMemberPinInput('');
+                  }
+                }
+              }} className="w-full p-5 bg-slate-100 rounded-2xl mb-4 outline-none border-2 border-transparent focus:border-[#16a34a]/40 text-lg text-center tracking-[0.3em]" autoFocus />
+              {memberLoginError && <p className="text-red-500 text-sm text-center mb-4 font-bold">{memberLoginError}</p>}
+              <button onClick={() => { setMemberPinStep(null); setMemberPinInput(''); setMemberLoginError(''); }} className="w-full text-slate-400 text-sm font-bold hover:text-slate-600 transition-colors">Back to Search</button>
+            </div>
+          )}
+          <button onClick={() => { setView('landing'); setMemberSearch(''); setMemberPinStep(null); setMemberPinInput(''); setMemberLoginError(''); }} className="w-full mt-6 text-slate-400 font-bold hover:text-slate-600 transition-colors">Return to Home</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (view === 'member_portal' && activeMember) {
+    const memberVisits = visits.filter(v => v.name === (activeMember.firstName + ' ' + activeMember.lastName));
+    const recentVisits = memberVisits.slice(0, 10);
+    const light = getStoplight(activeMember);
+    const statusColor = light === 'green' ? '#16a34a' : light === 'yellow' ? '#f59e0b' : '#ef4444';
+    const statusLabel = light === 'green' ? 'Good Standing' : light === 'yellow' ? 'Payment Due Soon' : 'Please See Front Desk';
+    const currentMember = members.find(m => m.id === activeMember.id) || activeMember;
+    return (
+      <div className="min-h-screen bg-[#f0f2f5] font-sans">
+        <div className="bg-[#001f3f] text-white px-8 py-6 flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <img src={LOGO_URL} alt="Logo" className="h-8 opacity-90" />
+            <div>
+              <p className="font-bold text-lg leading-none">{currentMember.firstName} {currentMember.lastName}</p>
+              <p className="text-white/50 text-xs">{currentMember.id}</p>
+            </div>
+          </div>
+          <button onClick={() => { setActiveMember(null); setView('landing'); }} className="flex items-center gap-2 text-white/50 hover:text-white text-sm font-bold transition-colors"><LogOut size={16} /> Sign Out</button>
+        </div>
+        <div className="max-w-4xl mx-auto p-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200" style={{ borderLeft: '6px solid ' + statusColor }}>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Account Status</p>
+              <p className="text-2xl font-black" style={{ color: statusColor }}>{statusLabel}</p>
+            </div>
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200" style={{ borderLeft: '6px solid #1080ad' }}>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Total Visits</p>
+              <p className="text-4xl font-black text-[#1080ad]">{currentMember.visits}</p>
+            </div>
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200" style={{ borderLeft: '6px solid #8b5cf6' }}>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Membership</p>
+              <p className="text-xl font-black text-[#001f3f]">{currentMember.type}</p>
+              <p className="text-xs text-slate-400 mt-1">{currentMember.billingMethod || 'Month-to-Month'}</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+              <h3 className="text-lg font-bold text-[#001f3f] mb-6">My Details</h3>
+              <div className="space-y-4">
+                <div className="flex justify-between border-b border-slate-50 pb-3"><span className="text-sm text-slate-400 font-bold">Member ID</span><span className="text-sm font-bold text-[#001f3f]">{currentMember.id}</span></div>
+                <div className="flex justify-between border-b border-slate-50 pb-3"><span className="text-sm text-slate-400 font-bold">Home Center</span><span className="text-sm font-bold text-[#001f3f]">{currentMember.center}</span></div>
+                <div className="flex justify-between border-b border-slate-50 pb-3"><span className="text-sm text-slate-400 font-bold">Email</span><span className="text-sm font-bold text-[#001f3f]">{currentMember.email || 'Not on file'}</span></div>
+                <div className="flex justify-between border-b border-slate-50 pb-3"><span className="text-sm text-slate-400 font-bold">Phone</span><span className="text-sm font-bold text-[#001f3f]">{currentMember.phone || 'Not on file'}</span></div>
+                {currentMember.nextPayment && <div className="flex justify-between border-b border-slate-50 pb-3"><span className="text-sm text-slate-400 font-bold">Next Payment</span><span className="text-sm font-bold" style={{ color: statusColor }}>{new Date(currentMember.nextPayment + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span></div>}
+                {currentMember.sponsorName && <div className="flex justify-between border-b border-slate-50 pb-3"><span className="text-sm text-slate-400 font-bold">Corporate Sponsor</span><span className="text-sm font-bold text-[#001f3f]">{currentMember.sponsorName}</span></div>}
+                {currentMember.startDate && <div className="flex justify-between pb-3"><span className="text-sm text-slate-400 font-bold">Member Since</span><span className="text-sm font-bold text-[#001f3f]">{new Date(currentMember.startDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span></div>}
+              </div>
+            </div>
+            <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+              <h3 className="text-lg font-bold text-[#001f3f] mb-6">My QR Badge</h3>
+              <div className="flex flex-col items-center">
+                <QRCode data={currentMember.id} size={180} />
+                <p className="mt-4 text-xs text-slate-400 font-bold">Scan at the kiosk for quick check-in</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+            <h3 className="text-lg font-bold text-[#001f3f] mb-6">Recent Visits</h3>
+            {recentVisits.length === 0 ? (
+              <p className="text-sm text-slate-400 text-center py-8">No visits recorded yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {recentVisits.map((v, i) => (
+                  <div key={i} className="flex justify-between items-center border-b border-slate-50 pb-3 last:border-0">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle size={16} className="text-[#16a34a]" />
+                      <span className="text-sm font-bold text-[#001f3f]">{v.center}</span>
+                    </div>
+                    <span className="text-xs text-slate-400 font-bold">{new Date(v.time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} at {new Date(v.time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* --- PUBLIC KIOSK VIEW --- */
   if (view === 'kiosk') {
-    const memberMatches = kioskInput.length >= 2 ? members.filter(m => (m.firstName + ' ' + m.lastName).toLowerCase().includes(kioskInput.toLowerCase()) || m.id.toLowerCase().includes(kioskInput.toLowerCase())).slice(0, 5) : [];
+    const kioskMemberMatches = kioskInput.length >= 2 ? members.filter(m => (m.firstName + ' ' + m.lastName).toLowerCase().includes(kioskInput.toLowerCase()) || m.id.toLowerCase().includes(kioskInput.toLowerCase())).slice(0, 5) : [];
     
     return (
       <div className="fixed inset-0 bg-[#001f3f] z-[100] flex flex-col font-sans overflow-hidden text-slate-900">
@@ -412,13 +476,12 @@ useEffect(() => {
           .medical-gradient { background: radial-gradient(circle at top left, #002d5a, #001226); }
         `}</style>
 
-        {/* Top Brand Bar */}
         <div className="h-20 bg-black/20 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-10 shrink-0 z-50">
           <img src={LOGO_URL} alt="Logo" className="h-8 brightness-110" />
           <button 
             onClick={() => {
               const pw = prompt("Staff Auth Required:");
-              if (pw === "2026") { setView('landing'); }
+              if (pw === "2026") { setView('landing'); setViewingCenter('both'); }
               else if (pw !== null) { alert("Access Denied"); }
             }} 
             className="text-white/20 hover:text-white/100 p-3 transition-all"
@@ -429,16 +492,15 @@ useEffect(() => {
 
         <div className="flex-1 flex flex-col medical-gradient relative">
           {viewingCenter === 'both' ? (
-            /* Area 1: Splash Screen */
             <div className="flex-1 flex flex-col md:flex-row p-6 gap-6">
-              <button onClick={() => { setViewingCenter('harper'); setIsScanning(true); }} className="flex-1 group relative overflow-hidden rounded-[3rem] transition-all duration-700 hover:scale-[1.01] shadow-2xl">
+              <button onClick={() => { setViewingCenter('harper'); }} className="flex-1 group relative overflow-hidden rounded-[3rem] transition-all duration-700 hover:scale-[1.01] shadow-2xl">
                 <div className="absolute inset-0 bg-gradient-to-br from-[#f59e0b] to-[#dd6d22] opacity-80 group-hover:opacity-100 transition-opacity" />
                 <div className="relative z-10 p-16 flex flex-col items-center justify-center h-full text-white text-center">
                   <h2 className="text-7xl font-black tracking-tighter leading-tight drop-shadow-lg text-white">HARPER<br/><span className="text-3xl font-light tracking-[0.2em] opacity-80 uppercase">Wellness Center</span></h2>
                   <div className="mt-12 px-12 py-5 bg-white text-[#dd6d22] rounded-full font-black text-2xl">TOUCH TO START</div>
                 </div>
               </button>
-              <button onClick={() => { setViewingCenter('anthony'); setIsScanning(true); }} className="flex-1 group relative overflow-hidden rounded-[3rem] transition-all duration-700 hover:scale-[1.01] shadow-2xl">
+              <button onClick={() => { setViewingCenter('anthony'); }} className="flex-1 group relative overflow-hidden rounded-[3rem] transition-all duration-700 hover:scale-[1.01] shadow-2xl">
                 <div className="absolute inset-0 bg-gradient-to-br from-[#1080ad] to-[#003d6b] opacity-80 group-hover:opacity-100 transition-opacity" />
                 <div className="relative z-10 p-16 flex flex-col items-center justify-center h-full text-white text-center">
                   <h2 className="text-7xl font-black tracking-tighter leading-tight drop-shadow-lg text-white">ANTHONY<br/><span className="text-3xl font-light tracking-[0.2em] opacity-80 uppercase">Wellness Center</span></h2>
@@ -447,7 +509,6 @@ useEffect(() => {
               </button>
             </div>
           ) : (
-            /* Area 2: Selection Screen (The Professional Redesign) */
             <div className="flex-1 bg-[#fcfdfe] flex flex-col items-center justify-center p-12 relative">
               <button onClick={() => { const pw = prompt("Enter Code:"); if (pw === "2026") setViewingCenter('both'); }} className="absolute top-8 left-8 flex items-center gap-2 text-[10px] font-bold text-slate-300 hover:text-[#1080ad] tracking-[0.2em] uppercase transition-all">
                 <Lock size={12} /> Exit {viewingCenter}
@@ -469,9 +530,9 @@ useEffect(() => {
                     <div className="flex items-center gap-4 mb-2"><Search size={24} className="text-slate-300" /><span className="text-[10px] font-black text-slate-400 tracking-widest uppercase">Member Search</span></div>
                     <input className="w-full bg-transparent text-3xl font-bold outline-none text-[#001f3f]" placeholder="Start typing..." value={kioskInput} onChange={(e) => setKioskInput(e.target.value)} />
                   </div>
-                  {memberMatches.length > 0 && (
+                  {kioskMemberMatches.length > 0 && (
                     <div className="absolute top-[110%] left-0 right-0 bg-white border border-slate-100 shadow-2xl rounded-[2rem] overflow-hidden z-50">
-                      {memberMatches.map(m => (
+                      {kioskMemberMatches.map(m => (
                         <button key={m.id} onClick={() => { setPinModal(m); setKioskInput(''); }} className="w-full p-6 text-left border-b hover:bg-slate-50 flex justify-between items-center group">
                           <span className="text-2xl font-black text-[#001f3f] group-hover:text-[#1080ad] transition-colors">{m.firstName} {m.lastName}</span>
                           <ChevronRight size={24} className="text-slate-200" />
@@ -482,13 +543,12 @@ useEffect(() => {
                 </div>
               </div>
               {kioskMessage.text && (
-                <div className={`mt-12 px-12 py-6 rounded-full text-2xl font-black shadow-lg ${kioskMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{kioskMessage.text}</div>
+                <div className={`mt-12 px-12 py-6 rounded-full text-2xl font-black shadow-lg ${kioskMessage.type === 'success' ? 'bg-green-50 text-green-700' : kioskMessage.type === 'warning' ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'}`}>{kioskMessage.text}{kioskMessage.subtext && <span className="block text-base font-bold mt-1">{kioskMessage.subtext}</span>}</div>
               )}
             </div>
           )}
         </div>
 
-        {/* SCANNER OVERLAY */}
         {isScanning && (
           <div className="fixed inset-0 bg-[#001226]/95 backdrop-blur-2xl z-[200] flex flex-col items-center justify-center p-6">
             <button onClick={() => setIsScanning(false)} className="absolute top-10 right-10 text-white/20 hover:text-white"><X size={60} /></button>
@@ -504,7 +564,6 @@ useEffect(() => {
           </div>
         )}
 
-        {/* PIN VERIFICATION */}
         {pinModal && (
           <div className="fixed inset-0 bg-[#001f3f]/98 backdrop-blur-3xl z-[300] flex items-center justify-center p-6">
             <div className="bg-white rounded-[4rem] p-16 w-full max-w-xl text-center shadow-2xl border-t-[12px] border-[#1080ad]">
@@ -526,6 +585,25 @@ useEffect(() => {
       </div>
     );
   }
+
+  if (view === 'corp_login') { return (<div className="min-h-screen bg-[#001f3f] flex items-center justify-center p-4 font-sans"><div className="bg-white rounded-[3rem] shadow-2xl p-12 w-full max-w-md border-t-8 border-[#8b5cf6]"><div className="flex justify-center mb-6"><Briefcase size={64} className="text-[#8b5cf6]" /></div><h2 className="text-4xl font-black text-center text-slate-900 mb-2 tracking-tight">Partner Login</h2><p className="text-slate-400 mb-10 text-center font-medium tracking-tight">Access your employee wellness roster.</p><input type="text" placeholder="Company Username" id="c_in" className="w-full p-5 bg-slate-100 rounded-2xl mb-4 outline-none border-2 border-transparent focus:border-purple-500/20 text-lg" onKeyDown={(e) => e.key === 'Enter' && handleCorpLogin()} /><input type="password" placeholder="Access PIN" id="c_pin" className="w-full p-5 bg-slate-100 rounded-2xl mb-8 outline-none border-2 border-transparent focus:border-purple-500/20 text-lg" onKeyDown={(e) => e.key === 'Enter' && handleCorpLogin()} /><button onClick={handleCorpLogin} className="w-full bg-[#8b5cf6] text-white p-5 rounded-2xl font-bold text-xl shadow-xl hover:bg-purple-700 transition-all">Sign In</button><button onClick={() => setView('landing')} className="w-full mt-6 text-slate-400 font-bold hover:text-slate-600 transition-colors">Return to Home</button></div></div>); }
+
+  if (view === 'corp_portal' && activeCorp) { const corpMembers = members.filter(m => m.sponsorName.toLowerCase() === activeCorp.companyName.toLowerCase()); const totalCorpVisits = corpMembers.reduce((sum, m) => sum + m.visits, 0); const singlePlans = corpMembers.filter(m => m.type.includes('SINGLE')).length; const familyPlans = corpMembers.filter(m => m.type.includes('FAMILY')).length; return (<div className="min-h-screen bg-[#f0f2f5] font-sans print:bg-white"><nav className="bg-[#001f3f] text-white p-4 shadow-md flex justify-between items-center sticky top-0 z-10 print:hidden"><div className="flex items-center gap-3"><img src={LOGO_URL} alt="Logo" className="h-6" /><span className="font-bold tracking-tight border-l border-white/20 pl-3">Corporate Partner Portal</span></div><button onClick={handleLogout} className="bg-red-500/20 text-red-100 hover:bg-red-500 hover:text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold transition-all"><LogOut size={16}/> Logout</button></nav><main className="max-w-5xl mx-auto p-8 space-y-8 mt-4 print:p-0 print:m-0 print:max-w-none print:mt-0"><div className="flex justify-between items-end print:hidden"><div><h1 className="text-4xl font-black text-[#001f3f] tracking-tight mb-1">{activeCorp.companyName} Wellness Roster</h1><p className="text-slate-500 font-medium">Review your enrolled employees and gym utilization.</p></div><button onClick={() => window.print()} className="bg-white border border-slate-200 text-[#001f3f] px-6 py-3 rounded-xl font-bold text-sm shadow-sm flex items-center gap-2 hover:bg-slate-50 transition-all"><Printer size={16} /> Print Roster</button></div><div className="hidden print:block mb-6 border-b-4 border-[#001f3f] pb-6 text-center"><img src={LOGO_URL} alt="Logo" className="h-12 mx-auto mb-4 invert grayscale" /><h1 className="text-3xl font-black text-[#001f3f] tracking-tight">{activeCorp.companyName} Wellness Roster</h1><p className="text-slate-500 font-bold uppercase tracking-widest mt-2">{currentDateString}</p></div><div className="grid grid-cols-1 md:grid-cols-4 gap-6 print:grid-cols-4 print:gap-4"><ProStatCard value={corpMembers.length} label="Total Enrolled" color="#001f3f" /><ProStatCard value={totalCorpVisits} label="Total Visits" color="#1080ad" /><ProStatCard value={singlePlans} label="Individual Plans" color="#16a34a" /><ProStatCard value={familyPlans} label="Family Plans" color="#f59e0b" /></div><div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden print:border-slate-300 print:shadow-none print:rounded-none"><div className="p-6 border-b border-slate-100 bg-slate-50 print:bg-white print:p-4"><h3 className="text-lg font-bold text-[#001f3f]">Employee Directory</h3></div><table className="w-full text-left border-collapse print:text-sm"><thead className="bg-white text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 print:border-b-2 print:border-slate-800"><tr><th className="px-8 py-4 print:py-2">Employee Name</th><th className="px-8 py-4 print:py-2">Member ID</th><th className="px-8 py-4 print:py-2">Plan Type</th><th className="px-8 py-4 print:py-2 text-right">Lifetime Visits</th></tr></thead><tbody className="text-sm">{corpMembers.length === 0 ? (<tr><td colSpan="4" className="text-center py-12 text-slate-400 font-medium italic">No employees currently enrolled.</td></tr>) : (corpMembers.map(m => (<tr key={m.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors print:border-slate-200"><td className="px-8 py-5 print:py-2 font-bold text-slate-800">{m.firstName} {m.lastName}</td><td className="px-8 py-5 print:py-2 font-mono text-slate-400">{m.id}</td><td className="px-8 py-5 print:py-2"><span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 print:bg-transparent print:px-0 print:text-black text-[10px] font-black tracking-tight">{m.type}</span></td><td className="px-8 py-5 print:py-2 text-right font-black text-[#1080ad] print:text-black text-lg print:text-base">{m.visits}</td></tr>)))}</tbody></table></div></main></div>); }
+
+  const PeriodSelector = ({ value, onChange }) => (
+    <select value={value} onChange={onChange} className="p-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] font-bold text-slate-700 cursor-pointer shadow-sm">
+      <optgroup label="Monthly">
+        {['01-2026','02-2026','03-2026','04-2026','05-2026','06-2026','07-2026','08-2026','09-2026','10-2026','11-2026','12-2026'].map(v => { const [m, y] = v.split('-'); return <option key={v} value={v}>{new Date(y, m - 1).toLocaleDateString('en-US', {month: 'long', year: 'numeric'})}</option>; })}
+      </optgroup>
+      <optgroup label="Quarterly">
+        <option value="Q1-2026">Q1 2026 (Jan - Mar)</option>
+        <option value="Q2-2026">Q2 2026 (Apr - Jun)</option>
+        <option value="Q3-2026">Q3 2026 (Jul - Sep)</option>
+        <option value="Q4-2026">Q4 2026 (Oct - Dec)</option>
+      </optgroup>
+    </select>
+  );
+
   // MAIN DIRECTOR DASHBOARD
   return (
     <div className="flex min-h-screen bg-[#f0f2f5] font-sans text-slate-800">
@@ -1265,37 +1343,6 @@ useEffect(() => {
                     <button onClick={() => setEditMode(!editMode)} className="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs"><FileText size={20} /> Edit Member</button>
                     {selectedMember.type.includes('FAMILY') && (<button onClick={() => { setFamilyFlow({ familyRecordId: selectedMember.airtableId, familyName: selectedMember.familyName || `${selectedMember.lastName} Family`, lastName: selectedMember.lastName, plan: selectedMember.type, center: selectedMember.center, email: selectedMember.email, phone: selectedMember.phone, corporateSponsor: selectedMember.sponsorName, addedMembers: [] }); setShowAddModal(true); setSelectedMember(null); }} className="bg-purple-50 text-purple-600 hover:bg-purple-600 hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs"><Users size={20} /> Add to Family</button>)}
                     <button onClick={() => setPaymentModal(selectedMember)} className="bg-green-50 text-green-600 hover:bg-green-600 hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs"><CreditCard size={20} /> Log Payment</button>
-                   <button 
-  onClick={async () => {
-    if (!window.confirm(`Convert ${selectedMember.firstName} to a $5 Day Pass for today?`)) return;
-    try {
-      // 1. Log the $5 Payment
-      await fetch('/api/log-payment', { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify({ 
-          airtableId: selectedMember.airtableId, 
-          memberName: `${selectedMember.firstName} ${selectedMember.lastName}`, 
-          method: 'Cash', 
-          amount: 5,
-          notes: 'One-time Day Pass' 
-        }) 
-      });
-
-      // 2. Process the Check-In
-      await processCheckIn(selectedMember.id, "Day Pass Override");
-      
-      // 3. Close the modal
-      setSelectedMember(null);
-      alert("Day Pass processed successfully!");
-    } catch (err) {
-      alert("Error processing day pass.");
-    }
-  }} 
-  className="bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs"
->
-  <CreditCard size={20} /> $5 Day Pass
-</button>
                     <button onClick={() => { const isHarper = selectedMember.center && selectedMember.center.toLowerCase().includes('harper'); const centerName = isHarper ? 'Harper Wellness Center' : 'Anthony Wellness Center'; const centerAddr = isHarper ? '615 W 12th St, Harper, KS 67058' : '309 W Main St, Anthony, KS 67003'; const centerPhone = isHarper ? '(620) 896-1202' : '(620) 842-5190'; const centerHours = isHarper ? 'M-F 8am-12pm &amp; 5pm-8pm, Sat 9am-noon' : 'M-F 7am-8pm, Sat 8am-1pm'; const directorName = isHarper ? 'Patrick Johnson' : 'Deanna Smithhisler'; const addressBlock = selectedMember.address ? `${selectedMember.address}<br/>${selectedMember.city}, ${selectedMember.state} ${selectedMember.zip}` : 'Address not on file'; const w = window.open('', '_blank'); w.document.write(`<!DOCTYPE html><html><head><title>Payment Reminder - ${selectedMember.firstName} ${selectedMember.lastName}</title><style>@media print{body{margin:0}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}body{font-family:Arial,sans-serif;color:#1e293b;margin:0}.page{max-width:680px;margin:0 auto}.hdr{background:#003d6b;padding:20px 44px;display:flex;justify-content:space-between;align-items:center}.hdr-left{display:flex;align-items:center;gap:16px}.hdr-logo{height:36px;opacity:.95}.hdr-name{font-size:18px;font-weight:700;color:#fff}.hdr-sub{font-size:10px;color:#8bb8d9;letter-spacing:1px;margin-top:2px}.accent{height:3px;background:linear-gradient(to right,#dba51f,#dd6d22)}.body{padding:32px 44px}.top-row{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px}.addr{font-size:14px;line-height:1.6}.date{font-size:12px;color:#94a3b8}.greeting{font-size:13px;margin-bottom:10px}.intro{font-size:13px;color:#475569;line-height:1.8;margin-bottom:20px}.box{border:1.5px solid #003d6b;border-radius:6px;overflow:hidden;margin-bottom:20px}.box-hdr{background:#003d6b;padding:8px 16px;font-size:10px;font-weight:700;color:#fff;letter-spacing:1.5px}.box-body{padding:2px 16px}.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e2e8f0}.row:last-child{border-bottom:none}.lbl{font-size:12px;color:#64748b}.val{font-size:12px;font-weight:700;color:#003d6b}.val-due{font-size:12px;font-weight:700;color:#dd6d22}.opts{font-size:12px;color:#475569;line-height:2;margin-bottom:20px;padding-left:10px;border-left:3px solid #dba51f}.opt{padding-left:10px}.opt-b{color:#003d6b;font-weight:700}.disc{font-size:12px;color:#94a3b8;margin-bottom:24px}.sign{font-size:13px;margin-bottom:2px}.sign-name{font-size:13px;font-weight:700;color:#003d6b}.sign-title{font-size:11px;color:#94a3b8}.ftr{border-top:2px solid #003d6b;padding:10px 44px;display:flex;justify-content:space-between;align-items:center;margin-top:24px}.ftr-l{font-size:10px;color:#94a3b8}.ftr-r{font-size:10px;color:#1080ad}</style></head><body><div class="page"><div class="hdr"><div class="hdr-left"><img src="https://pattersonhc.org/sites/default/files/wellness_white.png" class="hdr-logo" /><div><div class="hdr-name">${centerName}</div><div class="hdr-sub">${centerAddr} | ${centerPhone}</div></div></div></div><div class="accent"></div><div class="body"><div class="top-row"><div class="addr"><strong>${selectedMember.firstName} ${selectedMember.lastName}</strong><br/>${addressBlock}</div><div class="date">${new Date().toLocaleDateString('en-US', {month:'long',day:'numeric',year:'numeric'})}</div></div><div class="greeting">Dear ${selectedMember.firstName},</div><div class="intro">Your wellness center membership payment is coming due. Please review the details below and make your payment at your earliest convenience.</div><div class="box"><div class="box-hdr">ACCOUNT DETAILS</div><div class="box-body"><div class="row"><span class="lbl">Member ID</span><span class="val">${selectedMember.id}</span></div><div class="row"><span class="lbl">Membership</span><span class="val">${selectedMember.type}</span></div><div class="row"><span class="lbl">Amount Due</span><span class="val-due">$${selectedMember.monthlyRate || 'See front desk'}</span></div><div class="row"><span class="lbl">Due Date</span><span class="val-due">${selectedMember.nextPayment ? new Date(selectedMember.nextPayment + 'T00:00:00').toLocaleDateString('en-US', {month:'long',day:'numeric',year:'numeric'}) : 'See front desk'}</span></div></div></div><div class="opts"><div class="opt"><span class="opt-b">In person</span> — Front desk: ${centerHours}</div><div class="opt"><span class="opt-b">By phone</span> — ${centerPhone}</div><div class="opt"><span class="opt-b">By mail</span> — ${centerAddr}</div></div><div class="disc">If you have already made your payment, please disregard this notice.</div><div class="sign">Sincerely,</div><div class="sign-name">${directorName}</div><div class="sign-title">Director, ${centerName}</div></div><div class="ftr"><span class="ftr-l">${centerName} | Harper County, KS</span><span class="ftr-r">pattersonhc.org/wellness-centers</span></div></div></body></html>`); 
                       w.document.close(); 
                       setTimeout(() => w.print(), 500); 
@@ -1342,7 +1389,7 @@ useEffect(() => {
         </div>
       )}
 
-     {/* CORPORATE PAYMENT MODAL */}
+      {/* CORPORATE PAYMENT MODAL */}
       {corpPaymentModal && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-white rounded-2xl w-full max-w-sm p-8 relative shadow-2xl">
@@ -1358,8 +1405,10 @@ useEffect(() => {
                 <button key={m} onClick={async () => {
                   const entry = `${corpPaymentModal.reportMonth}:${m}`;
                   const newPaidMonths = corpPaymentModal.paidMonths ? `${corpPaymentModal.paidMonths},${entry}` : entry;
+                  
                   setCorporatePartners(prev => prev.map(c => c.id === corpPaymentModal.id ? { ...c, paidMonths: newPaidMonths } : c));
                   setCorpPaymentModal(null);
+                  
                   try {
                     await fetch('/api/update-corporate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ recordId: corpPaymentModal.id, paidMonths: newPaidMonths }) });
                   } catch (err) { 
@@ -1372,18 +1421,6 @@ useEffect(() => {
           </div>
         </div>
       )}
-
-    {/* THIS IS THE CORRECT START OF THE DIRECTOR PORTAL AREA */}
-  <div className="flex min-h-screen bg-[#f0f2f5] font-sans text-slate-800">
-    <aside className="w-64 bg-[#001f3f] ...">
-       {/* ... sidebar ... */}
-    </aside>
-    <main className="flex-1 p-10 ...">
-       {/* ... main tabs ... */}
-    </main>
-  </div> 
-
-  {/* THESE ARE THE FINAL BRACKETS FOR THE WHOLE FILE */}
-  </div> // Closes the very first <div> in the return
-  ); // Closes the return (
-} // Closes the export default function WellnessHub() {
+    </div>
+  );
+}
