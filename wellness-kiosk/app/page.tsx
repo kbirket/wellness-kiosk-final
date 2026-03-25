@@ -513,11 +513,9 @@ useEffect(() => {
               <input type="password" maxLength={4} autoFocus className="w-full p-8 bg-slate-50 rounded-[2.5rem] text-center text-8xl tracking-[0.4em] font-black mb-12 outline-none border-4 border-slate-100 text-slate-900 focus:border-[#1080ad]" 
                 onChange={(e) => {
                   if (e.target.value.length === 4) {
-                  if (e.target.value === pinModal.password) { 
-  processCheckIn(pinModal.id, "Kiosk Search"); 
-  setPinModal(null); 
-setTimeout(() => setKioskInput(''), 5000);
-}
+                    if (e.target.value === pinModal.password) { processCheckIn(pinModal.id, "Kiosk Search"); setPinModal(null); setTimeout(() => setViewingCenter('both'), 5000); }
+                    else { alert("Incorrect PIN"); e.target.value = ''; }
+                  }
                 }} 
               />
               <button onClick={() => setPinModal(null)} className="text-slate-300 font-black text-xl uppercase tracking-widest">Cancel</button>
