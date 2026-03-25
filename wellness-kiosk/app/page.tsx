@@ -696,8 +696,8 @@ export default function WellnessHub() {
                 </div>
               </div>
 
-              {/* TOP STAT CARDS */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb
+            {/* TOP STAT CARDS */}
+  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-blue-500"><p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Visits</p><p className="text-4xl font-black text-slate-800">{currentPeriodVisits.length}</p></div>
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-green-500"><p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">New Sign-Ups</p><p className="text-4xl font-black text-slate-800">{newMembersThisPeriod.length}</p></div>
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-amber-500"><p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">24/7 Passes (New)</p><p className="text-4xl font-black text-slate-800">{newMembersThisPeriod.filter(m => m.access247).length}</p></div>
