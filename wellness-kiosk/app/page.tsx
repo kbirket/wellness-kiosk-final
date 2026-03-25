@@ -327,13 +327,35 @@ const today = new Date(); const todayStr = today.toDateString(); const weekFromN
           let occColor = '#16a34a';
           if (currentOccupancy > 15 && currentOccupancy <= 35) { occStatus = 'Steady'; occColor = '#f59e0b'; }
           else if (currentOccupancy > 35) { occStatus = 'Busy'; occColor = '#ef4444'; }
-return <div className="flex min-h-screen bg-[#f0f2f5] font-sans text-slate-800">
-  <aside className={(sidebarOpen ? 'translate-x-0' : '-translate-x-full') + ' md:translate-x-0 fixed md:relative z-40 w-64 bg-[#001f3f] text-white flex flex-col min-h-screen transition-transform duration-300 print:hidden'}>        <div className="p-8 border-b border-white/10 flex justify-center"><img src={LOGO_URL} alt="Logo" className="h-10 opacity-90 drop-shadow-md" /></div>
-        <div className="p-6"><div className="flex items-center gap-3 mb-4"><div className="w-10 h-10 rounded-lg bg-[#f59e0b] flex items-center justify-center font-bold text-lg text-[#001f3f]">{user?.name.charAt(0)}</div><div><p className="text-sm font-bold leading-none">{user?.name}</p><p className="text-[11px] text-white/50">@{user?.username}</p></div></div><button onClick={handleLogout} className="flex items-center gap-2 text-xs text-white/40 hover:text-white transition-colors"><LogOut size={14} /> Sign Out</button></div>
-        <div className="px-4 mb-8"><p className="px-2 text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3">Viewing</p><div className="space-y-1">{[{k:'both',c:'#ffffff'},{k:'harper',c:'#f59e0b'},{k:'anthony',c:'#1080ad'}].map(item => (<button key={item.k} onClick={() => { setViewingCenter(item.k); localStorage.setItem('wellnessCenter', item.k); }} className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all ${viewingCenter === item.k ? 'bg-white/20 font-bold' : 'text-white/60 hover:bg-white/5'}`}><span className="w-1.5 h-6 rounded-full" style={{ backgroundColor: item.c }} />{item.k === 'both' ? 'Both Centers' : `${item.k.charAt(0).toUpperCase() + item.k.slice(1)}`}</button>))}</div></div>
-        <nav className="flex-1 px-4 space-y-1">{[{id:'dashboard',label:'Dashboard',icon:<LayoutDashboard size={18}/>},{id:'members',label:'Members',icon:<Users size={18}/>},{id:'classes',label:'Classes',icon:<Calendar size={18}/>},{id:'badge',label:'Staff Check-In',icon:<QrCode size={18}/>},{id:'notif',label:'Notifications',icon:<Bell size={18}/>},{id:'visitors',label:'Visitors',icon:<Eye size={18}/>},{id:'corporate',label:'Corporate',icon:<Briefcase size={18}/>},{id:'reports',label:'Reports',icon:<FileText size={18}/>},{id:'help',label:'Help & Training',icon:<HelpCircle size={18}/>}].map(item => (<button key={item.id} onClick={() => { setActiveTab(item.id); setKioskInput(''); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all ${activeTab === item.id ? 'bg-[#1080ad] text-white font-bold' : 'text-white/60 hover:bg-white/5'}`}>{item.icon} {item.label}{item.id === 'notif' && stats.overdue > 0 && <span className="ml-auto w-5 h-5 rounded-full bg-red-500 text-[10px] flex items-center justify-center font-bold tracking-tight">{stats.overdue}</span>}</button>))}</nav>
-      </aside>
 
+    <nav className="flex-1 px-4 space-y-1">{[{id:'dashboard',label:'Dashboard',icon:<LayoutDashboard size={18}/>},{id:'members',label:'Members',icon:<Users size={18}/>},{id:'classes',label:'Classes',icon:<Calendar size={18}/>},{id:'badge',label:'Staff Check-In',icon:<QrCode size={18}/>},{id:'notif',label:'Notifications',icon:<Bell size={18}/>},{id:'visitors',label:'Visitors',icon:<Eye size={18}/>},{id:'corporate',label:'Corporate',icon:<Briefcase size={18}/>},{id:'reports',label:'Reports',icon:<FileText size={18}/>},{id:'help',label:'Help & Training',icon:<HelpCircle size={18}/>}].map(item => (<button key={item.id} onClick={() => { setActiveTab(item.id); setKioskInput(''); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all ${activeTab === item.id ? 'bg-[#1080ad] text-white font-bold' : 'text-white/60 hover:bg-white/5'}`}>{item.icon} {item.label}{item.id === 'notif' && stats.overdue > 0 && <span className="ml-auto w-5 h-5 rounded-full bg-red-500 text-[10px] flex items-center justify-center font-bold tracking-tight">{stats.overdue}</span>}</button>))}</nav>
+      </aside>
+const centerItems = [
+          {k:'both',c:'#ffffff'},
+          {k:'harper',c:'#f59e0b'},
+          {k:'anthony',c:'#1080ad'}
+        ];
+
+        const navItems = [
+          {id:'dashboard',label:'Dashboard',icon:<LayoutDashboard size={18}/>},
+          {id:'members',label:'Members',icon:<Users size={18}/>},
+          {id:'classes',label:'Classes',icon:<Calendar size={18}/>},
+          {id:'badge',label:'Staff Check-In',icon:<QrCode size={18}/>},
+          {id:'notif',label:'Notifications',icon:<Bell size={18}/>},
+          {id:'visitors',label:'Visitors',icon:<Eye size={18}/>},
+          {id:'corporate',label:'Corporate',icon:<Briefcase size={18}/>},
+          {id:'reports',label:'Reports',icon:<FileText size={18}/>},
+          {id:'help',label:'Help & Training',icon:<HelpCircle size={18}/>}
+        ];
+
+        return (
+          <div className="flex min-h-screen bg-[#f0f2f5] font-sans text-slate-800">
+            <aside className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 fixed md:relative z-40 w-64 bg-[#001f3f] text-white flex flex-col min-h-screen transition-transform duration-300 print:hidden`}>
+              <div className="p-8 border-b border-white/10 flex justify-center"><img src={LOGO_URL} alt="Logo" className="h-10 opacity-90 drop-shadow-md" /></div>
+              <div className="p-6"><div className="flex items-center gap-3 mb-4"><div className="w-10 h-10 rounded-lg bg-[#f59e0b] flex items-center justify-center font-bold text-lg text-[#001f3f]">{user?.name?.charAt(0)}</div><div><p className="text-sm font-bold leading-none">{user?.name}</p><p className="text-[11px] text-white/50">@{user?.username}</p></div></div><button onClick={handleLogout} className="flex items-center gap-2 text-xs text-white/40 hover:text-white transition-colors"><LogOut size={14} /> Sign Out</button></div>
+              <div className="px-4 mb-8"><p className="px-2 text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3">Viewing</p><div className="space-y-1">{centerItems.map(item => (<button key={item.k} onClick={() => { setViewingCenter(item.k); localStorage.setItem('wellnessCenter', item.k); }} className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all ${viewingCenter === item.k ? 'bg-white/20 font-bold' : 'text-white/60 hover:bg-white/5'}`}><span className="w-1.5 h-6 rounded-full" style={{ backgroundColor: item.c }} />{item.k === 'both' ? 'Both Centers' : `${item.k.charAt(0).toUpperCase() + item.k.slice(1)}`}</button>))}</div></div>
+              <nav className="flex-1 px-4 space-y-1">{navItems.map(item => (<button key={item.id} onClick={() => { setActiveTab(item.id); setKioskInput(''); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all ${activeTab === item.id ? 'bg-[#1080ad] text-white font-bold' : 'text-white/60 hover:bg-white/5'}`}>{item.icon} {item.label}{item.id === 'notif' && stats.overdue > 0 && <span className="ml-auto w-5 h-5 rounded-full bg-red-500 text-[10px] flex items-center justify-center font-bold tracking-tight">{stats.overdue}</span>}</button>))}</nav>
+            </aside>
       <main className="flex-1 p-4 md:p-10 h-screen overflow-y-auto relative print:m-0 print:p-0 print:h-auto print:overflow-visible">
 {/* Mobile hamburger */}
 <div className="md:hidden flex items-center justify-between mb-4 -mt-4">
