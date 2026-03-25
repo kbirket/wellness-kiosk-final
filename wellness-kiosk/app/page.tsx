@@ -428,66 +428,86 @@ useEffect(() => {
               </button>
             </div>
           ) : (
-            /* Area 2: Center-Specific Entry Screen */
-            <div className="flex-1 bg-[#f8fafc] flex flex-col items-center justify-center p-12 relative">
-              
-              <button 
-                onClick={() => {
-                  const pw = prompt("Enter Code to Switch Centers:");
-                  if (pw === "2026") { setViewingCenter('both'); setIsScanning(false); setKioskInput(''); }
-                }} 
-                className="absolute top-8 left-8 flex items-center gap-2 text-[10px] font-black text-slate-300 hover:text-slate-500 tracking-[0.2em] uppercase transition-all bg-white px-4 py-2 rounded-full shadow-sm border border-slate-100"
-              >
-                <Lock size={12} className="opacity-50" /> Switch Center
-              </button>
+           /* Area 2: Center-Specific Entry Screen (PRO REDESIGN) */
+<div className="flex-1 bg-[#fcfdfe] flex flex-col items-center justify-center p-12 relative">
+  
+  {/* TOP DECORATION */}
+  <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-transparent via-[#1080ad]/20 to-transparent"></div>
 
-              <div className="text-center mb-16">
-                <h2 className="text-6xl font-black text-[#001f3f] mb-4 tracking-tighter uppercase">
-                  Welcome to the<br/>
-                  {viewingCenter === 'harper' ? 'Harper Wellness Center' : 'Anthony Wellness Center'}
-                </h2>
-                <div className="h-1.5 w-24 bg-[#1080ad] mx-auto rounded-full mb-6"></div>
-                <p className="text-slate-400 text-2xl font-medium italic">Please scan your badge or search your name</p>
-              </div>
+  {/* SUBTLE SWITCHER */}
+  <button 
+    onClick={() => {
+      const pw = prompt("Enter Code to Switch Centers:");
+      if (pw === "2026") { setViewingCenter('both'); setIsScanning(false); setKioskInput(''); }
+    }} 
+    className="absolute top-8 left-8 flex items-center gap-2 text-[10px] font-bold text-slate-300 hover:text-[#1080ad] tracking-[0.2em] uppercase transition-all"
+  >
+    <Lock size={12} /> Exit {viewingCenter}
+  </button>
 
-              <div className="flex gap-8 w-full max-w-5xl h-32">
-                 <button onClick={() => setIsScanning(true)} className="flex-1 bg-[#001f3f] text-white rounded-[2.5rem] font-black text-2xl flex items-center justify-center gap-4 shadow-[0_20px_50px_rgba(0,31,63,0.3)] active:scale-95 transition-all hover:bg-[#002d5a]">
-                   <Camera size={36} className="text-[#1080ad]" /> SCAN QR BADGE
-                 </button>
-                 
-                 <div className="flex-[1.5] relative">
-                   <div className="absolute left-8 top-1/2 -translate-y-1/2 text-slate-300">
-                     <Search size={32} />
-                   </div>
-                   <input 
-                     className="w-full h-full p-8 pl-20 bg-white rounded-[2.5rem] text-3xl font-bold outline-none border-4 border-slate-100 focus:border-[#1080ad] transition-all shadow-xl" 
-                     placeholder="Search by name..." 
-                     value={kioskInput} 
-                     onChange={(e) => setKioskInput(e.target.value)} 
-                   />
-                   
-                   {memberMatches.length > 0 && (
-                     <div className="absolute top-full left-0 right-0 mt-6 bg-white border border-slate-200 shadow-[0_30px_60px_rgba(0,0,0,0.15)] rounded-[3rem] overflow-hidden z-50">
-                       {memberMatches.map(m => (
-                         <button key={m.id} onClick={() => { setPinModal(m); setKioskInput(''); }} className="w-full p-8 text-left border-b border-slate-50 last:border-0 hover:bg-blue-50 flex justify-between items-center transition-colors">
-                           <span className="text-3xl font-black text-[#001f3f]">{m.firstName} {m.lastName}</span>
-                           <div className="bg-[#1080ad]/10 text-[#1080ad] px-8 py-3 rounded-2xl font-black text-lg tracking-widest uppercase">Select</div>
-                         </button>
-                       ))}
-                     </div>
-                   )}
-                 </div>
-              </div>
+  {/* MAIN HEADLINE AREA */}
+  <div className="text-center mb-16 animate-in fade-in slide-in-from-top-4 duration-700">
+    <h1 className="text-[10px] font-black tracking-[0.5em] text-[#1080ad] uppercase mb-4">Welcome To</h1>
+    <h2 className="text-7xl font-black text-[#001f3f] tracking-tighter uppercase leading-none">
+      {viewingCenter === 'harper' ? 'Harper' : 'Anthony'}<br/>
+      <span className="font-light text-[#1080ad]">Wellness Center</span>
+    </h2>
+    <p className="mt-8 text-slate-400 text-lg font-medium tracking-wide uppercase opacity-60">Please scan your badge or search your name</p>
+  </div>
 
-              {kioskMessage.text && (
-                <div className={`mt-16 px-16 py-10 rounded-[3rem] text-4xl font-black text-center shadow-2xl animate-in zoom-in-95 ${kioskMessage.type === 'success' ? 'bg-white text-green-600 border-b-8 border-green-500' : 'bg-white text-red-600 border-b-8 border-red-500'}`}>
-                  {kioskMessage.text}
-                  <p className="text-xl font-bold mt-2 text-slate-400 uppercase tracking-widest">{kioskMessage.subtext}</p>
-                </div>
-              )}
-            </div>
-          )}
+  {/* ACTION CONTAINER */}
+  <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
+    
+    {/* SCAN BUTTON - The Hero Action */}
+    <button 
+      onClick={() => setIsScanning(true)} 
+      className="group relative bg-[#001f3f] rounded-[2rem] p-10 flex flex-col items-center justify-center transition-all hover:scale-[1.02] active:scale-95 shadow-2xl shadow-blue-900/20"
+    >
+      <div className="absolute inset-0 bg-[#1080ad] opacity-0 group-hover:opacity-10 transition-opacity rounded-[2rem]"></div>
+      <Camera size={56} className="text-[#1080ad] mb-4 group-hover:scale-110 transition-transform" />
+      <span className="text-2xl font-black text-white tracking-widest uppercase">Scan QR Badge</span>
+      <div className="mt-2 w-12 h-1 bg-[#1080ad] rounded-full"></div>
+    </button>
+
+    {/* SEARCH AREA - Clean & Integrated */}
+    <div className="relative flex flex-col">
+      <div className="flex-1 bg-white border-2 border-slate-100 rounded-[2rem] p-10 flex flex-col justify-center shadow-xl shadow-slate-200/50 focus-within:border-[#1080ad] transition-all">
+        <div className="flex items-center gap-4 mb-2">
+          <Search size={24} className="text-slate-300" />
+          <span className="text-[10px] font-black text-slate-400 tracking-widest uppercase">Member Search</span>
         </div>
+        <input 
+          className="w-full bg-transparent text-3xl font-bold outline-none text-[#001f3f] placeholder:text-slate-200" 
+          placeholder="Start typing..." 
+          value={kioskInput} 
+          onChange={(e) => setKioskInput(e.target.value)} 
+        />
+      </div>
+
+      {/* DROPDOWN RESULTS */}
+      {memberMatches.length > 0 && (
+        <div className="absolute top-[110%] left-0 right-0 bg-white border border-slate-100 shadow-[0_30px_60px_rgba(0,0,0,0.1)] rounded-[2rem] overflow-hidden z-50">
+          {memberMatches.map(m => (
+            <button key={m.id} onClick={() => { setPinModal(m); setKioskInput(''); }} className="w-full p-6 text-left border-b border-slate-50 last:border-0 hover:bg-slate-50 flex justify-between items-center group transition-colors">
+              <div>
+                <p className="text-2xl font-black text-[#001f3f] group-hover:text-[#1080ad] transition-colors">{m.firstName} {m.lastName}</p>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Select Member</p>
+              </div>
+              <ChevronRight size={24} className="text-slate-200 group-hover:text-[#1080ad] group-hover:translate-x-1 transition-all" />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
+
+  {/* STATUS MESSAGE AREA */}
+  {kioskMessage.text && (
+    <div className={`mt-12 px-12 py-6 rounded-full text-2xl font-black shadow-lg animate-in zoom-in-95 ${kioskMessage.type === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+      {kioskMessage.text}
+    </div>
+  )}
+</div>
 
         {/* SCANNER OVERLAY */}
         {isScanning && (
