@@ -50,7 +50,7 @@ export default function WellnessHub() {
   const [activeClass, setActiveClass] = useState(null);
   const [kioskMode, setKioskMode] = useState('Gym');
   const [expandedFaq, setExpandedFaq] = useState(null);
-  
+  const [isScanning, setIsScanning] = useState(false);
   const [reportMonth, setReportMonth] = useState(() => {
     const now = new Date();
     return `${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
@@ -232,8 +232,47 @@ export default function WellnessHub() {
 
   const processCheckIn = async (memberId, method = "Manual Entry") => { const id = memberId.toUpperCase().trim(); const m = membersRef.current.find(m => m.id === id); if(m) { if (m.needsOrientation) { setKioskMessage({ text: 'Orientation Required', type: 'error', subtext: 'Please see front desk to complete your orientation.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 5000); return false; } const light = getStoplight(m); if (light === 'red') { setKioskMessage({ text: 'Please see front desk.', type: 'error', subtext: 'We need to quickly update your account.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4500); return false; } const currentCenter = centerRef.current; const scanCenter = currentCenter === 'both' ? m.center : currentCenter.charAt(0).toUpperCase() + currentCenter.slice(1); const currentTime = new Date().toISOString(); try { const res = await fetch('/api/visits', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: m.airtableId, center: scanCenter, time: currentTime, method: method }) }); const result = await res.json(); if (!result.success) { setKioskMessage({ text: 'System Error', type: 'error', subtext: 'Please see the front desk.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4000); return false; } setVisits(prev => [{name: m.firstName + ' ' + m.lastName, center: scanCenter, time: currentTime, type: m.type, method: method}, ...prev]); setMembers(prev => prev.map(member => member.id === id ? { ...member, visits: member.visits + 1 } : member)); if (activeMember && activeMember.id === id) setActiveMember(prev => ({...prev, visits: prev.visits + 1})); if (light === 'yellow') { setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'warning', subtext: 'Please see the front desk at your convenience.' }); } else { setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'success', subtext: '' }); } setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 3500); return true; } catch (err) { setKioskMessage({ text: 'Network Error', type: 'error', subtext: 'Please try again.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4000); return false; } } else { setKioskMessage({ text: 'ID not found.', type: 'error', subtext: 'Please see front desk.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 3500); return false; } };
 
-  useEffect(() => { let scanner = null; if (view === 'secret_scanner' && scannerActive) { scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 280, height: 280} }, false); scanner.render((decodedText) => { processCheckIn(decodedText, "Camera Scan"); }, () => {}); } return () => { if(scanner) scanner.clear().catch(e => console.error(e)); }; }, [view, scannerActive]);
+// --- QR SCANNER ENGINE FOR KIOSK ---
+  useEffect(() => {
+    let scanner = null;
+    
+    // Only start the camera hardware if the user is on the Kiosk AND has clicked "Scan"
+    if (view === 'kiosk' && isScanning) {
+      // Small delay to ensure the 'reader' DIV is rendered in the DOM
+      const timer = setTimeout(() => {
+        scanner = new Html5QrcodeScanner("reader", { 
+          fps: 20, 
+          qrbox: { width: 250, height: 250 },
+          aspectRatio: 1.0,
+          showTorchButtonIfSupported: true 
+        }, false);
 
+        scanner.render((decodedText) => {
+          // 1. Process the check-in using the ID from the QR code
+          processCheckIn(decodedText, "Kiosk Camera");
+          
+          // 2. Turn off the camera immediately to save power
+          setIsScanning(false);
+          
+          // 3. Clean up the hardware
+          if (scanner) {
+            scanner.clear().catch(error => console.error("Failed to clear scanner", error));
+          }
+        }, (error) => {
+          // This fires constantly while looking for a QR code; leave empty to avoid console spam
+        });
+      }, 300);
+
+      return () => clearTimeout(timer);
+    }
+
+    // Cleanup function when the component unmounts or view changes
+    return () => {
+      if (scanner) {
+        scanner.clear().catch(error => console.error("Scanner cleanup error", error));
+      }
+    };
+  }, [view, isScanning]); // Re-run whenever the view changes or scanning is toggled
   const handleExportCSV = () => { if (filteredMembers.length === 0) return; const headers = ["Member ID","First Name","Last Name","Email","Phone","Membership Type","Home Center","Status","Total Visits","Next Payment","Sponsor"]; const csvRows = [headers.join(','), ...filteredMembers.map(m => `"${m.id}","${m.firstName}","${m.lastName}","${m.email}","${m.phone}","${m.type}","${m.center}","${m.status}","${m.visits}","${m.nextPayment}","${m.sponsorName}"`)].join('\n'); const blob = new Blob([csvRows], { type: 'text/csv' }); const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `Wellness_Members_${new Date().toISOString().slice(0,10)}.csv`; a.click(); window.URL.revokeObjectURL(url); };
   
   const ProStatCard = ({ value, label, color }) => (<div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 print:shadow-none print:border-slate-300" style={{ borderLeft: `6px solid ${color}` }}><p className="text-5xl font-extrabold mb-1 print:text-3xl" style={{ color }}>{value}</p><p className="text-xs font-bold text-[#001f3f] uppercase tracking-tight print:text-[10px]">{label}</p></div>);
@@ -268,6 +307,29 @@ export default function WellnessHub() {
     );
   };
 
+useEffect(() => {
+  let scanner = null;
+  if (view === 'kiosk' && isScanning) {
+    const timer = setTimeout(() => {
+      scanner = new Html5QrcodeScanner("reader", { 
+        fps: 20, 
+        qrbox: { width: 250, height: 250 },
+        aspectRatio: 1.0 
+      }, false);
+      scanner.render((decodedText) => {
+        processCheckIn(decodedText, "Kiosk Camera");
+        setIsScanning(false);
+        scanner.clear();
+      }, () => {});
+    }, 300);
+    return () => { 
+      clearTimeout(timer); 
+      if(scanner) scanner.clear().catch(e => {}); 
+    };
+  }
+}, [view, isScanning]);
+
+
   if (!isMounted) return <div className="min-h-screen bg-[#001f3f]" />;
 
   if (view === 'landing') { return (<div className="min-h-screen bg-[#001f3f] flex items-center justify-center font-sans p-6 relative"><div className="text-center max-w-6xl w-full relative z-10"><img src={LOGO_URL} alt="Logo" className="h-40 mx-auto mb-16 opacity-100 drop-shadow-2xl" /><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"><button onClick={() => { setView('kiosk'); setViewingCenter(viewingCenter === 'both' ? 'anthony' : viewingCenter); setKioskInput(''); }} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group"><Smartphone size={56} className="text-[#1080ad] group-hover:scale-110 transition-transform" /><span className="text-xl font-bold">Public Kiosk</span></button><button onClick={() => setView('member_login')} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group"><UserCircle size={56} className="text-[#16a34a] group-hover:scale-110 transition-transform" /><span className="text-xl font-bold">Member Portal</span></button><button onClick={() => setView('corp_login')} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group"><Briefcase size={56} className="text-[#8b5cf6] group-hover:scale-110 transition-transform" /><span className="text-xl font-bold">Corporate Portal</span></button><button onClick={() => setView('login')} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group border-b-4 border-b-[#f59e0b]"><ShieldCheck size={56} className="text-[#f59e0b] group-hover:scale-110 transition-transform" /><span className="text-xl font-bold">Director Portal</span></button></div></div><button onClick={() => {setView('secret_scanner'); setViewingCenter('both');}} className="absolute bottom-6 right-6 opacity-10 hover:opacity-50 transition-opacity p-4"><Lock size={20} className="text-white"/></button></div>); }
@@ -289,71 +351,161 @@ export default function WellnessHub() {
   }
 
   if (view === 'corp_login') { return (<div className="min-h-screen bg-[#001f3f] flex items-center justify-center p-4 font-sans"><div className="bg-white rounded-[3rem] shadow-2xl p-12 w-full max-w-md border-t-8 border-[#8b5cf6]"><div className="flex justify-center mb-6"><Briefcase size={64} className="text-[#8b5cf6]" /></div><h2 className="text-4xl font-black text-center text-slate-900 mb-2 tracking-tight">Partner Login</h2><p className="text-slate-400 mb-10 text-center font-medium tracking-tight">Access your employee wellness roster.</p><input type="text" placeholder="Company Username" id="c_in" className="w-full p-5 bg-slate-100 rounded-2xl mb-4 outline-none border-2 border-transparent focus:border-purple-500/20 text-lg" onKeyDown={(e) => e.key === 'Enter' && handleCorpLogin()} /><input type="password" placeholder="Access PIN" id="c_pin" className="w-full p-5 bg-slate-100 rounded-2xl mb-8 outline-none border-2 border-transparent focus:border-purple-500/20 text-lg" onKeyDown={(e) => e.key === 'Enter' && handleCorpLogin()} /><button onClick={handleCorpLogin} className="w-full bg-[#8b5cf6] text-white p-5 rounded-2xl font-bold text-xl shadow-xl hover:bg-purple-700 transition-all">Sign In</button><button onClick={() => setView('landing')} className="w-full mt-6 text-slate-400 font-bold hover:text-slate-600 transition-colors">Return to Home</button></div></div>); }
-/* --- PUBLIC KIOSK VIEW --- */
-if (view === 'kiosk') {
-  return (
-    <div className="min-h-screen bg-[#001f3f] flex flex-col items-center justify-center p-6 font-sans">
-      <div className="w-full max-w-4xl bg-white rounded-[3rem] shadow-2xl p-12 text-center relative overflow-hidden">
-        <button onClick={() => setView('landing')} className="absolute top-8 left-8 text-slate-300 hover:text-slate-500"><X size={32}/></button>
-        <div className="mb-8"><img src={LOGO_URL} alt="Logo" className="h-16 mx-auto invert grayscale opacity-20" /></div>
-        <h2 className="text-6xl font-black text-slate-900 mb-4 tracking-tighter">Welcome!</h2>
-        <p className="text-2xl text-slate-400 font-medium mb-12">Scan your badge or search your name.</p>
 
-        <div className="relative max-w-2xl mx-auto">
-          <input 
-            autoFocus
-            className="w-full p-8 bg-slate-100 rounded-3xl border-4 border-transparent focus:border-[#1080ad] outline-none text-4xl text-center font-bold transition-all"
-            placeholder="Name or ID..."
-            value={kioskInput}
-            onChange={(e) => setKioskInput(e.target.value)}
-          />
-          {kioskMatches.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-4 bg-white border-2 border-slate-100 rounded-3xl shadow-2xl z-50 overflow-hidden">
-              {kioskMatches.map(m => (
-                <button key={m.id} onClick={() => { setPinModal(m); setKioskInput(''); }} className="w-full p-6 border-b border-slate-50 hover:bg-blue-50 transition-colors flex justify-between items-center">
-                  <span className="text-3xl font-bold text-[#001f3f]">{m.firstName} {m.lastName}</span>
-                  <ChevronRight size={32} className="text-[#1080ad]" />
-                </button>
-              ))}
-            </div>
-          )}
+  /* --- PUBLIC KIOSK VIEW --- */
+  if (view === 'kiosk') {
+    const memberMatches = kioskInput.length >= 2 ? members.filter(m => (m.firstName + ' ' + m.lastName).toLowerCase().includes(kioskInput.toLowerCase()) || m.id.toLowerCase().includes(kioskInput.toLowerCase())).slice(0, 5) : [];
+    
+    return (
+      <div className="fixed inset-0 bg-[#001f3f] z-[100] flex flex-col font-sans overflow-hidden">
+        <style>{`
+          @keyframes scan { 0% { top: 0%; } 100% { top: 100%; } }
+          .animate-scan {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: #1080ad;
+            box-shadow: 0 0 15px #1080ad;
+            animation: scan 2s linear infinite;
+            z-index: 50;
+          }
+        `}</style>
+
+        {/* Top Brand Bar */}
+        <div className="h-24 bg-white/5 backdrop-blur-md border-b border-white/10 flex items-center justify-between px-12 shrink-0">
+          <img src={LOGO_URL} alt="Logo" className="h-10 opacity-80" />
+          <button onClick={() => setView('landing')} className="text-white/20 hover:text-white/60 transition-colors p-2">
+            <X size={24} />
+          </button>
         </div>
 
-        {kioskMessage.text && (
-          <div className={`mt-12 p-8 rounded-3xl ${kioskMessage.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-            <p className="text-4xl font-black">{kioskMessage.text}</p>
-            <p className="text-xl font-bold mt-2">{kioskMessage.subtext}</p>
+     {/* HARPER SIDE */}
+<button 
+  onClick={() => { setViewingCenter('harper'); setIsScanning(true); }} // Move the trigger HERE
+  className="flex-1 group relative overflow-hidden transition-all duration-700 hover:flex-[1.1] border-r border-white/10"
+>
+  <div className="absolute inset-0 bg-gradient-to-br from-[#f59e0b] to-[#dd6d22] opacity-90 group-hover:opacity-100 transition-opacity" />
+  <div className="relative z-10 p-12 flex flex-col items-center justify-center h-full text-white">
+    <MapPin size={80} className="mb-6 opacity-50" />
+    <h2 className="text-5xl font-black tracking-tighter mb-4 text-center uppercase text-white">Harper Wellness</h2>
+    <div className="px-8 py-4 bg-white/20 rounded-full font-bold text-xl backdrop-blur-sm group-hover:bg-white group-hover:text-[#dd6d22] transition-all">
+      Touch to Check In
+    </div>
+  </div>
+</button>
+
+{/* ANTHONY SIDE */}
+<button 
+  onClick={() => { setViewingCenter('anthony'); setIsScanning(true); }} // Move the trigger HERE
+  className="flex-1 group relative overflow-hidden transition-all duration-700 hover:flex-[1.1]"
+>
+  <div className="absolute inset-0 bg-gradient-to-br from-[#1080ad] to-[#003d6b] opacity-90 group-hover:opacity-100 transition-opacity" />
+  <div className="relative z-10 p-12 flex flex-col items-center justify-center h-full text-white">
+    <MapPin size={80} className="mb-6 opacity-50" />
+    <h2 className="text-5xl font-black tracking-tighter mb-4 text-center uppercase text-white">Anthony Wellness</h2>
+    <div className="px-8 py-4 bg-white/20 rounded-full font-bold text-xl backdrop-blur-sm group-hover:bg-white group-hover:text-[#003d6b] transition-all">
+      Touch to Check In
+    </div>
+  </div>
+</button>
+
+        {/* Footer Instructions */}
+        <div className="h-20 bg-black/20 flex items-center justify-center shrink-0">
+          <p className="text-white/40 font-bold uppercase tracking-[0.3em] text-sm animate-pulse">Welcome to Patterson Health Center</p>
+        </div>
+
+        {/* SCANNER OVERLAY */}
+        {isScanning && (
+          <div className="fixed inset-0 bg-black z-[120] flex flex-col items-center justify-center p-6">
+            <button onClick={() => setIsScanning(false)} className="absolute top-10 right-10 text-white bg-white/10 p-4 rounded-full">
+              <X size={40} />
+            </button>
+            <h2 className="text-white text-3xl font-black mb-8 uppercase tracking-widest">Position QR Code in Frame</h2>
+            <div className="relative w-full max-w-lg aspect-square bg-slate-800 rounded-[3rem] overflow-hidden border-4 border-[#1080ad] shadow-[0_0_50px_rgba(16,128,173,0.5)]">
+              <div id="reader" className="w-full h-full"></div>
+              <div className="animate-scan"></div>
+            </div>
+            
+            {/* BACKUP: SEARCH BY NAME BUTTON */}
+            <button 
+              onClick={() => { setIsScanning(false); setKioskInput(''); }}
+              className="mt-8 text-white/40 hover:text-white border border-white/20 px-6 py-3 rounded-xl font-bold uppercase tracking-widest transition-all"
+            >
+              Phone cracked? Search by Name
+            </button>
+
+            {kioskMessage.text && (
+              <div className={`absolute bottom-10 p-8 rounded-3xl ${kioskMessage.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                <p className="text-3xl font-black">{kioskMessage.text}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* MANUAL SEARCH OVERLAY (Appears if not scanning and center is picked) */}
+        {!isScanning && viewingCenter !== 'both' && (
+          <div className="fixed inset-0 bg-white z-[130] flex flex-col items-center justify-center p-12">
+            <button onClick={() => setViewingCenter('both')} className="absolute top-10 left-10 text-slate-300 font-bold flex items-center gap-2">
+              <ChevronRight className="rotate-180" /> Back
+            </button>
+            <h2 className="text-4xl font-black text-[#001f3f] mb-8 uppercase">{viewingCenter} Manual Lookup</h2>
+            <div className="w-full max-w-2xl relative">
+              <input 
+                autoFocus 
+                className="w-full p-8 bg-slate-100 rounded-3xl text-3xl font-bold border-4 border-transparent focus:border-[#1080ad] outline-none"
+                placeholder="Start typing your name..."
+                value={kioskInput}
+                onChange={(e) => setKioskInput(e.target.value)}
+              />
+              {memberMatches.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-4 bg-white border shadow-2xl rounded-3xl overflow-hidden z-50">
+                  {memberMatches.map(m => (
+                    <button key={m.id} onClick={() => { setPinModal(m); setKioskInput(''); }} className="w-full p-8 text-left border-b flex justify-between items-center hover:bg-blue-50">
+                      <span className="text-3xl font-bold">{m.firstName} {m.lastName}</span>
+                      <ChevronRight size={32} className="text-[#1080ad]"/>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button onClick={() => setIsScanning(true)} className="mt-12 text-[#1080ad] font-bold text-xl uppercase tracking-widest flex items-center gap-2">
+               <Camera size={24} /> Switch back to camera
+            </button>
+          </div>
+        )}
+
+        {/* PIN MODAL */}
+        {pinModal && (
+          <div className="fixed inset-0 bg-[#001f3f]/95 z-[300] flex items-center justify-center p-6 backdrop-blur-md">
+            <div className="bg-white rounded-[3rem] p-12 w-full max-w-md text-center shadow-2xl">
+              <h3 className="text-3xl font-black mb-2">Verify PIN</h3>
+              <p className="text-slate-400 mb-8 font-bold">Hello, {pinModal.firstName}!</p>
+              <input 
+                type="password" maxLength={4} autoFocus
+                className="w-full p-6 bg-slate-100 rounded-2xl text-center text-5xl tracking-[0.5em] font-black mb-8 outline-none border-4 focus:border-[#1080ad]"
+                onChange={(e) => {
+                  if (e.target.value.length === 4) {
+                    if (e.target.value === pinModal.password) {
+                      processCheckIn(pinModal.id, "Kiosk");
+                      setPinModal(null);
+                      setViewingCenter('both');
+                    } else {
+                      alert("Incorrect PIN");
+                      e.target.value = '';
+                    }
+                  }
+                }}
+              />
+              <button onClick={() => setPinModal(null)} className="text-slate-400 font-bold hover:text-slate-600">Cancel</button>
+            </div>
           </div>
         )}
       </div>
+    );
+  }
 
-      {pinModal && (
-        <div className="fixed inset-0 bg-[#001f3f]/95 z-[100] flex items-center justify-center p-6 backdrop-blur-md">
-          <div className="bg-white rounded-[3rem] p-12 w-full max-w-md text-center shadow-2xl">
-            <h3 className="text-3xl font-black mb-2">Verify PIN</h3>
-            <p className="text-slate-400 mb-8 font-bold">Hello, {pinModal.firstName}!</p>
-            <input 
-              type="password" maxLength={4} autoFocus
-              className="w-full p-6 bg-slate-100 rounded-2xl text-center text-5xl tracking-[0.5em] font-black mb-8 outline-none border-4 focus:border-[#1080ad]"
-              onChange={(e) => {
-                if (e.target.value.length === 4) {
-                  if (e.target.value === pinModal.password) {
-                    processCheckIn(pinModal.id, "Kiosk");
-                    setPinModal(null);
-                  } else {
-                    alert("Incorrect PIN");
-                    e.target.value = '';
-                  }
-                }
-              }}
-            />
-            <button onClick={() => setPinModal(null)} className="text-slate-400 font-bold hover:text-slate-600">Cancel</button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+
   /* --- MEMBER PORTAL LOGIN --- */
 if (view === 'member_login') {
   return (
@@ -1214,7 +1366,7 @@ if (view === 'member_login') {
         </div>
       )}
 
-      {/* CORPORATE PAYMENT MODAL */}
+     {/* CORPORATE PAYMENT MODAL */}
       {corpPaymentModal && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-white rounded-2xl w-full max-w-sm p-8 relative shadow-2xl">
@@ -1230,10 +1382,8 @@ if (view === 'member_login') {
                 <button key={m} onClick={async () => {
                   const entry = `${corpPaymentModal.reportMonth}:${m}`;
                   const newPaidMonths = corpPaymentModal.paidMonths ? `${corpPaymentModal.paidMonths},${entry}` : entry;
-                  
                   setCorporatePartners(prev => prev.map(c => c.id === corpPaymentModal.id ? { ...c, paidMonths: newPaidMonths } : c));
                   setCorpPaymentModal(null);
-                  
                   try {
                     await fetch('/api/update-corporate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ recordId: corpPaymentModal.id, paidMonths: newPaidMonths }) });
                   } catch (err) { 
@@ -1246,6 +1396,18 @@ if (view === 'member_login') {
           </div>
         </div>
       )}
-    </div>
-  );
-}
+
+    {/* THIS IS THE CORRECT START OF THE DIRECTOR PORTAL AREA */}
+  <div className="flex min-h-screen bg-[#f0f2f5] font-sans text-slate-800">
+    <aside className="w-64 bg-[#001f3f] ...">
+       {/* ... sidebar ... */}
+    </aside>
+    <main className="flex-1 p-10 ...">
+       {/* ... main tabs ... */}
+    </main>
+  </div> 
+
+  {/* THESE ARE THE FINAL BRACKETS FOR THE WHOLE FILE */}
+  </div> // Closes the very first <div> in the return
+  ); // Closes the return (
+} // Closes the export default function WellnessHub() {
