@@ -237,6 +237,27 @@ export default function WellnessHub() {
 
   const processCheckIn = async (memberId, method = "Manual Entry") => { const id = memberId.toUpperCase().trim(); const m = membersRef.current.find(m => m.id === id); if(m) { if (m.needsOrientation) { setKioskMessage({ text: 'Orientation Required', type: 'error', subtext: 'Please see front desk to complete your orientation.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 5000); return false; } const light = getStoplight(m); if (light === 'red') { setKioskMessage({ text: 'Please see front desk.', type: 'error', subtext: 'We need to quickly update your account.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4500); return false; } const currentCenter = centerRef.current; const scanCenter = currentCenter === 'both' ? m.center : currentCenter.charAt(0).toUpperCase() + currentCenter.slice(1); const currentTime = new Date().toISOString(); try { const res = await fetch('/api/visits', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: m.airtableId, center: scanCenter, time: currentTime, method: method }) }); const result = await res.json(); if (!result.success) { setKioskMessage({ text: 'System Error', type: 'error', subtext: 'Please see the front desk.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4000); return false; } setVisits(prev => [{name: m.firstName + ' ' + m.lastName, center: scanCenter, time: currentTime, type: m.type, method: method}, ...prev]); setMembers(prev => prev.map(member => member.id === id ? { ...member, visits: member.visits + 1 } : member)); if (activeMember && activeMember.id === id) setActiveMember(prev => ({...prev, visits: prev.visits + 1})); if (light === 'yellow') { setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'warning', subtext: 'Please see the front desk at your convenience.' }); } else { setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'success', subtext: '' }); } setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 5000); return true; } catch (err) { setKioskMessage({ text: 'Network Error', type: 'error', subtext: 'Please try again.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4000); return false; } } else { setKioskMessage({ text: 'ID not found.', type: 'error', subtext: 'Please see front desk.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 3500); return false; } };
 
+  const processVisitorCheckIn = async (visitor) => {
+    const currentCenter = centerRef.current;
+    const scanCenter = currentCenter === 'both' ? (visitor.center || 'Anthony') : currentCenter.charAt(0).toUpperCase() + currentCenter.slice(1);
+    try {
+      const res = await fetch('/api/visitor-checkin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visitorAirtableId: visitor.airtableId, center: scanCenter }) });
+      const result = await res.json();
+      if (result.success) {
+        setVisitors(prev => prev.map(v => v.airtableId === visitor.airtableId ? { ...v, totalVisits: (v.totalVisits || 0) + 1 } : v));
+        setVisits(prev => [{ name: visitor.firstName + ' ' + visitor.lastName, center: scanCenter, time: new Date().toISOString(), type: 'VISITOR - ' + (visitor.passType || 'Pass'), method: 'Kiosk Search' }, ...prev]);
+        setKioskMessage({ text: `Welcome, ${visitor.firstName}!`, type: 'success', subtext: '' });
+        setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 5000);
+      } else {
+        setKioskMessage({ text: 'Check-in Error', type: 'error', subtext: result.error || 'Please see the front desk.' });
+        setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4500);
+      }
+    } catch (err) {
+      setKioskMessage({ text: 'Network Error', type: 'error', subtext: 'Please try again.' });
+      setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4000);
+    }
+  };
+
   useEffect(() => { let scanner = null; if (view === 'secret_scanner' && scannerActive) { scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 280, height: 280} }, false); scanner.render((decodedText) => { processCheckIn(decodedText, "Camera Scan"); }, () => {}); } return () => { if(scanner) scanner.clear().catch(e => console.error(e)); }; }, [view, scannerActive]);
 
 // --- QR SCANNER ENGINE FOR KIOSK ---
@@ -457,7 +478,9 @@ export default function WellnessHub() {
 
   /* --- PUBLIC KIOSK VIEW --- */
   if (view === 'kiosk') {
-    const kioskMemberMatches = kioskInput.length >= 2 ? members.filter(m => (m.firstName + ' ' + m.lastName).toLowerCase().includes(kioskInput.toLowerCase()) || m.id.toLowerCase().includes(kioskInput.toLowerCase())).slice(0, 5) : [];
+    const kioskMemberMatches = kioskInput.length >= 2 ? members.filter(m => (m.firstName + ' ' + m.lastName).toLowerCase().includes(kioskInput.toLowerCase()) || m.id.toLowerCase().includes(kioskInput.toLowerCase())).slice(0, 4) : [];
+    const kioskVisitorMatches = kioskInput.length >= 2 ? visitors.filter(v => { const today = new Date(); const exp = new Date(v.expirationDate + 'T23:59:59'); return exp >= today && v.orientationComplete && (v.firstName + ' ' + v.lastName).toLowerCase().includes(kioskInput.toLowerCase()); }).slice(0, 2) : [];
+    const allKioskMatches = [...kioskMemberMatches.map(m => ({...m, _type: 'member'})), ...kioskVisitorMatches.map(v => ({...v, _type: 'visitor'}))];
     
     return (
       <div className="fixed inset-0 bg-[#001f3f] z-[100] flex flex-col font-sans overflow-hidden text-slate-900">
@@ -530,11 +553,14 @@ export default function WellnessHub() {
                     <div className="flex items-center gap-4 mb-2"><Search size={24} className="text-slate-300" /><span className="text-[10px] font-black text-slate-400 tracking-widest uppercase">Member Search</span></div>
                     <input className="w-full bg-transparent text-3xl font-bold outline-none text-[#001f3f]" placeholder="Start typing..." value={kioskInput} onChange={(e) => setKioskInput(e.target.value)} />
                   </div>
-                  {kioskMemberMatches.length > 0 && (
+                  {allKioskMatches.length > 0 && (
                     <div className="absolute top-[110%] left-0 right-0 bg-white border border-slate-100 shadow-2xl rounded-[2rem] overflow-hidden z-50">
-                      {kioskMemberMatches.map(m => (
-                        <button key={m.id} onClick={() => { setPinModal(m); setKioskInput(''); }} className="w-full p-6 text-left border-b hover:bg-slate-50 flex justify-between items-center group">
-                          <span className="text-2xl font-black text-[#001f3f] group-hover:text-[#1080ad] transition-colors">{m.firstName} {m.lastName}</span>
+                      {allKioskMatches.map((m, idx) => (
+                        <button key={m._type + '-' + (m.airtableId || m.id || idx)} onClick={() => { setPinModal({...m, _kioskType: m._type}); setKioskInput(''); }} className="w-full p-6 text-left border-b hover:bg-slate-50 flex justify-between items-center group">
+                          <div className="flex items-center gap-4">
+                            <span className="text-2xl font-black text-[#001f3f] group-hover:text-[#1080ad] transition-colors">{m.firstName} {m.lastName}</span>
+                            {m._type === 'visitor' && <span className="px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-[10px] font-black uppercase tracking-wider">Visitor</span>}
+                          </div>
                           <ChevronRight size={24} className="text-slate-200" />
                         </button>
                       ))}
@@ -566,14 +592,24 @@ export default function WellnessHub() {
 
         {pinModal && (
           <div className="fixed inset-0 bg-[#001f3f]/98 backdrop-blur-3xl z-[300] flex items-center justify-center p-6">
-            <div className="bg-white rounded-[4rem] p-16 w-full max-w-xl text-center shadow-2xl border-t-[12px] border-[#1080ad]">
+            <div className={`bg-white rounded-[4rem] p-16 w-full max-w-xl text-center shadow-2xl border-t-[12px] ${pinModal._kioskType === 'visitor' ? 'border-[#8b5cf6]' : 'border-[#1080ad]'}`}>
               <h2 className="text-5xl font-black text-slate-900 mb-12 tracking-tight uppercase">Verify PIN</h2>
-              <p className="text-2xl font-bold text-slate-400 mb-8 uppercase tracking-widest">Hello, {pinModal.firstName}!</p>
-              <input type="password" maxLength={4} autoFocus className="w-full p-8 bg-slate-50 rounded-[2.5rem] text-center text-8xl tracking-[0.4em] font-black mb-12 outline-none border-4 border-slate-100 text-slate-900 focus:border-[#1080ad]" 
+              <p className="text-2xl font-bold text-slate-400 mb-2 uppercase tracking-widest">Hello, {pinModal.firstName}!</p>
+              {pinModal._kioskType === 'visitor' && <p className="text-sm font-black text-purple-500 mb-8 uppercase tracking-widest">Visitor Pass</p>}
+              {pinModal._kioskType !== 'visitor' && <div className="mb-8"></div>}
+              <input type="password" maxLength={4} autoFocus className={`w-full p-8 bg-slate-50 rounded-[2.5rem] text-center text-8xl tracking-[0.4em] font-black mb-12 outline-none border-4 border-slate-100 text-slate-900 ${pinModal._kioskType === 'visitor' ? 'focus:border-[#8b5cf6]' : 'focus:border-[#1080ad]'}`}
                 onChange={(e) => {
                   if (e.target.value.length === 4) {
-                    if (e.target.value === pinModal.password) { processCheckIn(pinModal.id, "Kiosk Search"); setPinModal(null); }
-                    else { alert("Incorrect PIN"); e.target.value = ''; }
+                    const enteredPin = e.target.value;
+                    if (pinModal._kioskType === 'visitor') {
+                      if (enteredPin === pinModal.pin) {
+                        processVisitorCheckIn(pinModal);
+                        setPinModal(null);
+                      } else { alert("Incorrect PIN"); e.target.value = ''; }
+                    } else {
+                      if (enteredPin === pinModal.password) { processCheckIn(pinModal.id, "Kiosk Search"); setPinModal(null); }
+                      else { alert("Incorrect PIN"); e.target.value = ''; }
+                    }
                   }
                 }} 
               />
