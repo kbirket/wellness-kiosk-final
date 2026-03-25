@@ -1,78 +1,94 @@
-// /app/api/visitor-checkin/route.js
-// Check in a visitor — verifies PIN and expiration
+// app/api/visitor-checkin/route.js
+
 import { NextResponse } from 'next/server';
-export const dynamic = 'force-dynamic';
+
+const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
+const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
 
 export async function POST(request) {
-  const baseId = process.env.AIRTABLE_BASE_ID;
-  const token = process.env.AIRTABLE_PAT;
-
   try {
-    const body = await request.json();
-    const { visitorAirtableId, pin, center } = body;
+    const { visitorAirtableId, center } = await request.json();
 
-    // Fetch the visitor record
-    const visitorRes = await fetch(`https://api.airtable.com/v0/${baseId}/Visitors/${visitorAirtableId}`, {
-      headers: { 'Authorization': `Bearer ${token}` },
-    });
-    const visitor = await visitorRes.json();
+    if (!visitorAirtableId) {
+      return NextResponse.json({ success: false, error: 'Missing visitor ID' });
+    }
+
+    // 1. Get the visitor record to check expiration and get current visit count
+    const getRes = await fetch(
+      `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Visitors/${visitorAirtableId}`,
+      { headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` } }
+    );
+    const visitor = await getRes.json();
 
     if (visitor.error) {
-      return NextResponse.json({ success: false, error: 'Visitor not found' }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'Visitor not found' });
     }
 
-    // Check PIN
-    if (visitor.fields['PIN'] !== pin) {
-      return NextResponse.json({ success: false, error: 'Incorrect PIN' }, { status: 401 });
+    // 2. Check if pass is expired
+    const expDate = visitor.fields['Expiration Date'];
+    if (expDate) {
+      const exp = new Date(expDate + 'T23:59:59');
+      if (exp < new Date()) {
+        return NextResponse.json({ success: false, error: 'Pass has expired. Please see front desk.' });
+      }
     }
 
-    // Check orientation
+    // 3. Check orientation
     if (!visitor.fields['Orientation Complete']) {
-      return NextResponse.json({ success: false, error: 'orientation_required', message: 'Please see front desk to complete your orientation.' }, { status: 403 });
+      return NextResponse.json({ success: false, error: 'Orientation required. Please see front desk.' });
     }
 
-    // Check expiration
-    const expDate = new Date(visitor.fields['Expiration Date'] + 'T23:59:59');
-    if (new Date() > expDate) {
-      return NextResponse.json({ success: false, error: 'pass_expired', message: 'Your pass has expired. Please see the front desk.' }, { status: 403 });
-    }
-
-    // Log the visit in the Visits table
-    const currentTime = new Date().toISOString();
-    await fetch(`https://api.airtable.com/v0/${baseId}/Visits`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        records: [{
+    // 4. Increment Total Visits
+    const currentVisits = Number(visitor.fields['Total Visits'] || 0);
+    const updateRes = await fetch(
+      `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Visitors/${visitorAirtableId}`,
+      {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${AIRTABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           fields: {
-            "Center": center || 'Both',
-            "Time": currentTime,
-            "Check-in Method": "Kiosk (Visitor)",
-            "Notes": `Visitor: ${visitor.fields['First Name']} ${visitor.fields['Last Name']} (${visitor.fields['Pass Type']})`,
-          }
-        }],
-        typecast: true
-      })
-    });
+            'Total Visits': currentVisits + 1,
+          },
+        }),
+      }
+    );
+    const updateResult = await updateRes.json();
 
-    // Update visitor's visit count (increment Total Visits)
-    const currentVisits = visitor.fields['Total Visits'] || 0;
-    await fetch(`https://api.airtable.com/v0/${baseId}/Visitors/${visitorAirtableId}`, {
-      method: 'PATCH',
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        fields: { "Total Visits": currentVisits + 1 }
-      })
-    });
+    if (updateResult.error) {
+      return NextResponse.json({ success: false, error: 'Failed to update visit count' });
+    }
 
-    return NextResponse.json({
-      success: true,
-      visitorName: `${visitor.fields['First Name']} ${visitor.fields['Last Name']}`,
-      passType: visitor.fields['Pass Type'],
-      expirationDate: visitor.fields['Expiration Date'],
-    });
+    // 5. Also log to the Visits table (same as member check-ins) so it shows in the dashboard
+    try {
+      await fetch(
+        `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Visits`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${AIRTABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            fields: {
+              'Name': `${visitor.fields['First Name']} ${visitor.fields['Last Name']} (Visitor)`,
+              'Center': center || 'Anthony',
+              'Time': new Date().toISOString(),
+              'Method': 'Kiosk - Visitor',
+            },
+          }),
+        }
+      );
+    } catch (visitLogErr) {
+      // Non-critical — visitor count was already updated
+      console.error('Could not log to Visits table:', visitLogErr);
+    }
 
-  } catch (error) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true, totalVisits: currentVisits + 1 });
+  } catch (err) {
+    console.error('Visitor check-in error:', err);
+    return NextResponse.json({ success: false, error: 'Server error' });
   }
 }
