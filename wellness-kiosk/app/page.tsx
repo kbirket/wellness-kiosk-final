@@ -351,8 +351,7 @@ useEffect(() => {
   }
 
   if (view === 'corp_login') { return (<div className="min-h-screen bg-[#001f3f] flex items-center justify-center p-4 font-sans"><div className="bg-white rounded-[3rem] shadow-2xl p-12 w-full max-w-md border-t-8 border-[#8b5cf6]"><div className="flex justify-center mb-6"><Briefcase size={64} className="text-[#8b5cf6]" /></div><h2 className="text-4xl font-black text-center text-slate-900 mb-2 tracking-tight">Partner Login</h2><p className="text-slate-400 mb-10 text-center font-medium tracking-tight">Access your employee wellness roster.</p><input type="text" placeholder="Company Username" id="c_in" className="w-full p-5 bg-slate-100 rounded-2xl mb-4 outline-none border-2 border-transparent focus:border-purple-500/20 text-lg" onKeyDown={(e) => e.key === 'Enter' && handleCorpLogin()} /><input type="password" placeholder="Access PIN" id="c_pin" className="w-full p-5 bg-slate-100 rounded-2xl mb-8 outline-none border-2 border-transparent focus:border-purple-500/20 text-lg" onKeyDown={(e) => e.key === 'Enter' && handleCorpLogin()} /><button onClick={handleCorpLogin} className="w-full bg-[#8b5cf6] text-white p-5 rounded-2xl font-bold text-xl shadow-xl hover:bg-purple-700 transition-all">Sign In</button><button onClick={() => setView('landing')} className="w-full mt-6 text-slate-400 font-bold hover:text-slate-600 transition-colors">Return to Home</button></div></div>); }
-
-  /* --- PUBLIC KIOSK VIEW: WELLNESS CENTER BRANDING --- */
+/* --- PUBLIC KIOSK VIEW --- */
   if (view === 'kiosk') {
     const memberMatches = kioskInput.length >= 2 ? members.filter(m => (m.firstName + ' ' + m.lastName).toLowerCase().includes(kioskInput.toLowerCase()) || m.id.toLowerCase().includes(kioskInput.toLowerCase())).slice(0, 5) : [];
     
@@ -370,165 +369,98 @@ useEffect(() => {
             animation: scan 2.5s ease-in-out infinite;
             z-index: 50;
           }
-          .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
           .medical-gradient { background: radial-gradient(circle at top left, #002d5a, #001226); }
         `}</style>
 
         {/* Top Brand Bar */}
         <div className="h-20 bg-black/20 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-10 shrink-0 z-50">
-          <div className="flex items-center gap-4">
-            <img src={LOGO_URL} alt="Logo" className="h-8 brightness-110" />
-            <div className="h-6 w-px bg-white/20 hidden md:block"></div>
-            <span className="text-white/40 text-xs font-bold tracking-[0.3em] uppercase hidden md:block">Wellness Center Hub</span>
-          </div>
-          
+          <img src={LOGO_URL} alt="Logo" className="h-8 brightness-110" />
           <button 
             onClick={() => {
               const pw = prompt("Staff Auth Required:");
               if (pw === "2026") { setView('landing'); }
               else if (pw !== null) { alert("Access Denied"); }
             }} 
-            className="text-white/20 hover:text-white/100 hover:bg-white/5 p-3 rounded-full transition-all"
+            className="text-white/20 hover:text-white/100 p-3 transition-all"
           >
             <X size={28} />
           </button>
         </div>
 
         <div className="flex-1 flex flex-col medical-gradient relative">
-          
           {viewingCenter === 'both' ? (
-            /* Area 1: High-End Splash Screen */
+            /* Area 1: Splash Screen */
             <div className="flex-1 flex flex-col md:flex-row p-6 gap-6">
-              <button 
-                onClick={() => { setViewingCenter('harper'); setIsScanning(true); }}
-                className="flex-1 group relative overflow-hidden rounded-[3rem] transition-all duration-700 hover:scale-[1.01] shadow-2xl"
-              >
+              <button onClick={() => { setViewingCenter('harper'); setIsScanning(true); }} className="flex-1 group relative overflow-hidden rounded-[3rem] transition-all duration-700 hover:scale-[1.01] shadow-2xl">
                 <div className="absolute inset-0 bg-gradient-to-br from-[#f59e0b] to-[#dd6d22] opacity-80 group-hover:opacity-100 transition-opacity" />
-                <div className="absolute top-0 right-0 p-12 opacity-10">
-                  <MapPin size={240} />
-                </div>
                 <div className="relative z-10 p-16 flex flex-col items-center justify-center h-full text-white text-center">
-                  <h2 className="text-7xl font-black tracking-tighter leading-tight drop-shadow-lg">HARPER<br/><span className="text-3xl font-light tracking-[0.2em] opacity-80 uppercase">Wellness Center</span></h2>
-                  <div className="mt-12 px-12 py-5 bg-white text-[#dd6d22] rounded-full font-black text-2xl shadow-2xl scale-100 group-active:scale-95 transition-all">TOUCH TO START</div>
+                  <h2 className="text-7xl font-black tracking-tighter leading-tight drop-shadow-lg text-white">HARPER<br/><span className="text-3xl font-light tracking-[0.2em] opacity-80 uppercase">Wellness Center</span></h2>
+                  <div className="mt-12 px-12 py-5 bg-white text-[#dd6d22] rounded-full font-black text-2xl">TOUCH TO START</div>
                 </div>
               </button>
-
-              <button 
-                onClick={() => { setViewingCenter('anthony'); setIsScanning(true); }}
-                className="flex-1 group relative overflow-hidden rounded-[3rem] transition-all duration-700 hover:scale-[1.01] shadow-2xl"
-              >
+              <button onClick={() => { setViewingCenter('anthony'); setIsScanning(true); }} className="flex-1 group relative overflow-hidden rounded-[3rem] transition-all duration-700 hover:scale-[1.01] shadow-2xl">
                 <div className="absolute inset-0 bg-gradient-to-br from-[#1080ad] to-[#003d6b] opacity-80 group-hover:opacity-100 transition-opacity" />
-                <div className="absolute top-0 right-0 p-12 opacity-10">
-                  <MapPin size={240} />
-                </div>
                 <div className="relative z-10 p-16 flex flex-col items-center justify-center h-full text-white text-center">
-                  <h2 className="text-7xl font-black tracking-tighter leading-tight drop-shadow-lg">ANTHONY<br/><span className="text-3xl font-light tracking-[0.2em] opacity-80 uppercase">Wellness Center</span></h2>
-                  <div className="mt-12 px-12 py-5 bg-white text-[#003d6b] rounded-full font-black text-2xl shadow-2xl scale-100 group-active:scale-95 transition-all">TOUCH TO START</div>
+                  <h2 className="text-7xl font-black tracking-tighter leading-tight drop-shadow-lg text-white">ANTHONY<br/><span className="text-3xl font-light tracking-[0.2em] opacity-80 uppercase">Wellness Center</span></h2>
+                  <div className="mt-12 px-12 py-5 bg-white text-[#003d6b] rounded-full font-black text-2xl">TOUCH TO START</div>
                 </div>
               </button>
             </div>
           ) : (
-           /* Area 2: Center-Specific Entry Screen (PRO REDESIGN) */
-<div className="flex-1 bg-[#fcfdfe] flex flex-col items-center justify-center p-12 relative">
-  
-  {/* TOP DECORATION */}
-  <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-transparent via-[#1080ad]/20 to-transparent"></div>
-
-  {/* SUBTLE SWITCHER */}
-  <button 
-    onClick={() => {
-      const pw = prompt("Enter Code to Switch Centers:");
-      if (pw === "2026") { setViewingCenter('both'); setIsScanning(false); setKioskInput(''); }
-    }} 
-    className="absolute top-8 left-8 flex items-center gap-2 text-[10px] font-bold text-slate-300 hover:text-[#1080ad] tracking-[0.2em] uppercase transition-all"
-  >
-    <Lock size={12} /> Exit {viewingCenter}
-  </button>
-
-  {/* MAIN HEADLINE AREA */}
-  <div className="text-center mb-16 animate-in fade-in slide-in-from-top-4 duration-700">
-    <h1 className="text-[10px] font-black tracking-[0.5em] text-[#1080ad] uppercase mb-4">Welcome To</h1>
-    <h2 className="text-7xl font-black text-[#001f3f] tracking-tighter uppercase leading-none">
-      {viewingCenter === 'harper' ? 'Harper' : 'Anthony'}<br/>
-      <span className="font-light text-[#1080ad]">Wellness Center</span>
-    </h2>
-    <p className="mt-8 text-slate-400 text-lg font-medium tracking-wide uppercase opacity-60">Please scan your badge or search your name</p>
-  </div>
-
-  {/* ACTION CONTAINER */}
-  <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
-    
-    {/* SCAN BUTTON - The Hero Action */}
-    <button 
-      onClick={() => setIsScanning(true)} 
-      className="group relative bg-[#001f3f] rounded-[2rem] p-10 flex flex-col items-center justify-center transition-all hover:scale-[1.02] active:scale-95 shadow-2xl shadow-blue-900/20"
-    >
-      <div className="absolute inset-0 bg-[#1080ad] opacity-0 group-hover:opacity-10 transition-opacity rounded-[2rem]"></div>
-      <Camera size={56} className="text-[#1080ad] mb-4 group-hover:scale-110 transition-transform" />
-      <span className="text-2xl font-black text-white tracking-widest uppercase">Scan QR Badge</span>
-      <div className="mt-2 w-12 h-1 bg-[#1080ad] rounded-full"></div>
-    </button>
-
-    {/* SEARCH AREA - Clean & Integrated */}
-    <div className="relative flex flex-col">
-      <div className="flex-1 bg-white border-2 border-slate-100 rounded-[2rem] p-10 flex flex-col justify-center shadow-xl shadow-slate-200/50 focus-within:border-[#1080ad] transition-all">
-        <div className="flex items-center gap-4 mb-2">
-          <Search size={24} className="text-slate-300" />
-          <span className="text-[10px] font-black text-slate-400 tracking-widest uppercase">Member Search</span>
-        </div>
-        <input 
-          className="w-full bg-transparent text-3xl font-bold outline-none text-[#001f3f] placeholder:text-slate-200" 
-          placeholder="Start typing..." 
-          value={kioskInput} 
-          onChange={(e) => setKioskInput(e.target.value)} 
-        />
-      </div>
-
-      {/* DROPDOWN RESULTS */}
-      {memberMatches.length > 0 && (
-        <div className="absolute top-[110%] left-0 right-0 bg-white border border-slate-100 shadow-[0_30px_60px_rgba(0,0,0,0.1)] rounded-[2rem] overflow-hidden z-50">
-          {memberMatches.map(m => (
-            <button key={m.id} onClick={() => { setPinModal(m); setKioskInput(''); }} className="w-full p-6 text-left border-b border-slate-50 last:border-0 hover:bg-slate-50 flex justify-between items-center group transition-colors">
-              <div>
-                <p className="text-2xl font-black text-[#001f3f] group-hover:text-[#1080ad] transition-colors">{m.firstName} {m.lastName}</p>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Select Member</p>
+            /* Area 2: Selection Screen (The Professional Redesign) */
+            <div className="flex-1 bg-[#fcfdfe] flex flex-col items-center justify-center p-12 relative">
+              <button onClick={() => { const pw = prompt("Enter Code:"); if (pw === "2026") setViewingCenter('both'); }} className="absolute top-8 left-8 flex items-center gap-2 text-[10px] font-bold text-slate-300 hover:text-[#1080ad] tracking-[0.2em] uppercase transition-all">
+                <Lock size={12} /> Exit {viewingCenter}
+              </button>
+              <div className="text-center mb-16">
+                <h1 className="text-[10px] font-black tracking-[0.5em] text-[#1080ad] uppercase mb-4">Welcome To</h1>
+                <h2 className="text-7xl font-black text-[#001f3f] tracking-tighter uppercase leading-none">
+                  {viewingCenter === 'harper' ? 'Harper' : 'Anthony'}<br/>
+                  <span className="font-light text-[#1080ad]">Wellness Center</span>
+                </h2>
               </div>
-              <ChevronRight size={24} className="text-slate-200 group-hover:text-[#1080ad] group-hover:translate-x-1 transition-all" />
-            </button>
-          ))}
+              <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
+                <button onClick={() => setIsScanning(true)} className="group relative bg-[#001f3f] rounded-[2rem] p-10 flex flex-col items-center justify-center transition-all hover:scale-[1.02] shadow-2xl shadow-blue-900/20">
+                  <Camera size={56} className="text-[#1080ad] mb-4" />
+                  <span className="text-2xl font-black text-white tracking-widest uppercase">Scan QR Badge</span>
+                </button>
+                <div className="relative flex flex-col">
+                  <div className="flex-1 bg-white border-2 border-slate-100 rounded-[2rem] p-10 flex flex-col justify-center shadow-xl">
+                    <div className="flex items-center gap-4 mb-2"><Search size={24} className="text-slate-300" /><span className="text-[10px] font-black text-slate-400 tracking-widest uppercase">Member Search</span></div>
+                    <input className="w-full bg-transparent text-3xl font-bold outline-none text-[#001f3f]" placeholder="Start typing..." value={kioskInput} onChange={(e) => setKioskInput(e.target.value)} />
+                  </div>
+                  {memberMatches.length > 0 && (
+                    <div className="absolute top-[110%] left-0 right-0 bg-white border border-slate-100 shadow-2xl rounded-[2rem] overflow-hidden z-50">
+                      {memberMatches.map(m => (
+                        <button key={m.id} onClick={() => { setPinModal(m); setKioskInput(''); }} className="w-full p-6 text-left border-b hover:bg-slate-50 flex justify-between items-center group">
+                          <span className="text-2xl font-black text-[#001f3f] group-hover:text-[#1080ad] transition-colors">{m.firstName} {m.lastName}</span>
+                          <ChevronRight size={24} className="text-slate-200" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              {kioskMessage.text && (
+                <div className={`mt-12 px-12 py-6 rounded-full text-2xl font-black shadow-lg ${kioskMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{kioskMessage.text}</div>
+              )}
+            </div>
+          )}
         </div>
-      )}
-    </div>
-  </div>
-
-  {/* STATUS MESSAGE AREA */}
-  {kioskMessage.text && (
-    <div className={`mt-12 px-12 py-6 rounded-full text-2xl font-black shadow-lg animate-in zoom-in-95 ${kioskMessage.type === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
-      {kioskMessage.text}
-    </div>
-  )}
-</div>
 
         {/* SCANNER OVERLAY */}
         {isScanning && (
           <div className="fixed inset-0 bg-[#001226]/95 backdrop-blur-2xl z-[200] flex flex-col items-center justify-center p-6">
-            <button onClick={() => setIsScanning(false)} className="absolute top-10 right-10 text-white/20 hover:text-white p-4 rounded-full transition-all"><X size={60} /></button>
-            
+            <button onClick={() => setIsScanning(false)} className="absolute top-10 right-10 text-white/20 hover:text-white"><X size={60} /></button>
             <div className="mb-12 text-center">
               <h2 className="text-white text-4xl font-black mb-4 tracking-[0.2em] uppercase">Badge Scanner</h2>
               <p className="text-[#1080ad] font-bold tracking-widest animate-pulse uppercase text-sm">Align QR Code within the markers</p>
             </div>
-
-            <div className="relative w-full max-w-xl aspect-square glass rounded-[5rem] overflow-hidden border-2 border-white/10">
+            <div className="relative w-full max-w-xl aspect-square bg-black/40 rounded-[5rem] overflow-hidden border-2 border-white/10 shadow-[0_0_100px_rgba(0,0,0,0.5)]">
                <div id="reader" className="w-full h-full scale-110"></div>
                <div className="animate-scan"></div>
-               <div className="absolute top-12 left-12 w-16 h-16 border-t-4 border-l-4 border-[#1080ad] rounded-tl-3xl opacity-50"></div>
-               <div className="absolute top-12 right-12 w-16 h-16 border-t-4 border-r-4 border-[#1080ad] rounded-tr-3xl opacity-50"></div>
-               <div className="absolute bottom-12 left-12 w-16 h-16 border-b-4 border-l-4 border-[#1080ad] rounded-bl-3xl opacity-50"></div>
-               <div className="absolute bottom-12 right-12 w-16 h-16 border-b-4 border-r-4 border-[#1080ad] rounded-br-3xl opacity-50"></div>
             </div>
-
-            <button onClick={() => setIsScanning(false)} className="mt-16 text-white/40 font-black text-xl uppercase tracking-[0.3em] hover:text-white transition-all">Cancel Scan</button>
+            <button onClick={() => setIsScanning(false)} className="mt-16 text-white/40 font-black text-xl uppercase tracking-[0.3em]">Cancel Scan</button>
           </div>
         )}
 
@@ -538,77 +470,22 @@ useEffect(() => {
             <div className="bg-white rounded-[4rem] p-16 w-full max-w-xl text-center shadow-2xl border-t-[12px] border-[#1080ad]">
               <h2 className="text-5xl font-black text-slate-900 mb-12 tracking-tight uppercase">Verify PIN</h2>
               <p className="text-2xl font-bold text-slate-400 mb-8 uppercase tracking-widest">Hello, {pinModal.firstName}!</p>
-              
-              <input 
-                type="password" maxLength={4} autoFocus 
-                className="w-full p-8 bg-slate-50 rounded-[2.5rem] text-center text-8xl tracking-[0.4em] font-black mb-12 outline-none border-4 border-slate-100 text-slate-900 focus:border-[#1080ad]" 
+              <input type="password" maxLength={4} autoFocus className="w-full p-8 bg-slate-50 rounded-[2.5rem] text-center text-8xl tracking-[0.4em] font-black mb-12 outline-none border-4 border-slate-100 text-slate-900 focus:border-[#1080ad]" 
                 onChange={(e) => {
                   if (e.target.value.length === 4) {
-                    if (e.target.value === pinModal.password) { 
-                      processCheckIn(pinModal.id, "Kiosk Search"); 
-                      setPinModal(null); 
-                      setViewingCenter('both');
-                    }
-                    else { alert("Access Denied: Incorrect PIN"); e.target.value = ''; }
+                    if (e.target.value === pinModal.password) { processCheckIn(pinModal.id, "Kiosk Search"); setPinModal(null); setViewingCenter('both'); }
+                    else { alert("Incorrect PIN"); e.target.value = ''; }
                   }
                 }} 
               />
-              <button onClick={() => setPinModal(null)} className="text-slate-300 font-black text-xl uppercase tracking-widest hover:text-red-500 transition-colors">Cancel</button>
+              <button onClick={() => setPinModal(null)} className="text-slate-300 font-black text-xl uppercase tracking-widest">Cancel</button>
             </div>
           </div>
         )}
-
-        {/* Footer */}
-        <div className="h-10 bg-black/30 flex items-center justify-center shrink-0">
-            <span className="text-[9px] text-white font-black tracking-[0.4em] uppercase opacity-30">Wellness Center Terminal · 2026</span>
-        </div>
+        <div className="h-10 bg-black/30 flex items-center justify-center shrink-0"><span className="text-[9px] text-white font-black tracking-[0.4em] uppercase opacity-30">Wellness Center Terminal · 2026</span></div>
       </div>
     );
   }
-  /* --- MEMBER PORTAL LOGIN --- */
-if (view === 'member_login') {
-  return (
-    <div className="min-h-screen bg-[#001f3f] flex items-center justify-center p-4 font-sans">
-      <div className="bg-white rounded-[3rem] shadow-2xl p-12 w-full max-w-md border-t-8 border-[#16a34a]">
-        <div className="flex justify-center mb-6"><UserCircle size={64} className="text-[#16a34a]" /></div>
-        <h2 className="text-4xl font-black text-center text-slate-900 mb-2">Member Portal</h2>
-        <p className="text-slate-400 mb-10 text-center font-medium">Log in to see your badge and visits.</p>
-        <input type="text" placeholder="Email Address" id="m_email" className="w-full p-5 bg-slate-100 rounded-2xl mb-4 outline-none text-lg border-2 border-transparent focus:border-[#16a34a]/20" />
-        <input type="password" placeholder="4-Digit PIN" id="m_pin" className="w-full p-5 bg-slate-100 rounded-2xl mb-8 outline-none text-lg border-2 border-transparent focus:border-[#16a34a]/20" />
-        <button 
-          onClick={() => {
-            const email = document.getElementById('m_email').value.toLowerCase().trim();
-            const pin = document.getElementById('m_pin').value;
-            const found = members.find(m => m.email.toLowerCase() === email && m.password === pin);
-            if (found) { setActiveMember(found); setView('member_portal'); }
-            else { alert("Account not found or PIN incorrect."); }
-          }} 
-          className="w-full bg-[#16a34a] text-white p-5 rounded-2xl font-bold text-xl shadow-xl hover:bg-green-700 transition-all"
-        >
-          Access Portal
-        </button>
-        <button onClick={() => setView('landing')} className="w-full mt-6 text-slate-400 font-bold hover:text-slate-600">Return to Home</button>
-      </div>
-    </div>
-  );
-}
-  
-  if (view === 'corp_portal' && activeCorp) { const corpMembers = members.filter(m => m.sponsorName.toLowerCase() === activeCorp.companyName.toLowerCase()); const totalCorpVisits = corpMembers.reduce((sum, m) => sum + m.visits, 0); const singlePlans = corpMembers.filter(m => m.type.includes('SINGLE')).length; const familyPlans = corpMembers.filter(m => m.type.includes('FAMILY')).length; return (<div className="min-h-screen bg-[#f0f2f5] font-sans print:bg-white"><nav className="bg-[#001f3f] text-white p-4 shadow-md flex justify-between items-center sticky top-0 z-10 print:hidden"><div className="flex items-center gap-3"><img src={LOGO_URL} alt="Logo" className="h-6" /><span className="font-bold tracking-tight border-l border-white/20 pl-3">Corporate Partner Portal</span></div><button onClick={handleLogout} className="bg-red-500/20 text-red-100 hover:bg-red-500 hover:text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold transition-all"><LogOut size={16}/> Logout</button></nav><main className="max-w-5xl mx-auto p-8 space-y-8 mt-4 print:p-0 print:m-0 print:max-w-none print:mt-0"><div className="flex justify-between items-end print:hidden"><div><h1 className="text-4xl font-black text-[#001f3f] tracking-tight mb-1">{activeCorp.companyName} Wellness Roster</h1><p className="text-slate-500 font-medium">Review your enrolled employees and gym utilization.</p></div><button onClick={() => window.print()} className="bg-white border border-slate-200 text-[#001f3f] px-6 py-3 rounded-xl font-bold text-sm shadow-sm flex items-center gap-2 hover:bg-slate-50 transition-all"><Printer size={16} /> Print Roster</button></div><div className="hidden print:block mb-6 border-b-4 border-[#001f3f] pb-6 text-center"><img src={LOGO_URL} alt="Logo" className="h-12 mx-auto mb-4 invert grayscale" /><h1 className="text-3xl font-black text-[#001f3f] tracking-tight">{activeCorp.companyName} Wellness Roster</h1><p className="text-slate-500 font-bold uppercase tracking-widest mt-2">{currentDateString}</p></div><div className="grid grid-cols-1 md:grid-cols-4 gap-6 print:grid-cols-4 print:gap-4"><ProStatCard value={corpMembers.length} label="Total Enrolled" color="#001f3f" /><ProStatCard value={totalCorpVisits} label="Total Visits" color="#1080ad" /><ProStatCard value={singlePlans} label="Individual Plans" color="#16a34a" /><ProStatCard value={familyPlans} label="Family Plans" color="#f59e0b" /></div><div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden print:border-slate-300 print:shadow-none print:rounded-none"><div className="p-6 border-b border-slate-100 bg-slate-50 print:bg-white print:p-4"><h3 className="text-lg font-bold text-[#001f3f]">Employee Directory</h3></div><table className="w-full text-left border-collapse print:text-sm"><thead className="bg-white text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 print:border-b-2 print:border-slate-800"><tr><th className="px-8 py-4 print:py-2">Employee Name</th><th className="px-8 py-4 print:py-2">Member ID</th><th className="px-8 py-4 print:py-2">Plan Type</th><th className="px-8 py-4 print:py-2 text-right">Lifetime Visits</th></tr></thead><tbody className="text-sm">{corpMembers.length === 0 ? (<tr><td colSpan="4" className="text-center py-12 text-slate-400 font-medium italic">No employees currently enrolled.</td></tr>) : (corpMembers.map(m => (<tr key={m.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors print:border-slate-200"><td className="px-8 py-5 print:py-2 font-bold text-slate-800">{m.firstName} {m.lastName}</td><td className="px-8 py-5 print:py-2 font-mono text-slate-400">{m.id}</td><td className="px-8 py-5 print:py-2"><span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 print:bg-transparent print:px-0 print:text-black text-[10px] font-black tracking-tight">{m.type}</span></td><td className="px-8 py-5 print:py-2 text-right font-black text-[#1080ad] print:text-black text-lg print:text-base">{m.visits}</td></tr>)))}</tbody></table></div></main></div>); }
-
-  const PeriodSelector = ({ value, onChange }) => (
-    <select value={value} onChange={onChange} className="p-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] font-bold text-slate-700 cursor-pointer shadow-sm">
-      <optgroup label="Monthly">
-        {['01-2026','02-2026','03-2026','04-2026','05-2026','06-2026','07-2026','08-2026','09-2026','10-2026','11-2026','12-2026'].map(v => { const [m, y] = v.split('-'); return <option key={v} value={v}>{new Date(y, m - 1).toLocaleDateString('en-US', {month: 'long', year: 'numeric'})}</option>; })}
-      </optgroup>
-      <optgroup label="Quarterly">
-        <option value="Q1-2026">Q1 2026 (Jan - Mar)</option>
-        <option value="Q2-2026">Q2 2026 (Apr - Jun)</option>
-        <option value="Q3-2026">Q3 2026 (Jul - Sep)</option>
-        <option value="Q4-2026">Q4 2026 (Oct - Dec)</option>
-      </optgroup>
-    </select>
-  );
-
   // MAIN DIRECTOR DASHBOARD
   return (
     <div className="flex min-h-screen bg-[#f0f2f5] font-sans text-slate-800">
