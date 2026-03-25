@@ -352,7 +352,7 @@ useEffect(() => {
 
   if (view === 'corp_login') { return (<div className="min-h-screen bg-[#001f3f] flex items-center justify-center p-4 font-sans"><div className="bg-white rounded-[3rem] shadow-2xl p-12 w-full max-w-md border-t-8 border-[#8b5cf6]"><div className="flex justify-center mb-6"><Briefcase size={64} className="text-[#8b5cf6]" /></div><h2 className="text-4xl font-black text-center text-slate-900 mb-2 tracking-tight">Partner Login</h2><p className="text-slate-400 mb-10 text-center font-medium tracking-tight">Access your employee wellness roster.</p><input type="text" placeholder="Company Username" id="c_in" className="w-full p-5 bg-slate-100 rounded-2xl mb-4 outline-none border-2 border-transparent focus:border-purple-500/20 text-lg" onKeyDown={(e) => e.key === 'Enter' && handleCorpLogin()} /><input type="password" placeholder="Access PIN" id="c_pin" className="w-full p-5 bg-slate-100 rounded-2xl mb-8 outline-none border-2 border-transparent focus:border-purple-500/20 text-lg" onKeyDown={(e) => e.key === 'Enter' && handleCorpLogin()} /><button onClick={handleCorpLogin} className="w-full bg-[#8b5cf6] text-white p-5 rounded-2xl font-bold text-xl shadow-xl hover:bg-purple-700 transition-all">Sign In</button><button onClick={() => setView('landing')} className="w-full mt-6 text-slate-400 font-bold hover:text-slate-600 transition-colors">Return to Home</button></div></div>); }
 
-  /* --- PUBLIC KIOSK VIEW --- */
+/* --- PUBLIC KIOSK VIEW --- */
   if (view === 'kiosk') {
     const memberMatches = kioskInput.length >= 2 ? members.filter(m => (m.firstName + ' ' + m.lastName).toLowerCase().includes(kioskInput.toLowerCase()) || m.id.toLowerCase().includes(kioskInput.toLowerCase())).slice(0, 5) : [];
     
@@ -375,136 +375,135 @@ useEffect(() => {
         {/* Top Brand Bar */}
         <div className="h-24 bg-white/5 backdrop-blur-md border-b border-white/10 flex items-center justify-between px-12 shrink-0">
           <img src={LOGO_URL} alt="Logo" className="h-10 opacity-80" />
-          <button onClick={() => setView('landing')} className="text-white/20 hover:text-white/60 transition-colors p-2">
+          
+          {/* Password Protected Exit Button */}
+          <button 
+            onClick={() => {
+              const pw = prompt("Enter Director Code to Exit Kiosk:");
+              if (pw === "2026") { setView('landing'); }
+              else if (pw !== null) { alert("Invalid Code"); }
+            }} 
+            className="text-white/20 hover:text-white/60 transition-colors p-2"
+          >
             <X size={24} />
           </button>
         </div>
 
-     {/* HARPER SIDE */}
-<button 
-  onClick={() => { setViewingCenter('harper'); setIsScanning(true); }} // Move the trigger HERE
-  className="flex-1 group relative overflow-hidden transition-all duration-700 hover:flex-[1.1] border-r border-white/10"
->
-  <div className="absolute inset-0 bg-gradient-to-br from-[#f59e0b] to-[#dd6d22] opacity-90 group-hover:opacity-100 transition-opacity" />
-  <div className="relative z-10 p-12 flex flex-col items-center justify-center h-full text-white">
-    <MapPin size={80} className="mb-6 opacity-50" />
-    <h2 className="text-5xl font-black tracking-tighter mb-4 text-center uppercase text-white">Harper Wellness</h2>
-    <div className="px-8 py-4 bg-white/20 rounded-full font-bold text-xl backdrop-blur-sm group-hover:bg-white group-hover:text-[#dd6d22] transition-all">
-      Touch to Check In
-    </div>
-  </div>
-</button>
-
-{/* ANTHONY SIDE */}
-<button 
-  onClick={() => { setViewingCenter('anthony'); setIsScanning(true); }} // Move the trigger HERE
-  className="flex-1 group relative overflow-hidden transition-all duration-700 hover:flex-[1.1]"
->
-  <div className="absolute inset-0 bg-gradient-to-br from-[#1080ad] to-[#003d6b] opacity-90 group-hover:opacity-100 transition-opacity" />
-  <div className="relative z-10 p-12 flex flex-col items-center justify-center h-full text-white">
-    <MapPin size={80} className="mb-6 opacity-50" />
-    <h2 className="text-5xl font-black tracking-tighter mb-4 text-center uppercase text-white">Anthony Wellness</h2>
-    <div className="px-8 py-4 bg-white/20 rounded-full font-bold text-xl backdrop-blur-sm group-hover:bg-white group-hover:text-[#003d6b] transition-all">
-      Touch to Check In
-    </div>
-  </div>
-</button>
-
-        {/* Footer Instructions */}
-        <div className="h-20 bg-black/20 flex items-center justify-center shrink-0">
-          <p className="text-white/40 font-bold uppercase tracking-[0.3em] text-sm animate-pulse">Welcome to Patterson Health Center</p>
-        </div>
-
-        {/* SCANNER OVERLAY */}
-        {isScanning && (
-          <div className="fixed inset-0 bg-black z-[120] flex flex-col items-center justify-center p-6">
-            <button onClick={() => setIsScanning(false)} className="absolute top-10 right-10 text-white bg-white/10 p-4 rounded-full">
-              <X size={40} />
-            </button>
-            <h2 className="text-white text-3xl font-black mb-8 uppercase tracking-widest">Position QR Code in Frame</h2>
-            <div className="relative w-full max-w-lg aspect-square bg-slate-800 rounded-[3rem] overflow-hidden border-4 border-[#1080ad] shadow-[0_0_50px_rgba(16,128,173,0.5)]">
-              <div id="reader" className="w-full h-full"></div>
-              <div className="animate-scan"></div>
-            </div>
-            
-            {/* BACKUP: SEARCH BY NAME BUTTON */}
+        {/* Area 1: Center Selection (The Splash Screen) */}
+        {viewingCenter === 'both' ? (
+          <div className="flex-1 flex flex-col md:flex-row">
             <button 
-              onClick={() => { setIsScanning(false); setKioskInput(''); }}
-              className="mt-8 text-white/40 hover:text-white border border-white/20 px-6 py-3 rounded-xl font-bold uppercase tracking-widest transition-all"
+              onClick={() => { setViewingCenter('harper'); setIsScanning(true); }}
+              className="flex-1 bg-gradient-to-br from-[#f59e0b] to-[#dd6d22] text-white p-12 flex flex-col items-center justify-center group transition-all"
             >
-              Phone cracked? Search by Name
+              <MapPin size={80} className="mb-6 opacity-50 group-hover:scale-110 transition-transform" />
+              <h2 className="text-6xl font-black text-center">HARPER</h2>
+              <p className="text-xl font-bold mt-4 opacity-80">Touch to Check In</p>
             </button>
+            <button 
+              onClick={() => { setViewingCenter('anthony'); setIsScanning(true); }}
+              className="flex-1 bg-gradient-to-br from-[#1080ad] to-[#003d6b] text-white p-12 flex flex-col items-center justify-center group transition-all"
+            >
+              <MapPin size={80} className="mb-6 opacity-50 group-hover:scale-110 transition-transform" />
+              <h2 className="text-6xl font-black text-center">ANTHONY</h2>
+              <p className="text-xl font-bold mt-4 opacity-80">Touch to Check In</p>
+            </button>
+          </div>
+        ) : (
+          /* Area 2: The Scanning / Search Screen */
+          <div className="flex-1 bg-white p-12 flex flex-col items-center justify-center relative text-slate-900">
+            
+            {/* Very Small Password Protected "Switch Centers" Button */}
+            <button 
+              onClick={() => {
+                const pw = prompt("Enter Director Code to Switch Centers:");
+                if (pw === "2026") { setViewingCenter('both'); setIsScanning(false); setKioskInput(''); }
+                else if (pw !== null) { alert("Invalid Code"); }
+              }} 
+              className="absolute top-6 left-6 flex items-center gap-2 text-[10px] font-black text-slate-300 hover:text-[#1080ad] tracking-widest uppercase transition-all border border-slate-100 px-3 py-1.5 rounded-lg shadow-sm"
+            >
+              <Lock size={10} /> Switch Centers
+            </button>
+
+            <h2 className="text-5xl font-black text-[#001f3f] mb-2 uppercase tracking-tight">{viewingCenter} Wellness</h2>
+            <p className="text-slate-400 text-xl font-medium mb-12">Scan Badge or Search Name</p>
+
+            <div className="flex gap-4 w-full max-w-2xl mb-12 h-24">
+               <button onClick={() => setIsScanning(true)} className="flex-1 bg-[#001f3f] text-white rounded-3xl font-bold text-xl flex items-center justify-center gap-4 shadow-xl active:scale-95 transition-all">
+                 <Camera size={32} /> Scan QR
+               </button>
+               <div className="flex-[1.5] relative">
+                 <input 
+                   className="w-full h-full p-6 bg-slate-100 rounded-3xl text-2xl font-bold outline-none border-4 border-transparent focus:border-[#1080ad] transition-all" 
+                   placeholder="Type Name..." 
+                   value={kioskInput} 
+                   onChange={(e) => setKioskInput(e.target.value)} 
+                 />
+                 {memberMatches.length > 0 && (
+                   <div className="absolute top-full left-0 right-0 mt-4 bg-white border shadow-2xl rounded-3xl overflow-hidden z-50">
+                     {memberMatches.map(m => (
+                       <button key={m.id} onClick={() => { setPinModal(m); setKioskInput(''); }} className="w-full p-6 text-left border-b hover:bg-blue-50 flex justify-between items-center">
+                         <span className="text-2xl font-bold">{m.firstName} {m.lastName}</span>
+                         <ChevronRight size={24} className="text-[#1080ad]"/>
+                       </button>
+                     ))}
+                   </div>
+                 )}
+               </div>
+            </div>
 
             {kioskMessage.text && (
-              <div className={`absolute bottom-10 p-8 rounded-3xl ${kioskMessage.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                <p className="text-3xl font-black">{kioskMessage.text}</p>
+              <div className={`p-8 rounded-3xl text-3xl font-black text-center ${kioskMessage.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                {kioskMessage.text}
+                <p className="text-lg font-bold mt-1">{kioskMessage.subtext}</p>
               </div>
             )}
           </div>
         )}
 
-        {/* MANUAL SEARCH OVERLAY (Appears if not scanning and center is picked) */}
-        {!isScanning && viewingCenter !== 'both' && (
-          <div className="fixed inset-0 bg-white z-[130] flex flex-col items-center justify-center p-12">
-            <button onClick={() => setViewingCenter('both')} className="absolute top-10 left-10 text-slate-300 font-bold flex items-center gap-2">
-              <ChevronRight className="rotate-180" /> Back
-            </button>
-            <h2 className="text-4xl font-black text-[#001f3f] mb-8 uppercase">{viewingCenter} Manual Lookup</h2>
-            <div className="w-full max-w-2xl relative">
-              <input 
-                autoFocus 
-                className="w-full p-8 bg-slate-100 rounded-3xl text-3xl font-bold border-4 border-transparent focus:border-[#1080ad] outline-none"
-                placeholder="Start typing your name..."
-                value={kioskInput}
-                onChange={(e) => setKioskInput(e.target.value)}
-              />
-              {memberMatches.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-4 bg-white border shadow-2xl rounded-3xl overflow-hidden z-50">
-                  {memberMatches.map(m => (
-                    <button key={m.id} onClick={() => { setPinModal(m); setKioskInput(''); }} className="w-full p-8 text-left border-b flex justify-between items-center hover:bg-blue-50">
-                      <span className="text-3xl font-bold">{m.firstName} {m.lastName}</span>
-                      <ChevronRight size={32} className="text-[#1080ad]"/>
-                    </button>
-                  ))}
-                </div>
-              )}
+        {/* SCANNER OVERLAY (Full Screen Camera) */}
+        {isScanning && (
+          <div className="fixed inset-0 bg-black z-[200] flex flex-col items-center justify-center p-6">
+            <button onClick={() => setIsScanning(false)} className="absolute top-10 right-10 text-white bg-white/10 p-4 rounded-full hover:bg-white/20"><X size={40} /></button>
+            <h2 className="text-white text-3xl font-black mb-10 uppercase tracking-widest">Position QR in Frame</h2>
+            <div className="relative w-full max-w-lg aspect-square bg-slate-800 rounded-[3rem] overflow-hidden border-4 border-[#1080ad] shadow-[0_0_50px_rgba(16,128,173,0.5)]">
+               <div id="reader" className="w-full h-full"></div>
+               <div className="animate-scan"></div>
             </div>
-            <button onClick={() => setIsScanning(true)} className="mt-12 text-[#1080ad] font-bold text-xl uppercase tracking-widest flex items-center gap-2">
-               <Camera size={24} /> Switch back to camera
-            </button>
+            <button onClick={() => setIsScanning(false)} className="mt-12 text-white/40 font-bold border border-white/10 px-8 py-3 rounded-full hover:text-white transition-all">Cancel Scan</button>
           </div>
         )}
 
-        {/* PIN MODAL */}
+        {/* PIN pad verification screen */}
         {pinModal && (
           <div className="fixed inset-0 bg-[#001f3f]/95 z-[300] flex items-center justify-center p-6 backdrop-blur-md">
-            <div className="bg-white rounded-[3rem] p-12 w-full max-w-md text-center shadow-2xl">
-              <h3 className="text-3xl font-black mb-2">Verify PIN</h3>
-              <p className="text-slate-400 mb-8 font-bold">Hello, {pinModal.firstName}!</p>
+            <div className="bg-white rounded-[3rem] p-12 w-full max-w-md text-center">
+              <h3 className="text-3xl font-black mb-2 text-slate-900">Verify Identity</h3>
+              <p className="text-slate-400 font-bold mb-8 uppercase tracking-widest">Hello, {pinModal.firstName}!</p>
               <input 
-                type="password" maxLength={4} autoFocus
-                className="w-full p-6 bg-slate-100 rounded-2xl text-center text-5xl tracking-[0.5em] font-black mb-8 outline-none border-4 focus:border-[#1080ad]"
+                type="password" maxLength={4} autoFocus 
+                className="w-full p-6 bg-slate-100 rounded-2xl text-center text-6xl tracking-[0.5em] font-black mb-8 outline-none border-4 text-slate-900 focus:border-[#1080ad]" 
                 onChange={(e) => {
                   if (e.target.value.length === 4) {
-                    if (e.target.value === pinModal.password) {
-                      processCheckIn(pinModal.id, "Kiosk");
-                      setPinModal(null);
-                      setViewingCenter('both');
-                    } else {
-                      alert("Incorrect PIN");
-                      e.target.value = '';
-                    }
+                    if (e.target.value === pinModal.password) { processCheckIn(pinModal.id, "Kiosk"); setPinModal(null); }
+                    else { alert("Incorrect PIN"); e.target.value = ''; }
                   }
-                }}
+                }} 
               />
-              <button onClick={() => setPinModal(null)} className="text-slate-400 font-bold hover:text-slate-600">Cancel</button>
+              <button onClick={() => setPinModal(null)} className="text-slate-400 font-bold text-xl uppercase">Cancel</button>
             </div>
           </div>
         )}
+
+        {/* Footer instructions */}
+        <div className="h-20 bg-black/20 flex items-center justify-center shrink-0 mt-auto">
+          <p className="text-white/30 font-bold uppercase tracking-[0.3em] text-xs">
+            Patterson Health Center Wellness Hub
+          </p>
+        </div>
       </div>
     );
   }
-
 
   /* --- MEMBER PORTAL LOGIN --- */
 if (view === 'member_login') {
