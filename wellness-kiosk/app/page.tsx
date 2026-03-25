@@ -289,7 +289,99 @@ export default function WellnessHub() {
   }
 
   if (view === 'corp_login') { return (<div className="min-h-screen bg-[#001f3f] flex items-center justify-center p-4 font-sans"><div className="bg-white rounded-[3rem] shadow-2xl p-12 w-full max-w-md border-t-8 border-[#8b5cf6]"><div className="flex justify-center mb-6"><Briefcase size={64} className="text-[#8b5cf6]" /></div><h2 className="text-4xl font-black text-center text-slate-900 mb-2 tracking-tight">Partner Login</h2><p className="text-slate-400 mb-10 text-center font-medium tracking-tight">Access your employee wellness roster.</p><input type="text" placeholder="Company Username" id="c_in" className="w-full p-5 bg-slate-100 rounded-2xl mb-4 outline-none border-2 border-transparent focus:border-purple-500/20 text-lg" onKeyDown={(e) => e.key === 'Enter' && handleCorpLogin()} /><input type="password" placeholder="Access PIN" id="c_pin" className="w-full p-5 bg-slate-100 rounded-2xl mb-8 outline-none border-2 border-transparent focus:border-purple-500/20 text-lg" onKeyDown={(e) => e.key === 'Enter' && handleCorpLogin()} /><button onClick={handleCorpLogin} className="w-full bg-[#8b5cf6] text-white p-5 rounded-2xl font-bold text-xl shadow-xl hover:bg-purple-700 transition-all">Sign In</button><button onClick={() => setView('landing')} className="w-full mt-6 text-slate-400 font-bold hover:text-slate-600 transition-colors">Return to Home</button></div></div>); }
+/* --- PUBLIC KIOSK VIEW --- */
+if (view === 'kiosk') {
+  return (
+    <div className="min-h-screen bg-[#001f3f] flex flex-col items-center justify-center p-6 font-sans">
+      <div className="w-full max-w-4xl bg-white rounded-[3rem] shadow-2xl p-12 text-center relative overflow-hidden">
+        <button onClick={() => setView('landing')} className="absolute top-8 left-8 text-slate-300 hover:text-slate-500"><X size={32}/></button>
+        <div className="mb-8"><img src={LOGO_URL} alt="Logo" className="h-16 mx-auto invert grayscale opacity-20" /></div>
+        <h2 className="text-6xl font-black text-slate-900 mb-4 tracking-tighter">Welcome!</h2>
+        <p className="text-2xl text-slate-400 font-medium mb-12">Scan your badge or search your name.</p>
 
+        <div className="relative max-w-2xl mx-auto">
+          <input 
+            autoFocus
+            className="w-full p-8 bg-slate-100 rounded-3xl border-4 border-transparent focus:border-[#1080ad] outline-none text-4xl text-center font-bold transition-all"
+            placeholder="Name or ID..."
+            value={kioskInput}
+            onChange={(e) => setKioskInput(e.target.value)}
+          />
+          {kioskMatches.length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-4 bg-white border-2 border-slate-100 rounded-3xl shadow-2xl z-50 overflow-hidden">
+              {kioskMatches.map(m => (
+                <button key={m.id} onClick={() => { setPinModal(m); setKioskInput(''); }} className="w-full p-6 border-b border-slate-50 hover:bg-blue-50 transition-colors flex justify-between items-center">
+                  <span className="text-3xl font-bold text-[#001f3f]">{m.firstName} {m.lastName}</span>
+                  <ChevronRight size={32} className="text-[#1080ad]" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {kioskMessage.text && (
+          <div className={`mt-12 p-8 rounded-3xl ${kioskMessage.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+            <p className="text-4xl font-black">{kioskMessage.text}</p>
+            <p className="text-xl font-bold mt-2">{kioskMessage.subtext}</p>
+          </div>
+        )}
+      </div>
+
+      {pinModal && (
+        <div className="fixed inset-0 bg-[#001f3f]/95 z-[100] flex items-center justify-center p-6 backdrop-blur-md">
+          <div className="bg-white rounded-[3rem] p-12 w-full max-w-md text-center shadow-2xl">
+            <h3 className="text-3xl font-black mb-2">Verify PIN</h3>
+            <p className="text-slate-400 mb-8 font-bold">Hello, {pinModal.firstName}!</p>
+            <input 
+              type="password" maxLength={4} autoFocus
+              className="w-full p-6 bg-slate-100 rounded-2xl text-center text-5xl tracking-[0.5em] font-black mb-8 outline-none border-4 focus:border-[#1080ad]"
+              onChange={(e) => {
+                if (e.target.value.length === 4) {
+                  if (e.target.value === pinModal.password) {
+                    processCheckIn(pinModal.id, "Kiosk");
+                    setPinModal(null);
+                  } else {
+                    alert("Incorrect PIN");
+                    e.target.value = '';
+                  }
+                }
+              }}
+            />
+            <button onClick={() => setPinModal(null)} className="text-slate-400 font-bold hover:text-slate-600">Cancel</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+  /* --- MEMBER PORTAL LOGIN --- */
+if (view === 'member_login') {
+  return (
+    <div className="min-h-screen bg-[#001f3f] flex items-center justify-center p-4 font-sans">
+      <div className="bg-white rounded-[3rem] shadow-2xl p-12 w-full max-w-md border-t-8 border-[#16a34a]">
+        <div className="flex justify-center mb-6"><UserCircle size={64} className="text-[#16a34a]" /></div>
+        <h2 className="text-4xl font-black text-center text-slate-900 mb-2">Member Portal</h2>
+        <p className="text-slate-400 mb-10 text-center font-medium">Log in to see your badge and visits.</p>
+        <input type="text" placeholder="Email Address" id="m_email" className="w-full p-5 bg-slate-100 rounded-2xl mb-4 outline-none text-lg border-2 border-transparent focus:border-[#16a34a]/20" />
+        <input type="password" placeholder="4-Digit PIN" id="m_pin" className="w-full p-5 bg-slate-100 rounded-2xl mb-8 outline-none text-lg border-2 border-transparent focus:border-[#16a34a]/20" />
+        <button 
+          onClick={() => {
+            const email = document.getElementById('m_email').value.toLowerCase().trim();
+            const pin = document.getElementById('m_pin').value;
+            const found = members.find(m => m.email.toLowerCase() === email && m.password === pin);
+            if (found) { setActiveMember(found); setView('member_portal'); }
+            else { alert("Account not found or PIN incorrect."); }
+          }} 
+          className="w-full bg-[#16a34a] text-white p-5 rounded-2xl font-bold text-xl shadow-xl hover:bg-green-700 transition-all"
+        >
+          Access Portal
+        </button>
+        <button onClick={() => setView('landing')} className="w-full mt-6 text-slate-400 font-bold hover:text-slate-600">Return to Home</button>
+      </div>
+    </div>
+  );
+}
+  
   if (view === 'corp_portal' && activeCorp) { const corpMembers = members.filter(m => m.sponsorName.toLowerCase() === activeCorp.companyName.toLowerCase()); const totalCorpVisits = corpMembers.reduce((sum, m) => sum + m.visits, 0); const singlePlans = corpMembers.filter(m => m.type.includes('SINGLE')).length; const familyPlans = corpMembers.filter(m => m.type.includes('FAMILY')).length; return (<div className="min-h-screen bg-[#f0f2f5] font-sans print:bg-white"><nav className="bg-[#001f3f] text-white p-4 shadow-md flex justify-between items-center sticky top-0 z-10 print:hidden"><div className="flex items-center gap-3"><img src={LOGO_URL} alt="Logo" className="h-6" /><span className="font-bold tracking-tight border-l border-white/20 pl-3">Corporate Partner Portal</span></div><button onClick={handleLogout} className="bg-red-500/20 text-red-100 hover:bg-red-500 hover:text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold transition-all"><LogOut size={16}/> Logout</button></nav><main className="max-w-5xl mx-auto p-8 space-y-8 mt-4 print:p-0 print:m-0 print:max-w-none print:mt-0"><div className="flex justify-between items-end print:hidden"><div><h1 className="text-4xl font-black text-[#001f3f] tracking-tight mb-1">{activeCorp.companyName} Wellness Roster</h1><p className="text-slate-500 font-medium">Review your enrolled employees and gym utilization.</p></div><button onClick={() => window.print()} className="bg-white border border-slate-200 text-[#001f3f] px-6 py-3 rounded-xl font-bold text-sm shadow-sm flex items-center gap-2 hover:bg-slate-50 transition-all"><Printer size={16} /> Print Roster</button></div><div className="hidden print:block mb-6 border-b-4 border-[#001f3f] pb-6 text-center"><img src={LOGO_URL} alt="Logo" className="h-12 mx-auto mb-4 invert grayscale" /><h1 className="text-3xl font-black text-[#001f3f] tracking-tight">{activeCorp.companyName} Wellness Roster</h1><p className="text-slate-500 font-bold uppercase tracking-widest mt-2">{currentDateString}</p></div><div className="grid grid-cols-1 md:grid-cols-4 gap-6 print:grid-cols-4 print:gap-4"><ProStatCard value={corpMembers.length} label="Total Enrolled" color="#001f3f" /><ProStatCard value={totalCorpVisits} label="Total Visits" color="#1080ad" /><ProStatCard value={singlePlans} label="Individual Plans" color="#16a34a" /><ProStatCard value={familyPlans} label="Family Plans" color="#f59e0b" /></div><div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden print:border-slate-300 print:shadow-none print:rounded-none"><div className="p-6 border-b border-slate-100 bg-slate-50 print:bg-white print:p-4"><h3 className="text-lg font-bold text-[#001f3f]">Employee Directory</h3></div><table className="w-full text-left border-collapse print:text-sm"><thead className="bg-white text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 print:border-b-2 print:border-slate-800"><tr><th className="px-8 py-4 print:py-2">Employee Name</th><th className="px-8 py-4 print:py-2">Member ID</th><th className="px-8 py-4 print:py-2">Plan Type</th><th className="px-8 py-4 print:py-2 text-right">Lifetime Visits</th></tr></thead><tbody className="text-sm">{corpMembers.length === 0 ? (<tr><td colSpan="4" className="text-center py-12 text-slate-400 font-medium italic">No employees currently enrolled.</td></tr>) : (corpMembers.map(m => (<tr key={m.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors print:border-slate-200"><td className="px-8 py-5 print:py-2 font-bold text-slate-800">{m.firstName} {m.lastName}</td><td className="px-8 py-5 print:py-2 font-mono text-slate-400">{m.id}</td><td className="px-8 py-5 print:py-2"><span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 print:bg-transparent print:px-0 print:text-black text-[10px] font-black tracking-tight">{m.type}</span></td><td className="px-8 py-5 print:py-2 text-right font-black text-[#1080ad] print:text-black text-lg print:text-base">{m.visits}</td></tr>)))}</tbody></table></div></main></div>); }
 
   const PeriodSelector = ({ value, onChange }) => (
