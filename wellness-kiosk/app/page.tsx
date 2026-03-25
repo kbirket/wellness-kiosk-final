@@ -516,7 +516,7 @@ useEffect(() => {
                   if (e.target.value === pinModal.password) { 
   processCheckIn(pinModal.id, "Kiosk Search"); 
   setPinModal(null); 
-  setTimeout(() => setViewingCenter(''), 5000); 
+setTimeout(() => setKioskInput(''), 5000);
 }
                 }} 
               />
