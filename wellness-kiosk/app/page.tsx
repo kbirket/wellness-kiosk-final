@@ -91,25 +91,65 @@ export default function WellnessHub() {
   const centerRef = useRef(viewingCenter);
   useEffect(() => { centerRef.current = viewingCenter; }, [viewingCenter]);
 
+// --- 1. THE SECURITY GUARD (Keep you logged in) ---
   useEffect(() => {
     setIsMounted(true);
     setCurrentDateString(new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }));
+    
     const savedToken = localStorage.getItem('wellnessToken');
-    const savedCenter = localStorage.getItem('wellnessCenter');
-    if (savedToken) {
-      fetch('/api/verify-session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: savedToken }) })
-      .then(res => res.json()).then(data => {
-        if (data.valid) { setSessionToken(savedToken); setLastActivity(Date.now()); if (data.type === 'director' && data.user) { setUser(data.user); setViewingCenter(data.user.center); setView('dashboard'); } else if (data.type === 'corporate' && data.corp) { setActiveCorp(data.corp); setView('corp_portal'); } }
-        else { localStorage.removeItem('wellnessToken'); localStorage.removeItem('wellnessCenter'); }
-      }).catch(() => { localStorage.removeItem('wellnessToken'); });
+    if (savedToken && view === 'landing') { // Only auto-login if we are sitting on the landing page
+      fetch('/api/verify-session', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ token: savedToken }) 
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.valid && data.type === 'director') {
+          setUser(data.user);
+          setSessionToken(savedToken);
+          setViewingCenter(data.user.center);
+          setView('dashboard'); // This sends you to the dashboard automatically
+        }
+      }).catch(() => {
+        console.log("Session expired or server down.");
+      });
     }
-    if (savedCenter) setViewingCenter(savedCenter);
   }, []);
 
-  const handleLogin = async () => { const u = document.getElementById('u_in').value.toLowerCase().trim(); const p = document.getElementById('p_in').value.trim(); try { const res = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: u, password: p, loginType: 'director' }) }); const data = await res.json(); if (data.success) { setUser(data.user); setSessionToken(data.token); setViewingCenter(data.user.center); setLastActivity(Date.now()); localStorage.setItem('wellnessToken', data.token); localStorage.setItem('wellnessCenter', data.user.center); setView('dashboard'); } else { alert('Incorrect credentials.'); } } catch (err) { alert('Login failed. Please try again.'); } };
-  const handleCorpLogin = async () => { const u = document.getElementById('c_in').value.toLowerCase().trim(); const p = document.getElementById('c_pin').value.trim(); try { const res = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: u, password: p, loginType: 'corporate' }) }); const data = await res.json(); if (data.success) { setActiveCorp(data.corp); setSessionToken(data.token); setLastActivity(Date.now()); localStorage.setItem('wellnessToken', data.token); setView('corp_portal'); } else { alert('Incorrect corporate credentials.'); } } catch (err) { alert('Login failed. Please try again.'); } };
-  const handleLogout = () => { setUser(null); setActiveCorp(null); setSessionToken(null); localStorage.removeItem('wellnessToken'); localStorage.removeItem('wellnessCenter'); setView('landing'); };
+  // --- 2. THE LOGIN BUTTON LOGIC ---
+  const handleLogin = async () => {
+    const u = document.getElementById('u_in').value.toLowerCase().trim();
+    const p = document.getElementById('p_in').value.trim();
+    
+    try {
+      const res = await fetch('/api/login', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ username: u, password: p, loginType: 'director' }) 
+      });
+      const data = await res.json();
 
+      if (data.success) {
+        // SAVE EVERYTHING FIRST
+        localStorage.setItem('wellnessToken', data.token);
+        localStorage.setItem('wellnessCenter', data.user.center);
+        
+        // UPDATE STATE
+        setUser(data.user);
+        setSessionToken(data.token);
+        setViewingCenter(data.user.center);
+        setLastActivity(Date.now());
+        
+        // NOW JUMP TO DASHBOARD
+        setView('dashboard'); 
+      } else {
+        alert('Incorrect Username or Password.');
+      }
+    } catch (err) {
+      alert('Login service is currently unavailable.');
+    }
+  };
   const SESSION_TIMEOUT = 8 * 60 * 60 * 1000;
   useEffect(() => { const u = () => setLastActivity(Date.now()); window.addEventListener('click', u); window.addEventListener('keydown', u); window.addEventListener('scroll', u); window.addEventListener('touchstart', u); return () => { window.removeEventListener('click', u); window.removeEventListener('keydown', u); window.removeEventListener('scroll', u); window.removeEventListener('touchstart', u); }; }, []);
   useEffect(() => { if (!user && !activeCorp) return; const interval = setInterval(() => { if (Date.now() - lastActivity > SESSION_TIMEOUT) { alert('Your session has expired due to inactivity. Please log in again.'); handleLogout(); } }, 60 * 1000); return () => clearInterval(interval); }, [user, activeCorp, lastActivity]);
