@@ -1,22 +1,11 @@
-// app/api/update-member/route.js
-// 
-// If your existing update-member route does NOT already handle address fields,
-// add these mappings to your airtableFields object:
-//
-//   if (fields.address !== undefined) airtableFields['Street Address'] = fields.address;
-//   if (fields.city !== undefined) airtableFields['City'] = fields.city;
-//   if (fields.state !== undefined) airtableFields['State'] = fields.state;
-//   if (fields.zip !== undefined) airtableFields['Zip'] = fields.zip;
-//
-// Below is the full route if you need to replace yours entirely:
-
 import { NextResponse } from 'next/server';
 
-const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
-const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
-const MEMBERS_TABLE = process.env.AIRTABLE_MEMBERS_TABLE || 'Members';
-
 export async function POST(request) {
+  // 1. Pull variables INSIDE the function for reliability
+  const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
+  const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
+  const MEMBERS_TABLE = process.env.AIRTABLE_MEMBERS_TABLE || 'Members';
+
   try {
     const body = await request.json();
     const { airtableId, ...fields } = body;
@@ -25,8 +14,8 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'Missing member record ID' }, { status: 400 });
     }
 
+    // 2. Build the fields object
     const airtableFields = {};
-
     if (fields.firstName !== undefined) airtableFields['First Name'] = fields.firstName;
     if (fields.lastName !== undefined) airtableFields['Last Name'] = fields.lastName;
     if (fields.email !== undefined) airtableFields['Email'] = fields.email;
@@ -46,7 +35,10 @@ export async function POST(request) {
     if (fields.discountExpiration !== undefined) airtableFields['Discount Expiration'] = fields.discountExpiration || null;
     if (fields.monthlyRate !== undefined) airtableFields['Monthly Rate'] = fields.monthlyRate;
 
-    const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${MEMBERS_TABLE}/${airtableId}`, {
+    // 3. Make the Request (Using Backticks for the Auth header)
+    const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(MEMBERS_TABLE)}/${airtableId}`;
+    
+    const res = await fetch(url, {
       method: 'PATCH',
       headers: {
         'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
@@ -57,15 +49,18 @@ export async function POST(request) {
 
     if (!res.ok) {
       const errorData = await res.json();
-      console.error('Airtable error:', errorData);
-      return NextResponse.json({ success: false, error: errorData.error?.message || 'Airtable update failed' }, { status: 500 });
+      console.error('Airtable response error:', errorData);
+      return NextResponse.json({ 
+        success: false, 
+        error: errorData.error?.message || 'Airtable update failed' 
+      }, { status: res.status });
     }
 
     const data = await res.json();
     return NextResponse.json({ success: true, record: data });
 
   } catch (error) {
-    console.error('Update member error:', error);
+    console.error('Update member server error:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
