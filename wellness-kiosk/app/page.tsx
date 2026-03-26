@@ -532,72 +532,65 @@ export default function WellnessHub() {
             </div>
           </div>
         ) : (
-          /* CHECK-IN SCREEN — CONCEPT C REDESIGN */
-          <div className="flex-1 flex flex-col">
-            {/* Compact navy header with logo and staff button */}
-            <div className="h-16 flex items-center justify-between px-8 shrink-0">
-              <img src={LOGO_URL} alt="Logo" className="h-6 opacity-40" />
-              <button onClick={() => { const pw = prompt("Staff Auth Required:"); if (pw === "2026") { setKioskStaffMenu(true); } else if (pw !== null) { alert("Access Denied"); } }} className="text-white/15 hover:text-white/60 p-2 transition-all"><Lock size={18} /></button>
+          /* CHECK-IN SCREEN — SPLIT LAYOUT */
+          <div className="flex-1 flex">
+            {/* Left panel — center branding */}
+            <div className="w-[42%] flex flex-col justify-between p-10" style={{ background: 'linear-gradient(180deg, #0a3158, #001f3f)', borderRight: `4px solid ${centerColor}` }}>
+              <img src={LOGO_URL} alt="Logo" className="h-8 opacity-40 self-start" />
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.4em] mb-3" style={{ color: centerColor }}>Welcome to</p>
+                <h1 className="text-5xl font-black text-white tracking-tight leading-[1.05]">{centerName}<br/>Wellness<br/>Center</h1>
+                <p className="text-white/20 text-xs mt-4 leading-relaxed">{centerAddress}</p>
+              </div>
+              <button onClick={() => { const pw = prompt("Staff Auth Required:"); if (pw === "2026") { setKioskStaffMenu(true); } else if (pw !== null) { alert("Access Denied"); } }} className="self-start flex items-center gap-2 text-white/10 hover:text-white/40 transition-all text-xs">
+                <Lock size={12} /> <span className="font-bold tracking-wider uppercase">Staff</span>
+              </button>
             </div>
 
-            {/* White content card */}
-            <div className="flex-1 bg-white rounded-t-[2.5rem] flex flex-col overflow-hidden">
-              {/* Center name header */}
-              <div className="px-10 pt-8 pb-6 border-b border-slate-100">
-                <div className="flex items-center gap-4">
-                  <div className="w-2 h-10 rounded-full" style={{ backgroundColor: centerColor }}></div>
-                  <div>
-                    <h1 className="text-3xl font-black text-[#001f3f] tracking-tight">{centerName} Wellness Center</h1>
-                    <p className="text-xs font-bold text-slate-400 tracking-wide mt-1">{centerAddress}</p>
-                  </div>
+            {/* Right panel — check-in area */}
+            <div className="flex-1 bg-[#f5f6f8] flex flex-col items-center justify-center px-10 py-8 relative">
+              <p className="text-xs font-black text-slate-400 uppercase tracking-[0.25em] mb-8">Check in</p>
+              
+              {/* Search input */}
+              <div className="w-full max-w-md relative">
+                <div className="bg-white border-2 border-slate-200 rounded-2xl px-7 py-5 flex items-center gap-4 focus-within:border-slate-400 transition-colors shadow-sm">
+                  <Search size={22} className="text-slate-300 shrink-0" />
+                  <input className="w-full bg-transparent text-xl font-bold outline-none text-[#001f3f] placeholder-slate-300" placeholder="Type your name..." value={kioskInput} onChange={(e) => setKioskInput(e.target.value)} />
                 </div>
-              </div>
-
-              {/* Check-in area */}
-              <div className="flex-1 flex flex-col items-center justify-center px-10 py-8 relative">
-                <p className="text-xs font-black text-slate-300 uppercase tracking-[0.3em] mb-8">Check in below</p>
-                
-                {/* Search input */}
-                <div className="w-full max-w-xl relative">
-                  <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl px-8 py-6 flex items-center gap-4 focus-within:border-slate-400 transition-colors">
-                    <Search size={24} className="text-slate-300 shrink-0" />
-                    <input className="w-full bg-transparent text-2xl font-bold outline-none text-[#001f3f] placeholder-slate-300" placeholder="Type your name..." value={kioskInput} onChange={(e) => setKioskInput(e.target.value)} />
-                  </div>
-                  {allKioskMatches.length > 0 && (
-                    <div className="absolute top-full mt-3 left-0 right-0 bg-white border border-slate-200 shadow-2xl rounded-2xl overflow-hidden z-50">
-                      {allKioskMatches.map((m, idx) => (
-                        <button key={m._type + '-' + (m.airtableId || m.id || idx)} onClick={() => { setPinModal({...m, _kioskType: m._type}); setKioskInput(''); }} className="w-full px-8 py-5 text-left border-b border-slate-100 last:border-0 hover:bg-slate-50 flex justify-between items-center group transition-colors">
-                          <div className="flex items-center gap-4">
-                            <span className="text-xl font-black text-[#001f3f] group-hover:text-[#1080ad] transition-colors">{m.firstName} {m.lastName}</span>
-                            {m._type === 'visitor' && <span className="px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-[10px] font-black uppercase tracking-wider">Visitor</span>}
-                          </div>
-                          <ChevronRight size={20} className="text-slate-200 group-hover:text-slate-400" />
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Divider */}
-                <div className="flex items-center gap-4 my-6">
-                  <div className="h-px w-16 bg-slate-200"></div>
-                  <span className="text-xs font-bold text-slate-300 uppercase tracking-[0.15em]">or scan badge</span>
-                  <div className="h-px w-16 bg-slate-200"></div>
-                </div>
-
-                {/* Scan button */}
-                <button onClick={() => setIsScanning(true)} className="bg-[#001f3f] text-white px-10 py-5 rounded-2xl font-black text-lg tracking-wider uppercase flex items-center gap-3 hover:bg-[#002d5a] transition-colors shadow-lg">
-                  <Camera size={24} /> Open Camera
-                </button>
-
-                {/* Success/Error message */}
-                {kioskMessage.text && (
-                  <div className={`mt-10 px-10 py-5 rounded-2xl text-xl font-black shadow-lg ${kioskMessage.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : kioskMessage.type === 'warning' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
-                    {kioskMessage.text}
-                    {kioskMessage.subtext && <span className="block text-sm font-bold mt-1 opacity-70">{kioskMessage.subtext}</span>}
+                {allKioskMatches.length > 0 && (
+                  <div className="absolute top-full mt-3 left-0 right-0 bg-white border border-slate-200 shadow-2xl rounded-2xl overflow-hidden z-50">
+                    {allKioskMatches.map((m, idx) => (
+                      <button key={m._type + '-' + (m.airtableId || m.id || idx)} onClick={() => { setPinModal({...m, _kioskType: m._type}); setKioskInput(''); }} className="w-full px-7 py-4 text-left border-b border-slate-100 last:border-0 hover:bg-slate-50 flex justify-between items-center group transition-colors">
+                        <div className="flex items-center gap-3">
+                          <span className="text-lg font-black text-[#001f3f] group-hover:text-[#1080ad] transition-colors">{m.firstName} {m.lastName}</span>
+                          {m._type === 'visitor' && <span className="px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-[9px] font-black uppercase tracking-wider">Visitor</span>}
+                        </div>
+                        <ChevronRight size={18} className="text-slate-200 group-hover:text-slate-400" />
+                      </button>
+                    ))}
                   </div>
                 )}
               </div>
+
+              {/* Divider */}
+              <div className="flex items-center gap-3 my-6">
+                <div className="h-px w-12 bg-slate-200"></div>
+                <span className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.15em]">or</span>
+                <div className="h-px w-12 bg-slate-200"></div>
+              </div>
+
+              {/* Scan button */}
+              <button onClick={() => setIsScanning(true)} className="bg-[#001f3f] text-white px-8 py-4 rounded-xl font-bold text-sm tracking-wider uppercase flex items-center gap-3 hover:bg-[#002d5a] transition-colors shadow-md">
+                <Camera size={20} /> Scan Badge
+              </button>
+
+              {/* Success/Error message */}
+              {kioskMessage.text && (
+                <div className={`mt-8 px-8 py-4 rounded-xl text-lg font-black ${kioskMessage.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : kioskMessage.type === 'warning' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                  {kioskMessage.text}
+                  {kioskMessage.subtext && <span className="block text-xs font-bold mt-1 opacity-70">{kioskMessage.subtext}</span>}
+                </div>
+              )}
             </div>
           </div>
         )}
