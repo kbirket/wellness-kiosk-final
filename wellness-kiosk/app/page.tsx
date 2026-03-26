@@ -10,6 +10,20 @@ const DonutChart = ({ data, totalLabel }) => { const total = data.reduce((sum, d
 
 const LOGO_URL = 'https://pattersonhc.org/sites/default/files/wellness_white.png';
 
+const PeriodSelector = ({ value, onChange }) => (
+    <select value={value} onChange={onChange} className="p-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] font-bold text-slate-700 cursor-pointer shadow-sm">
+      <optgroup label="Monthly">
+        {['01-2026','02-2026','03-2026','04-2026','05-2026','06-2026','07-2026','08-2026','09-2026','10-2026','11-2026','12-2026'].map(v => { const [m, y] = v.split('-'); return <option key={v} value={v}>{new Date(y, m - 1).toLocaleDateString('en-US', {month: 'long', year: 'numeric'})}</option>; })}
+      </optgroup>
+      <optgroup label="Quarterly">
+        <option value="Q1-2026">Q1 2026 (Jan - Mar)</option>
+        <option value="Q2-2026">Q2 2026 (Apr - Jun)</option>
+        <option value="Q3-2026">Q3 2026 (Jul - Sep)</option>
+        <option value="Q4-2026">Q4 2026 (Oct - Dec)</option>
+      </optgroup>
+    </select>
+  );
+
 export default function WellnessHub() {
   const [isMounted, setIsMounted] = useState(false);
   const [currentDateString, setCurrentDateString] = useState('');
@@ -668,20 +682,6 @@ export default function WellnessHub() {
 
   if (view === 'corp_portal' && activeCorp) { const corpMembers = members.filter(m => m.sponsorName.toLowerCase() === activeCorp.companyName.toLowerCase()); const totalCorpVisits = corpMembers.reduce((sum, m) => sum + m.visits, 0); const singlePlans = corpMembers.filter(m => m.type.includes('SINGLE')).length; const familyPlans = corpMembers.filter(m => m.type.includes('FAMILY')).length; return (<div className="min-h-screen bg-[#f0f2f5] font-sans print:bg-white"><nav className="bg-[#001f3f] text-white p-4 shadow-md flex justify-between items-center sticky top-0 z-10 print:hidden"><div className="flex items-center gap-3"><img src={LOGO_URL} alt="Logo" className="h-6" /><span className="font-bold tracking-tight border-l border-white/20 pl-3">Corporate Partner Portal</span></div><button onClick={handleLogout} className="bg-red-500/20 text-red-100 hover:bg-red-500 hover:text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold transition-all"><LogOut size={16}/> Logout</button></nav><main className="max-w-5xl mx-auto p-8 space-y-8 mt-4 print:p-0 print:m-0 print:max-w-none print:mt-0"><div className="flex justify-between items-end print:hidden"><div><h1 className="text-4xl font-black text-[#001f3f] tracking-tight mb-1">{activeCorp.companyName} Wellness Roster</h1><p className="text-slate-500 font-medium">Review your enrolled employees and gym utilization.</p></div><button onClick={() => window.print()} className="bg-white border border-slate-200 text-[#001f3f] px-6 py-3 rounded-xl font-bold text-sm shadow-sm flex items-center gap-2 hover:bg-slate-50 transition-all"><Printer size={16} /> Print Roster</button></div><div className="hidden print:block mb-6 border-b-4 border-[#001f3f] pb-6 text-center"><img src={LOGO_URL} alt="Logo" className="h-12 mx-auto mb-4 invert grayscale" /><h1 className="text-3xl font-black text-[#001f3f] tracking-tight">{activeCorp.companyName} Wellness Roster</h1><p className="text-slate-500 font-bold uppercase tracking-widest mt-2">{currentDateString}</p></div><div className="grid grid-cols-1 md:grid-cols-4 gap-6 print:grid-cols-4 print:gap-4"><ProStatCard value={corpMembers.length} label="Total Enrolled" color="#001f3f" /><ProStatCard value={totalCorpVisits} label="Total Visits" color="#1080ad" /><ProStatCard value={singlePlans} label="Individual Plans" color="#16a34a" /><ProStatCard value={familyPlans} label="Family Plans" color="#f59e0b" /></div><div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden print:border-slate-300 print:shadow-none print:rounded-none"><div className="p-6 border-b border-slate-100 bg-slate-50 print:bg-white print:p-4"><h3 className="text-lg font-bold text-[#001f3f]">Employee Directory</h3></div><table className="w-full text-left border-collapse print:text-sm"><thead className="bg-white text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 print:border-b-2 print:border-slate-800"><tr><th className="px-8 py-4 print:py-2">Employee Name</th><th className="px-8 py-4 print:py-2">Member ID</th><th className="px-8 py-4 print:py-2">Plan Type</th><th className="px-8 py-4 print:py-2 text-right">Lifetime Visits</th></tr></thead><tbody className="text-sm">{corpMembers.length === 0 ? (<tr><td colSpan="4" className="text-center py-12 text-slate-400 font-medium italic">No employees currently enrolled.</td></tr>) : (corpMembers.map(m => (<tr key={m.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors print:border-slate-200"><td className="px-8 py-5 print:py-2 font-bold text-slate-800">{m.firstName} {m.lastName}</td><td className="px-8 py-5 print:py-2 font-mono text-slate-400">{m.id}</td><td className="px-8 py-5 print:py-2"><span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 print:bg-transparent print:px-0 print:text-black text-[10px] font-black tracking-tight">{m.type}</span></td><td className="px-8 py-5 print:py-2 text-right font-black text-[#1080ad] print:text-black text-lg print:text-base">{m.visits}</td></tr>)))}</tbody></table></div></main></div>); }
 
-  const PeriodSelector = ({ value, onChange }) => (
-    <select value={value} onChange={onChange} className="p-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] font-bold text-slate-700 cursor-pointer shadow-sm">
-      <optgroup label="Monthly">
-        {['01-2026','02-2026','03-2026','04-2026','05-2026','06-2026','07-2026','08-2026','09-2026','10-2026','11-2026','12-2026'].map(v => { const [m, y] = v.split('-'); return <option key={v} value={v}>{new Date(y, m - 1).toLocaleDateString('en-US', {month: 'long', year: 'numeric'})}</option>; })}
-      </optgroup>
-      <optgroup label="Quarterly">
-        <option value="Q1-2026">Q1 2026 (Jan - Mar)</option>
-        <option value="Q2-2026">Q2 2026 (Apr - Jun)</option>
-        <option value="Q3-2026">Q3 2026 (Jul - Sep)</option>
-        <option value="Q4-2026">Q4 2026 (Oct - Dec)</option>
-      </optgroup>
-    </select>
-  );
-
   // MAIN DIRECTOR DASHBOARD
   return (
     <div className="flex min-h-screen bg-[#f0f2f5] font-sans text-slate-800">
@@ -909,7 +909,7 @@ export default function WellnessHub() {
               )}
               {corporatePartners.filter(c => c.name.toLowerCase().includes(corpSearch.toLowerCase())).map(corp => {
                  const isUsageBased = !!usageBasedCorps[corp.id];
-                 const corpMembers = members.filter(mem => mem.sponsorName === corp.sponsorMatch && !mem.type.includes('HD6') && !mem.type.includes('HCHF'));
+                 const corpMembers = members.filter(mem => mem.sponsorName === corp.sponsorMatch);
                  let totalOwed = 0; let totalPeriodVisits = 0;
                  const enrichedMembers = corpMembers.map(mem => { const memVisits = currentPeriodVisits.filter(v => v.name.toLowerCase() === `${mem.firstName} ${mem.lastName}`.toLowerCase()); totalPeriodVisits += memVisits.length; const rate = parseFloat(String(mem.monthlyRate).replace(/[^0-9.]/g, '')) || 0; let memberOwed = 0; let activeMonthsCount = 0; if (isUsageBased) { targetMonths.forEach(mIdx => { const visitedInMonth = memVisits.some(v => new Date(v.time).getMonth() === mIdx); if (visitedInMonth) { memberOwed += rate; activeMonthsCount++; } }); } else { if (mem.status === 'ACTIVE') { memberOwed = rate * targetMonths.length; activeMonthsCount = targetMonths.length; } } totalOwed += memberOwed; return { ...mem, periodVisits: memVisits.length, memberOwed, activeMonthsCount }; });
                  const activeMembersCount = enrichedMembers.filter(m => m.memberOwed > 0 || m.status === 'ACTIVE').length;
@@ -1136,43 +1136,69 @@ export default function WellnessHub() {
                     // Day pass visitors this month
                     const dayPassVisitors = visitors.filter(v => v.passType === 'Day Pass' && v.purchaseDate && new Date(v.purchaseDate).getFullYear() === yr && new Date(v.purchaseDate).getMonth() === mo).length;
                     
-                    const html = `<!DOCTYPE html><html><head><title>${centerName} ${monthName} ${yr} Summary</title><style>@media print{body{margin:0;padding:15px}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:30px;max-width:850px;margin:0 auto}h1{text-align:center;font-size:22px;color:#003d6b;margin-bottom:24px;font-weight:900}table{width:100%;border-collapse:collapse;margin-bottom:20px;font-size:11px}th,td{border:1px solid #cbd5e1;padding:6px 10px}th{background:#003d6b;color:white;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;font-weight:700}td{font-weight:600}.section-title{font-size:13px;font-weight:900;color:#003d6b;margin:20px 0 8px 0;padding-bottom:4px;border-bottom:2px solid #003d6b}.highlight{background:#fef3c7;font-weight:900}.totals-row td{background:#f1f5f9;font-weight:900;border-top:2px solid #003d6b}.stat-label{background:#f8fafc;font-weight:700;color:#334155}.stat-value{text-align:right;font-weight:900;color:#003d6b;font-size:13px}.right{text-align:right}.center{text-align:center}</style></head><body><h1>${centerName} ${monthName} ${yr} Summary</h1>
+                    // Build pie chart CSS
+                    const pieData = [
+                      { label: 'Single', value: singleCount, color: '#1080ad' },
+                      { label: 'Family', value: familyCount, color: '#f59e0b' },
+                      { label: 'Student', value: studentCount, color: '#8b5cf6' },
+                      { label: 'Senior', value: seniorCount, color: '#16a34a' },
+                      { label: 'Sr. Family', value: seniorFamCount, color: '#059669' },
+                      { label: 'Corporate', value: corpCount, color: '#ef4444' },
+                    ].filter(d => d.value > 0);
+                    const pieTotal = pieData.reduce((s, d) => s + d.value, 0) || 1;
+                    let cumPct = 0;
+                    const pieStops = pieData.map(d => {
+                      const pct = (d.value / pieTotal) * 100;
+                      const stop = `${d.color} ${cumPct}% ${cumPct + pct}%`;
+                      cumPct += pct;
+                      return stop;
+                    }).join(', ');
+                    const pieLegend = pieData.map(d => `<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid #f1f5f9"><div style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:${d.color};display:inline-block"></span><span style="font-size:11px;font-weight:600;color:#334155">${d.label}</span></div><span style="font-size:12px;font-weight:900;color:#003d6b">${d.value}</span></div>`).join('');
+
+                    const html = `<!DOCTYPE html><html><head><title>${centerName} ${monthName} ${yr} Summary</title><style>@page{margin:0.5in}@media print{body{margin:0;padding:0}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:20px;max-width:850px;margin:0 auto}table{width:100%;border-collapse:collapse;margin-bottom:16px;font-size:11px}th,td{border:1px solid #cbd5e1;padding:5px 10px}th{background:#003d6b;color:white;font-size:9px;text-transform:uppercase;letter-spacing:0.5px;font-weight:700}td{font-weight:600}.hdr{background:#003d6b;padding:14px 28px;display:flex;justify-content:space-between;align-items:center;border-radius:6px 6px 0 0}.hdr img{height:30px}.hdr-text{text-align:right;color:white}.hdr-title{font-size:20px;font-weight:900;margin:0}.hdr-sub{font-size:9px;color:#8bb8d9;letter-spacing:1px;margin-top:2px}.accent{height:3px;background:linear-gradient(to right,#dba51f,#dd6d22);margin-bottom:20px}.section-title{font-size:12px;font-weight:900;color:#003d6b;margin:16px 0 6px 0;padding-bottom:3px;border-bottom:2px solid #003d6b}.stat-label{background:#f8fafc;font-weight:700;color:#334155}.stat-value{text-align:right;font-weight:900;color:#003d6b;font-size:12px}.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}.kpi{background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:10px;border-left:4px solid}.kpi-val{font-size:22px;font-weight:900;margin-bottom:1px}.kpi-lbl{font-size:8px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1px}.chart-row{display:flex;gap:20px;align-items:flex-start;margin-bottom:16px}.pie-wrap{width:140px;height:140px;border-radius:50%;position:relative;flex-shrink:0}.pie-center{position:absolute;inset:28px;background:white;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center}.pie-center-val{font-size:22px;font-weight:900;color:#003d6b;line-height:1}.pie-center-lbl{font-size:7px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1px}.legend{flex:1}.footer{margin-top:16px;padding-top:8px;border-top:2px solid #003d6b;font-size:9px;color:#94a3b8;display:flex;justify-content:space-between}</style></head><body>
+<div class="hdr"><img src="${LOGO_URL}" /><div class="hdr-text"><h1 class="hdr-title">${monthName} ${yr} Summary</h1><div class="hdr-sub">${centerName}</div></div></div><div class="accent"></div>
+
+<div class="kpi-grid">
+<div class="kpi" style="border-color:#1080ad"><div class="kpi-val" style="color:#1080ad">${monthVisits.length}</div><div class="kpi-lbl">Total Visits</div></div>
+<div class="kpi" style="border-color:#16a34a"><div class="kpi-val" style="color:#16a34a">${avgPerDay}</div><div class="kpi-lbl">Avg / Day</div></div>
+<div class="kpi" style="border-color:#f59e0b"><div class="kpi-val" style="color:#f59e0b">${newMembers.length}</div><div class="kpi-lbl">New Members</div></div>
+<div class="kpi" style="border-color:#8b5cf6"><div class="kpi-val" style="color:#8b5cf6">${totalClassMembers}</div><div class="kpi-lbl">Total Members</div></div>
+</div>
+
+<div class="chart-row">
+<div class="pie-wrap" style="background:conic-gradient(${pieStops || '#e2e8f0 0% 100%'})"><div class="pie-center"><div class="pie-center-val">${pieTotal}</div><div class="pie-center-lbl">Members</div></div></div>
+<div class="legend"><div class="section-title" style="margin-top:0">Membership Breakdown</div>${pieLegend}</div>
+</div>
 
 <div class="section-title">Monthly Overview</div>
-<table><thead><tr><th>Metric</th><th class="right">Value</th></tr></thead><tbody>
+<table><thead><tr><th>Metric</th><th style="text-align:right">Value</th></tr></thead><tbody>
 <tr><td class="stat-label">Total Visits</td><td class="stat-value">${monthVisits.length}</td></tr>
 <tr><td class="stat-label">Average Visits Per Day</td><td class="stat-value">${avgPerDay}</td></tr>
 <tr><td class="stat-label">Employee & Family Visits</td><td class="stat-value">${empVisits.length}</td></tr>
 <tr><td class="stat-label">Day Passes</td><td class="stat-value">${monthDayPasses}</td></tr>
 <tr><td class="stat-label">Corporate Member Visits</td><td class="stat-value">${corpVisits.length}</td></tr>
-<tr><td class="stat-label">Total Members</td><td class="stat-value">${totalClassMembers}</td></tr>
 </tbody></table>
 
-<div class="section-title">Membership Stats</div>
-<table><thead><tr><th>Category</th><th class="right">Count</th></tr></thead><tbody>
-<tr><td class="stat-label">Single Memberships</td><td class="stat-value">${singleCount}</td></tr>
-<tr><td class="stat-label">Family Memberships</td><td class="stat-value">${familyCount}</td></tr>
-<tr><td class="stat-label">Student Memberships</td><td class="stat-value">${studentCount}</td></tr>
-<tr><td class="stat-label">Senior Memberships</td><td class="stat-value">${seniorCount}</td></tr>
-<tr><td class="stat-label">Family/Senior Memberships</td><td class="stat-value">${seniorFamCount}</td></tr>
-<tr><td class="stat-label">Corporate</td><td class="stat-value">${corpCount}</td></tr>
-</tbody></table>
-
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+<div>
 <div class="section-title">Corporate Breakdown</div>
-<table><thead><tr><th>Category</th><th class="right">Count</th></tr></thead><tbody>
+<table><thead><tr><th>Category</th><th style="text-align:right">Count</th></tr></thead><tbody>
 <tr><td class="stat-label">Single Memberships</td><td class="stat-value">${corpMemsSingle}</td></tr>
 <tr><td class="stat-label">Family Memberships</td><td class="stat-value">${corpMemsFam}</td></tr>
 <tr><td class="stat-label">Student Memberships</td><td class="stat-value">${corpMemsStudent}</td></tr>
 <tr><td class="stat-label">Senior Memberships</td><td class="stat-value">${corpMemsSenior}</td></tr>
 </tbody></table>
-
+</div>
+<div>
 <div class="section-title">Other Information</div>
-<table><thead><tr><th>Metric</th><th class="right">Value</th></tr></thead><tbody>
+<table><thead><tr><th>Metric</th><th style="text-align:right">Value</th></tr></thead><tbody>
 <tr><td class="stat-label">New Members</td><td class="stat-value">${newMembers.length}</td></tr>
 <tr><td class="stat-label">Paid-Daily Visitors</td><td class="stat-value">${dayPassVisitors}</td></tr>
 </tbody></table>
+</div>
+</div>
 
-<div style="margin-top:30px;text-align:center;font-size:10px;color:#94a3b8;border-top:2px solid #003d6b;padding-top:10px">Generated from Patterson HC Wellness Hub · ${new Date().toLocaleDateString('en-US', {month:'long',day:'numeric',year:'numeric'})}</div>
+<div class="footer"><span>Prepared by Patterson Health Center · Wellness Hub</span><span>${new Date().toLocaleDateString('en-US', {month:'long',day:'numeric',year:'numeric'})}</span></div>
 </body></html>`;
                     const w = window.open('', '_blank'); w.document.write(html); w.document.close(); setTimeout(() => w.print(), 500);
                   }} className="px-4 py-2 bg-[#dd6d22] text-white rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-orange-700 transition-colors"><Download size={16}/> Monthly Summary</button>
