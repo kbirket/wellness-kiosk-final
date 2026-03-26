@@ -980,12 +980,23 @@ export default function WellnessHub() {
           // --- REVENUE CALCULATIONS ---
           const paidMembers = scopedMembers.filter(m => m.status === 'ACTIVE' && !m.type.includes('HD6') && !m.type.includes('HCHF') && !m.type.includes('MILITARY') && m.type !== 'FIRST DAY FREE');
           const revenueByPlan = {};
+          const collectedRevenueByPlan = {};
           paidMembers.forEach(m => {
             const rate = parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0;
             const planLabel = m.type.includes('CORPORATE') ? 'Corporate' : m.type === 'SINGLE' ? 'Single' : m.type.includes('FAMILY') ? 'Family' : m.type.includes('SENIOR') ? 'Senior' : m.type.includes('STUDENT') ? 'Student' : 'Other';
             revenueByPlan[planLabel] = (revenueByPlan[planLabel] || 0) + rate;
+            // Only count as collected if individual has payment logged OR is corporate with corp payment logged
+            const isCorp = m.type.includes('CORPORATE') || m.sponsorName;
+            let isCollected = false;
+            if (isCorp) {
+              const sponsor = corporatePartners.find(cp => cp.sponsorMatch === m.sponsorName);
+              isCollected = sponsor && sponsor.paidMonths && sponsor.paidMonths.split(',').some(str => str.startsWith(reportMonth));
+            } else {
+              isCollected = !!m.paymentMethod;
+            }
+            if (isCollected) { collectedRevenueByPlan[planLabel] = (collectedRevenueByPlan[planLabel] || 0) + rate; }
           });
-          const revChartData = Object.entries(revenueByPlan).filter(([_, v]) => v > 0).sort((a, b) => b[1] - a[1]).map(([label, value]) => {
+          const revChartData = Object.entries(collectedRevenueByPlan).filter(([_, v]) => v > 0).sort((a, b) => b[1] - a[1]).map(([label, value]) => {
             const colorMap = { Single: '#1080ad', Family: '#f59e0b', Senior: '#16a34a', Student: '#8b5cf6', Corporate: '#ef4444', Other: '#64748b' };
             return { label, value: Math.round(value), color: colorMap[label] || '#64748b' };
           });
@@ -1018,7 +1029,7 @@ export default function WellnessHub() {
             const html = `<!DOCTYPE html><html><head><title>Board Report - ${displayPeriod}</title><style>@media print{body{margin:0;padding:20px}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:30px;max-width:800px;margin:0 auto}.hdr{background:#003d6b;padding:16px 28px;display:flex;justify-content:space-between;align-items:center;border-radius:8px 8px 0 0}.hdr img{height:32px}.hdr-text{text-align:right;color:white}.hdr-title{font-size:20px;font-weight:900;margin:0}.hdr-sub{font-size:10px;color:#8bb8d9;letter-spacing:1px;margin-top:2px}.accent{height:3px;background:linear-gradient(to right,#dba51f,#dd6d22);margin-bottom:24px}.section{margin-bottom:20px}.section-title{font-size:11px;font-weight:900;color:#64748b;text-transform:uppercase;letter-spacing:2px;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #003d6b}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}.card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px}.card-val{font-size:28px;font-weight:900;color:#003d6b;margin-bottom:2px}.card-lbl{font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.5px}.card-accent{border-left:4px solid}.tbl{width:100%;border-collapse:collapse;font-size:12px}th{background:#003d6b;color:white;text-align:left;padding:8px 12px;font-size:9px;text-transform:uppercase;letter-spacing:1px}th.right{text-align:right}.footer{margin-top:30px;padding-top:12px;border-top:2px solid #003d6b;font-size:11px;color:#94a3b8;display:flex;justify-content:space-between}</style></head><body>
             <div class="hdr"><img src="${LOGO_URL}" /><div class="hdr-text"><h1 class="hdr-title">Facility Summary — Board Report</h1><div class="hdr-sub">${centerName} · ${displayPeriod}</div></div></div><div class="accent"></div>
             <div class="section"><div class="section-title">Key Performance Indicators</div><div class="grid" style="grid-template-columns:repeat(4,1fr)"><div class="card card-accent" style="border-color:#1080ad"><div class="card-val" style="color:#1080ad">${currentPeriodVisits.length}</div><div class="card-lbl">Total Visits</div></div><div class="card card-accent" style="border-color:#16a34a"><div class="card-val" style="color:#16a34a">${newMembersThisPeriod.length}</div><div class="card-lbl">New Sign-ups</div></div><div class="card card-accent" style="border-color:#f59e0b"><div class="card-val" style="color:#f59e0b">${avgVisitsPerMember}</div><div class="card-lbl">Avg Visits / Member</div></div><div class="card card-accent" style="border-color:#8b5cf6"><div class="card-val" style="color:#8b5cf6">${retentionRate}%</div><div class="card-lbl">90-Day Retention</div></div></div></div>
-            <div class="grid"><div class="section"><div class="section-title">Membership Breakdown</div><table class="tbl"><thead><tr><th>Plan Type</th><th class="right">Members</th></tr></thead><tbody>${planRows}</tbody><tfoot><tr><td style="padding:10px 12px;border-top:2px solid #003d6b;font-weight:900;text-transform:uppercase;font-size:11px;">Total</td><td style="padding:10px 12px;border-top:2px solid #003d6b;text-align:right;font-weight:900;font-size:16px;color:#003d6b;">${scopedMembers.length}</td></tr></tfoot></table></div><div class="section"><div class="section-title">Monthly Revenue by Category</div><table class="tbl"><thead><tr><th>Category</th><th class="right">Amount</th></tr></thead><tbody>${revRows}</tbody><tfoot><tr><td style="padding:10px 12px;border-top:2px solid #003d6b;font-weight:900;text-transform:uppercase;font-size:11px;">Actual Total</td><td style="padding:10px 12px;border-top:2px solid #003d6b;text-align:right;font-weight:900;font-size:16px;color:#16a34a;">$${Math.round(expectedRevenue).toLocaleString()}</td></tr></tfoot></table></div></div>
+            <div class="grid"><div class="section"><div class="section-title">Membership Breakdown</div><table class="tbl"><thead><tr><th>Plan Type</th><th class="right">Members</th></tr></thead><tbody>${planRows}</tbody><tfoot><tr><td style="padding:10px 12px;border-top:2px solid #003d6b;font-weight:900;text-transform:uppercase;font-size:11px;">Total</td><td style="padding:10px 12px;border-top:2px solid #003d6b;text-align:right;font-weight:900;font-size:16px;color:#003d6b;">${scopedMembers.length}</td></tr></tfoot></table></div><div class="section"><div class="section-title">Monthly Revenue by Category</div><table class="tbl"><thead><tr><th>Category</th><th class="right">Amount</th></tr></thead><tbody>${revRows}</tbody><tfoot><tr><td style="padding:10px 12px;border-top:2px solid #003d6b;font-weight:900;text-transform:uppercase;font-size:11px;">Collected Total</td><td style="padding:10px 12px;border-top:2px solid #003d6b;text-align:right;font-weight:900;font-size:16px;color:#16a34a;">$${Math.round(totalCollected).toLocaleString()}</td></tr></tfoot></table></div></div>
             <div class="grid"><div class="section"><div class="section-title">Engagement & Retention</div><div class="grid" style="grid-template-columns:1fr 1fr"><div class="card"><div class="card-val">${engagementRate}%</div><div class="card-lbl">Visited This Period</div></div><div class="card"><div class="card-val">${neverVisited.length}</div><div class="card-lbl">Never Visited (Active)</div></div></div><div style="margin-top:8px"><div style="background:#e2e8f0;border-radius:6px;height:18px;overflow:hidden;position:relative"><div style="background:linear-gradient(to right,#16a34a,#1080ad);height:100%;width:${collectionRate}%;border-radius:6px;transition:width 0.5s"></div></div><div style="display:flex;justify-content:space-between;margin-top:4px;font-size:10px;color:#94a3b8;font-weight:700"><span>Collection Rate</span><span style="color:#003d6b;font-weight:900">${collectionRate}% ($${Math.round(totalCollected).toLocaleString()} of $${Math.round(expectedRevenue).toLocaleString()})</span></div></div></div><div class="section"><div class="section-title">Top 5 Most Active Members</div><table class="tbl"><thead><tr><th>Member</th><th class="right">Visits</th></tr></thead><tbody>${topVisitorRows || '<tr><td colspan="2" style="padding:12px;text-align:center;color:#94a3b8;font-style:italic">No data</td></tr>'}</tbody></table></div></div>
             ${slippingAway.length > 0 ? `<div class="section"><div class="section-title">At-Risk Members (21+ Days Since Last Visit)</div><div style="display:flex;flex-wrap:wrap;gap:8px">${slippingAway.slice(0,8).map(m => `<span style="background:#fef2f2;border:1px solid #fecaca;color:#dc2626;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700">${m.firstName} ${m.lastName}</span>`).join('')}</div></div>` : ''}
             <div class="footer"><span>Prepared by ${directorName} · Patterson Health Center</span><span>${new Date().toLocaleDateString('en-US', {month:'long',day:'numeric',year:'numeric'})}</span></div></body></html>`;
@@ -1184,27 +1195,32 @@ export default function WellnessHub() {
               {/* NEW: REVENUE VISUALS */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                  <h3 className="text-md font-black text-[#001f3f] mb-6 flex items-center gap-2"><TrendingUp size={18} className="text-[#16a34a]"/> Monthly Revenue by Plan Type</h3>
+                  <h3 className="text-md font-black text-[#001f3f] mb-6 flex items-center gap-2"><TrendingUp size={18} className="text-[#16a34a]"/> Collected Revenue by Plan Type</h3>
                   {revChartData.length > 0 ? (
                     <div className="space-y-4">
                       <DonutChart data={revChartData} totalLabel="Revenue" />
                     </div>
-                  ) : <p className="text-sm text-slate-400 italic">No revenue data for this period.</p>}
+                  ) : <p className="text-sm text-slate-400 italic">No payments collected this period.</p>}
                 </div>
 
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                  <h3 className="text-md font-black text-[#001f3f] mb-6 flex items-center gap-2"><Activity size={18} className="text-[#1080ad]" /> Collection & Revenue Health</h3>
+                  <h3 className="text-md font-black text-[#001f3f] mb-6 flex items-center gap-2"><Activity size={18} className="text-[#1080ad]" /> Actual Revenue</h3>
                   <div className="space-y-6">
                     <div>
                       <div className="flex justify-between items-end mb-2">
-                        <div><p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Expected Monthly Revenue</p><p className="text-3xl font-black text-[#001f3f]">${Math.round(expectedRevenue).toLocaleString()}</p></div>
+                        <div><p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Actual Monthly Revenue</p><p className="text-3xl font-black text-[#16a34a]">${Math.round(totalCollected).toLocaleString()}</p></div>
+                        <div className="text-right"><p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Expected</p><p className="text-lg font-black text-slate-400">${Math.round(expectedRevenue).toLocaleString()}</p></div>
                       </div>
                     </div>
                     <ProgressBar value={Math.round(totalCollected)} max={Math.round(expectedRevenue)} color="#16a34a" label="Collected vs Expected" />
-                    <div className="grid grid-cols-2 gap-4 mt-4">
+                    <div className="grid grid-cols-3 gap-4 mt-4">
                       <div className="bg-green-50 p-4 rounded-xl border border-green-100">
-                        <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-1">Collected</p>
-                        <p className="text-2xl font-black text-[#16a34a]">${Math.round(totalCollected).toLocaleString()}</p>
+                        <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-1">Member Payments</p>
+                        <p className="text-2xl font-black text-[#16a34a]">${Math.round(actualRevenue).toLocaleString()}</p>
+                      </div>
+                      <div className="bg-purple-50 p-4 rounded-xl border border-purple-100">
+                        <p className="text-[10px] font-black text-purple-600 uppercase tracking-widest mb-1">Corporate Payments</p>
+                        <p className="text-2xl font-black text-[#8b5cf6]">${Math.round(corpCollected).toLocaleString()}</p>
                       </div>
                       <div className="bg-red-50 p-4 rounded-xl border border-red-100">
                         <p className="text-[10px] font-black text-red-600 uppercase tracking-widest mb-1">Outstanding</p>
