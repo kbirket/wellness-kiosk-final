@@ -71,6 +71,7 @@ export default function WellnessHub() {
   const [helpSearch, setHelpSearch] = useState('');
   const [kioskStaffMenu, setKioskStaffMenu] = useState(false);
   const [editingVisitor, setEditingVisitor] = useState(null);
+  const [corpSearch, setCorpSearch] = useState('');
 
   useEffect(() => { localStorage.setItem('wellnessUsagePrefs', JSON.stringify(usageBasedCorps)); }, [usageBasedCorps]);
 
@@ -891,9 +892,15 @@ export default function WellnessHub() {
           const currentPeriodVisits = visits.filter(v => { if (!v.time) return false; const d = new Date(v.time); return d.getFullYear() === y && targetMonths.includes(d.getMonth()); });
           return (
           <div className="space-y-6">
-            <div className="flex justify-between items-center mb-8"><div><h2 className="text-3xl font-bold text-[#001f3f] tracking-tight">Corporate Partners</h2><p className="text-slate-400 font-medium">Manage corporate sponsorships and billing rosters.</p></div><div className="bg-white p-2 rounded-xl shadow-sm border border-slate-200"><PeriodSelector value={reportMonth} onChange={(e) => setReportMonth(e.target.value)} /></div></div>
+            <div className="flex justify-between items-center mb-4"><div><h2 className="text-3xl font-bold text-[#001f3f] tracking-tight">Corporate Partners</h2><p className="text-slate-400 font-medium">Manage corporate sponsorships and billing rosters.</p></div><div className="bg-white p-2 rounded-xl shadow-sm border border-slate-200"><PeriodSelector value={reportMonth} onChange={(e) => setReportMonth(e.target.value)} /></div></div>
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4">
+              <Search className="text-slate-300 shrink-0" size={18} />
+              <input className="flex-1 outline-none text-sm font-medium text-[#001f3f] placeholder-slate-300" placeholder="Search corporate partners..." value={corpSearch} onChange={e => setCorpSearch(e.target.value)} />
+              {corpSearch && <button onClick={() => setCorpSearch('')} className="text-slate-300 hover:text-red-400 transition-colors"><X size={16}/></button>}
+              <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest shrink-0">{corporatePartners.filter(c => c.name.toLowerCase().includes(corpSearch.toLowerCase())).length} of {corporatePartners.length}</span>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {corporatePartners.map(corp => {
+              {corporatePartners.filter(c => c.name.toLowerCase().includes(corpSearch.toLowerCase())).map(corp => {
                  const isUsageBased = !!usageBasedCorps[corp.id];
                  const corpMembers = members.filter(mem => mem.sponsorName === corp.sponsorMatch);
                  let totalOwed = 0; let totalPeriodVisits = 0;
