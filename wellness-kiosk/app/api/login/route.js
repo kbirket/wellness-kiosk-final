@@ -9,7 +9,7 @@
 //   DIRECTOR_ADMIN_PASS=admin2026
 //   DIRECTOR_HARPER_PASS=harper2026
 //   DIRECTOR_ANTHONY_PASS=anthony2026
-//   DIRECTOR_BUSINESS_PASS=business2026
+//   DIRECTOR_BUSINESS_PASS=business2026!
 //   AUTH_SECRET=<random string>
 
 import { NextResponse } from 'next/server';
