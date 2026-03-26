@@ -9,6 +9,7 @@
 //   DIRECTOR_ADMIN_PASS=admin2026
 //   DIRECTOR_HARPER_PASS=harper2026
 //   DIRECTOR_ANTHONY_PASS=anthony2026
+//   DIRECTOR_BUSINESS_PASS=business2026
 //   AUTH_SECRET=<random string>
 
 import { NextResponse } from 'next/server';
@@ -22,6 +23,7 @@ const DIRECTORS = [
   { username: 'admin', password: process.env.DIRECTOR_ADMIN_PASS, name: 'System Admin', center: 'both', role: 'admin' },
   { username: 'harper', password: process.env.DIRECTOR_HARPER_PASS, name: 'Patrick', center: 'harper', role: 'director' },
   { username: 'anthony', password: process.env.DIRECTOR_ANTHONY_PASS, name: 'Deanna', center: 'anthony', role: 'director' },
+  { username: 'business', password: process.env.DIRECTOR_BUSINESS_PASS, name: 'Business Office', center: 'both', role: 'business' },
 ];
 
 function createToken(payload) {
