@@ -1,53 +1,71 @@
+// app/api/update-member/route.js
+// 
+// If your existing update-member route does NOT already handle address fields,
+// add these mappings to your airtableFields object:
+//
+//   if (fields.address !== undefined) airtableFields['Street Address'] = fields.address;
+//   if (fields.city !== undefined) airtableFields['City'] = fields.city;
+//   if (fields.state !== undefined) airtableFields['State'] = fields.state;
+//   if (fields.zip !== undefined) airtableFields['Zip'] = fields.zip;
+//
+// Below is the full route if you need to replace yours entirely:
+
 import { NextResponse } from 'next/server';
-export const dynamic = 'force-dynamic';
+
+const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
+const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
+const MEMBERS_TABLE = process.env.AIRTABLE_MEMBERS_TABLE || 'Members';
 
 export async function POST(request) {
-  const baseId = process.env.AIRTABLE_BASE_ID;
-  const token = process.env.AIRTABLE_PAT;
-  const tableName = 'Members';
-
   try {
     const body = await request.json();
-    
-    // Dynamically build the fields object
-    const fields = {};
-    if (body.firstName) fields["First Name"] = body.firstName;
-    if (body.lastName) fields["Last Name"] = body.lastName;
-    if (body.email !== undefined) fields["Email"] = body.email;
-    if (body.phone !== undefined) fields["Phone"] = body.phone;
-    if (body.plan) fields["Membership Type"] = body.plan;
-    if (body.billingMethod) fields["Billing Method"] = body.billingMethod;
-    if (body.center) fields["Home Center"] = body.center;
-    if (body.sponsor) fields["Corporate Sponsor"] = body.sponsor;
-    if (body.access247 !== undefined) fields["24/7 Access"] = body.access247;
-    if (body.badgeNumber) fields["Badge Number"] = body.badgeNumber;
-    if (body.notes !== undefined) fields["Notes"] = body.notes;
-    if (body.discountCode !== undefined) fields["Discount Code"] = body.discountCode;
-    if (body.discountExpiration) { 
-        fields["Discount Expiration"] = body.discountExpiration; 
-    } else if (body.discountExpiration === '') { 
-        fields["Discount Expiration"] = null; // Clears the date if they delete it
+    const { airtableId, ...fields } = body;
+
+    if (!airtableId) {
+      return NextResponse.json({ success: false, error: 'Missing member record ID' }, { status: 400 });
     }
 
-    // We use PATCH to only update the specific fields provided
-    const response = await fetch(`https://api.airtable.com/v0/${baseId}/${tableName}/${body.airtableId}`, {
+    const airtableFields = {};
+
+    if (fields.firstName !== undefined) airtableFields['First Name'] = fields.firstName;
+    if (fields.lastName !== undefined) airtableFields['Last Name'] = fields.lastName;
+    if (fields.email !== undefined) airtableFields['Email'] = fields.email;
+    if (fields.phone !== undefined) airtableFields['Phone'] = fields.phone;
+    if (fields.address !== undefined) airtableFields['Street Address'] = fields.address;
+    if (fields.city !== undefined) airtableFields['City'] = fields.city;
+    if (fields.state !== undefined) airtableFields['State'] = fields.state;
+    if (fields.zip !== undefined) airtableFields['Zip'] = fields.zip;
+    if (fields.plan !== undefined) airtableFields['Plan Name'] = [fields.plan];
+    if (fields.billingMethod !== undefined) airtableFields['Billing Method'] = fields.billingMethod;
+    if (fields.center !== undefined) airtableFields['Home Center'] = fields.center;
+    if (fields.sponsor !== undefined) airtableFields['Corporate Sponsor'] = fields.sponsor;
+    if (fields.access247 !== undefined) airtableFields['24/7 Access'] = fields.access247;
+    if (fields.badgeNumber !== undefined) airtableFields['Badge Number'] = fields.badgeNumber;
+    if (fields.notes !== undefined) airtableFields['Notes'] = fields.notes;
+    if (fields.discountCode !== undefined) airtableFields['Discount Code'] = fields.discountCode;
+    if (fields.discountExpiration !== undefined) airtableFields['Discount Expiration'] = fields.discountExpiration || null;
+    if (fields.monthlyRate !== undefined) airtableFields['Monthly Rate'] = fields.monthlyRate;
+
+    const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${MEMBERS_TABLE}/${airtableId}`, {
       method: 'PATCH',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
-      // THIS IS THE FIX: Added typecast: true so Airtable auto-matches text to dropdowns/records
-      body: JSON.stringify({ fields, typecast: true }) 
+      body: JSON.stringify({ fields: airtableFields }),
     });
 
-    const data = await response.json();
-    
-    if (data.error) {
-      return NextResponse.json({ success: false, error: data.error.message }, { status: 400 });
+    if (!res.ok) {
+      const errorData = await res.json();
+      console.error('Airtable error:', errorData);
+      return NextResponse.json({ success: false, error: errorData.error?.message || 'Airtable update failed' }, { status: 500 });
     }
-    
-    return NextResponse.json({ success: true, data });
+
+    const data = await res.json();
+    return NextResponse.json({ success: true, record: data });
+
   } catch (error) {
+    console.error('Update member error:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
