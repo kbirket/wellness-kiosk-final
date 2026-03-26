@@ -69,6 +69,7 @@ export default function WellnessHub() {
   const [memberPinInput, setMemberPinInput] = useState('');
   const [memberLoginError, setMemberLoginError] = useState('');
   const [helpSearch, setHelpSearch] = useState('');
+  const [kioskStaffMenu, setKioskStaffMenu] = useState(false);
 
   useEffect(() => { localStorage.setItem('wellnessUsagePrefs', JSON.stringify(usageBasedCorps)); }, [usageBasedCorps]);
 
@@ -482,6 +483,11 @@ export default function WellnessHub() {
     const kioskMemberMatches = kioskInput.length >= 2 ? members.filter(m => (m.firstName + ' ' + m.lastName).toLowerCase().includes(kioskInput.toLowerCase()) || m.id.toLowerCase().includes(kioskInput.toLowerCase())).slice(0, 4) : [];
     const kioskVisitorMatches = kioskInput.length >= 2 ? visitors.filter(v => { const today = new Date(); const exp = new Date(v.expirationDate + 'T23:59:59'); return exp >= today && v.orientationComplete && (v.firstName + ' ' + v.lastName).toLowerCase().includes(kioskInput.toLowerCase()); }).slice(0, 2) : [];
     const allKioskMatches = [...kioskMemberMatches.map(m => ({...m, _type: 'member'})), ...kioskVisitorMatches.map(v => ({...v, _type: 'visitor'}))];
+    const isHarper = viewingCenter === 'harper';
+    const centerColor = isHarper ? '#dd6d22' : '#1080ad';
+    const centerColorLight = isHarper ? '#f59e0b' : '#1080ad';
+    const centerName = isHarper ? 'Harper' : 'Anthony';
+    const centerAddress = isHarper ? '615 W 12th St, Harper, KS 67058' : '309 W Main St, Anthony, KS 67003';
     
     return (
       <div className="fixed inset-0 bg-[#001f3f] z-[100] flex flex-col font-sans overflow-hidden text-slate-900">
@@ -497,85 +503,122 @@ export default function WellnessHub() {
             animation: scan 2.5s ease-in-out infinite;
             z-index: 50;
           }
-          .medical-gradient { background: radial-gradient(circle at top left, #002d5a, #001226); }
         `}</style>
 
-        <div className="h-20 bg-black/20 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-10 shrink-0 z-50">
-          <img src={LOGO_URL} alt="Logo" className="h-8 brightness-110" />
-          <button 
-            onClick={() => {
-              const pw = prompt("Staff Auth Required:");
-              if (pw === "2026") { setView('landing'); setViewingCenter('both'); }
-              else if (pw !== null) { alert("Access Denied"); }
-            }} 
-            className="text-white/20 hover:text-white/100 p-3 transition-all"
-          >
-            <X size={28} />
-          </button>
-        </div>
-
-        <div className="flex-1 flex flex-col medical-gradient relative">
-          {viewingCenter === 'both' ? (
-            <div className="flex-1 flex flex-col md:flex-row p-6 gap-6">
-              <button onClick={() => { setViewingCenter('harper'); }} className="flex-1 group relative overflow-hidden rounded-[3rem] transition-all duration-700 hover:scale-[1.01] shadow-2xl">
-                <div className="absolute inset-0 bg-gradient-to-br from-[#f59e0b] to-[#dd6d22] opacity-80 group-hover:opacity-100 transition-opacity" />
+        {viewingCenter === 'both' ? (
+          /* CENTER SELECTION SPLASH */
+          <div className="flex-1 flex flex-col">
+            <div className="h-16 flex items-center justify-between px-8 shrink-0">
+              <img src={LOGO_URL} alt="Logo" className="h-6 opacity-50" />
+              <button onClick={() => { const pw = prompt("Staff Auth Required:"); if (pw === "2026") { setView('landing'); } else if (pw !== null) { alert("Access Denied"); } }} className="text-white/15 hover:text-white/60 p-2 transition-all"><X size={22} /></button>
+            </div>
+            <div className="flex-1 flex flex-col md:flex-row p-6 pt-2 gap-6">
+              <button onClick={() => setViewingCenter('harper')} className="flex-1 group relative overflow-hidden rounded-[2.5rem] transition-all duration-500 hover:scale-[1.005]">
+                <div className="absolute inset-0 bg-gradient-to-br from-[#f59e0b] to-[#dd6d22] opacity-85 group-hover:opacity-100 transition-opacity" />
                 <div className="relative z-10 p-16 flex flex-col items-center justify-center h-full text-white text-center">
-                  <h2 className="text-7xl font-black tracking-tighter leading-tight drop-shadow-lg text-white">HARPER<br/><span className="text-3xl font-light tracking-[0.2em] opacity-80 uppercase">Wellness Center</span></h2>
-                  <div className="mt-12 px-12 py-5 bg-white text-[#dd6d22] rounded-full font-black text-2xl">TOUCH TO START</div>
+                  <h2 className="text-7xl font-black tracking-tighter leading-tight text-white">HARPER</h2>
+                  <p className="text-2xl font-light tracking-[0.25em] uppercase opacity-70 mt-2">Wellness Center</p>
+                  <div className="mt-14 px-12 py-5 bg-white text-[#dd6d22] rounded-full font-black text-xl tracking-wide">TOUCH TO START</div>
                 </div>
               </button>
-              <button onClick={() => { setViewingCenter('anthony'); }} className="flex-1 group relative overflow-hidden rounded-[3rem] transition-all duration-700 hover:scale-[1.01] shadow-2xl">
-                <div className="absolute inset-0 bg-gradient-to-br from-[#1080ad] to-[#003d6b] opacity-80 group-hover:opacity-100 transition-opacity" />
+              <button onClick={() => setViewingCenter('anthony')} className="flex-1 group relative overflow-hidden rounded-[2.5rem] transition-all duration-500 hover:scale-[1.005]">
+                <div className="absolute inset-0 bg-gradient-to-br from-[#1080ad] to-[#003d6b] opacity-85 group-hover:opacity-100 transition-opacity" />
                 <div className="relative z-10 p-16 flex flex-col items-center justify-center h-full text-white text-center">
-                  <h2 className="text-7xl font-black tracking-tighter leading-tight drop-shadow-lg text-white">ANTHONY<br/><span className="text-3xl font-light tracking-[0.2em] opacity-80 uppercase">Wellness Center</span></h2>
-                  <div className="mt-12 px-12 py-5 bg-white text-[#003d6b] rounded-full font-black text-2xl">TOUCH TO START</div>
+                  <h2 className="text-7xl font-black tracking-tighter leading-tight text-white">ANTHONY</h2>
+                  <p className="text-2xl font-light tracking-[0.25em] uppercase opacity-70 mt-2">Wellness Center</p>
+                  <div className="mt-14 px-12 py-5 bg-white text-[#003d6b] rounded-full font-black text-xl tracking-wide">TOUCH TO START</div>
                 </div>
               </button>
             </div>
-          ) : (
-            <div className="flex-1 bg-[#fcfdfe] flex flex-col items-center justify-center p-12 relative">
-              <button onClick={() => { const pw = prompt("Enter Code:"); if (pw === "2026") setViewingCenter('both'); }} className="absolute top-8 left-8 flex items-center gap-2 text-[10px] font-bold text-slate-300 hover:text-[#1080ad] tracking-[0.2em] uppercase transition-all">
-                <Lock size={12} /> Exit {viewingCenter}
-              </button>
-              <div className="text-center mb-16">
-                <h1 className="text-[10px] font-black tracking-[0.5em] text-[#1080ad] uppercase mb-4">Welcome To</h1>
-                <h2 className="text-7xl font-black text-[#001f3f] tracking-tighter uppercase leading-none">
-                  {viewingCenter === 'harper' ? 'Harper' : 'Anthony'}<br/>
-                  <span className="font-light text-[#1080ad]">Wellness Center</span>
-                </h2>
+          </div>
+        ) : (
+          /* CHECK-IN SCREEN — CONCEPT C REDESIGN */
+          <div className="flex-1 flex flex-col">
+            {/* Compact navy header with logo and staff button */}
+            <div className="h-16 flex items-center justify-between px-8 shrink-0">
+              <img src={LOGO_URL} alt="Logo" className="h-6 opacity-40" />
+              <button onClick={() => { const pw = prompt("Staff Auth Required:"); if (pw === "2026") { setKioskStaffMenu(true); } else if (pw !== null) { alert("Access Denied"); } }} className="text-white/15 hover:text-white/60 p-2 transition-all"><Lock size={18} /></button>
+            </div>
+
+            {/* White content card */}
+            <div className="flex-1 bg-white rounded-t-[2.5rem] flex flex-col overflow-hidden">
+              {/* Center name header */}
+              <div className="px-10 pt-8 pb-6 border-b border-slate-100">
+                <div className="flex items-center gap-4">
+                  <div className="w-2 h-10 rounded-full" style={{ backgroundColor: centerColor }}></div>
+                  <div>
+                    <h1 className="text-3xl font-black text-[#001f3f] tracking-tight">{centerName} Wellness Center</h1>
+                    <p className="text-xs font-bold text-slate-400 tracking-wide mt-1">{centerAddress}</p>
+                  </div>
+                </div>
               </div>
-              <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
-                <button onClick={() => setIsScanning(true)} className="group relative bg-[#001f3f] rounded-[2rem] p-10 flex flex-col items-center justify-center transition-all hover:scale-[1.02] shadow-2xl shadow-blue-900/20">
-                  <Camera size={56} className="text-[#1080ad] mb-4" />
-                  <span className="text-2xl font-black text-white tracking-widest uppercase">Scan QR Badge</span>
-                </button>
-                <div className="relative flex flex-col">
-                  <div className="flex-1 bg-white border-2 border-slate-100 rounded-[2rem] p-10 flex flex-col justify-center shadow-xl">
-                    <div className="flex items-center gap-4 mb-2"><Search size={24} className="text-slate-300" /><span className="text-[10px] font-black text-slate-400 tracking-widest uppercase">Member Search</span></div>
-                    <input className="w-full bg-transparent text-3xl font-bold outline-none text-[#001f3f]" placeholder="Start typing..." value={kioskInput} onChange={(e) => setKioskInput(e.target.value)} />
+
+              {/* Check-in area */}
+              <div className="flex-1 flex flex-col items-center justify-center px-10 py-8 relative">
+                <p className="text-xs font-black text-slate-300 uppercase tracking-[0.3em] mb-8">Check in below</p>
+                
+                {/* Search input */}
+                <div className="w-full max-w-xl relative">
+                  <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl px-8 py-6 flex items-center gap-4 focus-within:border-slate-400 transition-colors">
+                    <Search size={24} className="text-slate-300 shrink-0" />
+                    <input className="w-full bg-transparent text-2xl font-bold outline-none text-[#001f3f] placeholder-slate-300" placeholder="Type your name..." value={kioskInput} onChange={(e) => setKioskInput(e.target.value)} />
                   </div>
                   {allKioskMatches.length > 0 && (
-                    <div className="absolute top-[110%] left-0 right-0 bg-white border border-slate-100 shadow-2xl rounded-[2rem] overflow-hidden z-50">
+                    <div className="absolute top-full mt-3 left-0 right-0 bg-white border border-slate-200 shadow-2xl rounded-2xl overflow-hidden z-50">
                       {allKioskMatches.map((m, idx) => (
-                        <button key={m._type + '-' + (m.airtableId || m.id || idx)} onClick={() => { setPinModal({...m, _kioskType: m._type}); setKioskInput(''); }} className="w-full p-6 text-left border-b hover:bg-slate-50 flex justify-between items-center group">
+                        <button key={m._type + '-' + (m.airtableId || m.id || idx)} onClick={() => { setPinModal({...m, _kioskType: m._type}); setKioskInput(''); }} className="w-full px-8 py-5 text-left border-b border-slate-100 last:border-0 hover:bg-slate-50 flex justify-between items-center group transition-colors">
                           <div className="flex items-center gap-4">
-                            <span className="text-2xl font-black text-[#001f3f] group-hover:text-[#1080ad] transition-colors">{m.firstName} {m.lastName}</span>
+                            <span className="text-xl font-black text-[#001f3f] group-hover:text-[#1080ad] transition-colors">{m.firstName} {m.lastName}</span>
                             {m._type === 'visitor' && <span className="px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-[10px] font-black uppercase tracking-wider">Visitor</span>}
                           </div>
-                          <ChevronRight size={24} className="text-slate-200" />
+                          <ChevronRight size={20} className="text-slate-200 group-hover:text-slate-400" />
                         </button>
                       ))}
                     </div>
                   )}
                 </div>
-              </div>
-              {kioskMessage.text && (
-                <div className={`mt-12 px-12 py-6 rounded-full text-2xl font-black shadow-lg ${kioskMessage.type === 'success' ? 'bg-green-50 text-green-700' : kioskMessage.type === 'warning' ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'}`}>{kioskMessage.text}{kioskMessage.subtext && <span className="block text-base font-bold mt-1">{kioskMessage.subtext}</span>}</div>
-              )}
-            </div>
-          )}
-        </div>
 
+                {/* Divider */}
+                <div className="flex items-center gap-4 my-6">
+                  <div className="h-px w-16 bg-slate-200"></div>
+                  <span className="text-xs font-bold text-slate-300 uppercase tracking-[0.15em]">or scan badge</span>
+                  <div className="h-px w-16 bg-slate-200"></div>
+                </div>
+
+                {/* Scan button */}
+                <button onClick={() => setIsScanning(true)} className="bg-[#001f3f] text-white px-10 py-5 rounded-2xl font-black text-lg tracking-wider uppercase flex items-center gap-3 hover:bg-[#002d5a] transition-colors shadow-lg">
+                  <Camera size={24} /> Open Camera
+                </button>
+
+                {/* Success/Error message */}
+                {kioskMessage.text && (
+                  <div className={`mt-10 px-10 py-5 rounded-2xl text-xl font-black shadow-lg ${kioskMessage.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : kioskMessage.type === 'warning' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                    {kioskMessage.text}
+                    {kioskMessage.subtext && <span className="block text-sm font-bold mt-1 opacity-70">{kioskMessage.subtext}</span>}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* STAFF MENU OVERLAY */}
+        {kioskStaffMenu && (
+          <div className="fixed inset-0 bg-[#001f3f]/95 backdrop-blur-xl z-[250] flex items-center justify-center p-6">
+            <div className="bg-white rounded-[2.5rem] p-12 w-full max-w-sm text-center shadow-2xl">
+              <ShieldCheck size={40} className="text-[#dba51f] mx-auto mb-4" />
+              <h3 className="text-2xl font-black text-[#001f3f] mb-2">Staff Menu</h3>
+              <p className="text-sm text-slate-400 mb-8">What would you like to do?</p>
+              <div className="space-y-3">
+                <button onClick={() => { setKioskStaffMenu(false); setViewingCenter('both'); }} className="w-full bg-[#1080ad] text-white py-4 rounded-xl font-bold text-lg hover:bg-[#0d6d94] transition-colors">Switch Center</button>
+                <button onClick={() => { setKioskStaffMenu(false); setView('landing'); setViewingCenter('both'); }} className="w-full bg-[#001f3f] text-white py-4 rounded-xl font-bold text-lg hover:bg-[#002d5a] transition-colors">Main Menu</button>
+                <button onClick={() => setKioskStaffMenu(false)} className="w-full text-slate-400 py-3 font-bold hover:text-slate-600 transition-colors">Cancel</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* SCANNER OVERLAY */}
         {isScanning && (
           <div className="fixed inset-0 bg-[#001226]/95 backdrop-blur-2xl z-[200] flex flex-col items-center justify-center p-6">
             <button onClick={() => setIsScanning(false)} className="absolute top-10 right-10 text-white/20 hover:text-white"><X size={60} /></button>
@@ -591,14 +634,15 @@ export default function WellnessHub() {
           </div>
         )}
 
+        {/* PIN VERIFICATION */}
         {pinModal && (
           <div className="fixed inset-0 bg-[#001f3f]/98 backdrop-blur-3xl z-[300] flex items-center justify-center p-6">
-            <div className={`bg-white rounded-[4rem] p-16 w-full max-w-xl text-center shadow-2xl border-t-[12px] ${pinModal._kioskType === 'visitor' ? 'border-[#8b5cf6]' : 'border-[#1080ad]'}`}>
-              <h2 className="text-5xl font-black text-slate-900 mb-12 tracking-tight uppercase">Verify PIN</h2>
+            <div className={`bg-white rounded-[3rem] p-14 w-full max-w-xl text-center shadow-2xl border-t-[8px] ${pinModal._kioskType === 'visitor' ? 'border-[#8b5cf6]' : 'border-[#1080ad]'}`}>
+              <h2 className="text-4xl font-black text-slate-900 mb-10 tracking-tight uppercase">Verify PIN</h2>
               <p className="text-2xl font-bold text-slate-400 mb-2 uppercase tracking-widest">Hello, {pinModal.firstName}!</p>
               {pinModal._kioskType === 'visitor' && <p className="text-sm font-black text-purple-500 mb-8 uppercase tracking-widest">Visitor Pass</p>}
               {pinModal._kioskType !== 'visitor' && <div className="mb-8"></div>}
-              <input type="password" maxLength={4} autoFocus className={`w-full p-8 bg-slate-50 rounded-[2.5rem] text-center text-8xl tracking-[0.4em] font-black mb-12 outline-none border-4 border-slate-100 text-slate-900 ${pinModal._kioskType === 'visitor' ? 'focus:border-[#8b5cf6]' : 'focus:border-[#1080ad]'}`}
+              <input type="password" maxLength={4} autoFocus className={`w-full p-7 bg-slate-50 rounded-2xl text-center text-7xl tracking-[0.4em] font-black mb-10 outline-none border-4 border-slate-100 text-slate-900 ${pinModal._kioskType === 'visitor' ? 'focus:border-[#8b5cf6]' : 'focus:border-[#1080ad]'}`}
                 onChange={(e) => {
                   if (e.target.value.length === 4) {
                     const enteredPin = e.target.value;
@@ -614,11 +658,11 @@ export default function WellnessHub() {
                   }
                 }} 
               />
-              <button onClick={() => setPinModal(null)} className="text-slate-300 font-black text-xl uppercase tracking-widest">Cancel</button>
+              <button onClick={() => setPinModal(null)} className="text-slate-300 font-black text-lg uppercase tracking-widest">Cancel</button>
             </div>
           </div>
         )}
-        <div className="h-10 bg-black/30 flex items-center justify-center shrink-0"><span className="text-[9px] text-white font-black tracking-[0.4em] uppercase opacity-30">Wellness Center Terminal · 2026</span></div>
+        <div className="h-8 bg-black/20 flex items-center justify-center shrink-0"><span className="text-[8px] text-white/15 font-bold tracking-[0.3em] uppercase">{centerName || 'Wellness'} Center Terminal</span></div>
       </div>
     );
   }
