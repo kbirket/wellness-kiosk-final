@@ -107,7 +107,7 @@ export default function WellnessHub() {
     };
     if (p === 'CORPORATE') return 25;
     if (p === 'CORPORATE FAMILY') return 45;
-    if (['MILITARY', 'MILITARY FAMILY', 'HD6', 'HD6 FAMILY', 'FIRST DAY FREE'].includes(p)) return 0;
+      if (['MILITARY', 'MILITARY FAMILY', 'HD6', 'HD6 FAMILY', 'FIRST DAY FREE', 'LIFETIME'].includes(p)) return 0;
     return r[p] ? (r[p][b] || r[p]['Month-to-Month']) : 0;
   };
 
