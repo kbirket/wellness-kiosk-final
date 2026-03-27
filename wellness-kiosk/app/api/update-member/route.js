@@ -1,15 +1,4 @@
 // app/api/update-member/route.js
-// 
-// If your existing update-member route does NOT already handle address fields,
-// add these mappings to your airtableFields object:
-//
-//   if (fields.address !== undefined) airtableFields['Street Address'] = fields.address;
-//   if (fields.city !== undefined) airtableFields['City'] = fields.city;
-//   if (fields.state !== undefined) airtableFields['State'] = fields.state;
-//   if (fields.zip !== undefined) airtableFields['Zip'] = fields.zip;
-//
-// Below is the full route if you need to replace yours entirely:
-
 import { NextResponse } from 'next/server';
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_PAT;
@@ -35,7 +24,6 @@ export async function POST(request) {
     if (fields.city !== undefined) airtableFields['City'] = fields.city;
     if (fields.state !== undefined) airtableFields['State'] = fields.state;
     if (fields.zip !== undefined) airtableFields['Zip'] = fields.zip;
-    if (fields.plan !== undefined) airtableFields['Plan Name'] = [fields.plan];
     if (fields.billingMethod !== undefined) airtableFields['Billing Method'] = fields.billingMethod;
     if (fields.center !== undefined) airtableFields['Home Center'] = fields.center;
     if (fields.sponsor !== undefined) airtableFields['Corporate Sponsor'] = fields.sponsor;
@@ -45,6 +33,35 @@ export async function POST(request) {
     if (fields.discountCode !== undefined) airtableFields['Discount Code'] = fields.discountCode;
     if (fields.discountExpiration !== undefined) airtableFields['Discount Expiration'] = fields.discountExpiration || null;
     if (fields.monthlyRate !== undefined) airtableFields['Monthly Rate'] = fields.monthlyRate;
+
+    // Membership Type is a linked record to the Pricing Reference table
+    // We need to look up the record ID by plan name
+    if (fields.plan !== undefined) {
+      try {
+        const pricingTable = encodeURIComponent('Pricing Reference');
+        const pricingRes = await fetch(
+          `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${pricingTable}`,
+          { headers: { 'Authorization': `Bearer ${AIRTABLE_API_KEY}` } }
+        );
+        
+        if (pricingRes.ok) {
+          const pricingData = await pricingRes.json();
+          // Find the record whose name matches the plan
+          const planRecord = pricingData.records.find(r => {
+            const name = r.fields['Plan Name'] || r.fields['Name'] || r.fields['Plan'] || '';
+            return String(name).toUpperCase().trim() === String(fields.plan).toUpperCase().trim();
+          });
+          
+          if (planRecord) {
+            airtableFields['Membership Type'] = [planRecord.id];
+          } else {
+            console.warn(`Could not find Pricing Reference record for plan: ${fields.plan}`);
+          }
+        }
+      } catch (planErr) {
+        console.error('Error looking up Pricing Reference:', planErr);
+      }
+    }
 
     const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${MEMBERS_TABLE}/${airtableId}`, {
       method: 'PATCH',
