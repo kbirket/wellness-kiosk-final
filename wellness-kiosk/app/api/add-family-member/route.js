@@ -62,7 +62,9 @@ export async function POST(request) {
 
     // If this is a PRIMARY member (no familyRecordId provided), create the Family record
     if (!body.familyRecordId) {
-      const familyName = `The ${body.lastName}s`;
+      
+      // FIX: Use the frontend's family name if provided, otherwise default to the last name
+      const familyName = body.familyName || `The ${body.lastName}s`;
 
       const familyRes = await fetch(`https://api.airtable.com/v0/${baseId}/${familiesTable}`, {
         method: 'POST',
