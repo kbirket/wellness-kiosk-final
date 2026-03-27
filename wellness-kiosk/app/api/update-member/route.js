@@ -1,30 +1,20 @@
-// app/api/update-member/route.js
-// 
-// If your existing update-member route does NOT already handle address fields,
-// add these mappings to your airtableFields object:
-//
-//   if (fields.address !== undefined) airtableFields['Street Address'] = fields.address;
-//   if (fields.city !== undefined) airtableFields['City'] = fields.city;
-//   if (fields.state !== undefined) airtableFields['State'] = fields.state;
-//   if (fields.zip !== undefined) airtableFields['Zip'] = fields.zip;
-//
-// Below is the full route if you need to replace yours entirely:
-
+// app/api/update-visitor/route.js
 import { NextResponse } from 'next/server';
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_PAT;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
-const MEMBERS_TABLE = process.env.AIRTABLE_MEMBERS_TABLE || 'Members';
+const VISITORS_TABLE = process.env.AIRTABLE_VISITORS_TABLE || 'Visitors';
 
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { airtableId, ...fields } = body;
+    const { visitorAirtableId, ...fields } = body;
 
-    if (!airtableId) {
-      return NextResponse.json({ success: false, error: 'Missing member record ID' }, { status: 400 });
+    if (!visitorAirtableId) {
+      return NextResponse.json({ success: false, error: 'Missing visitor record ID' }, { status: 400 });
     }
 
+    // Build the Airtable fields object, mapping frontend keys to Airtable field names
     const airtableFields = {};
 
     if (fields.firstName !== undefined) airtableFields['First Name'] = fields.firstName;
@@ -35,18 +25,13 @@ export async function POST(request) {
     if (fields.city !== undefined) airtableFields['City'] = fields.city;
     if (fields.state !== undefined) airtableFields['State'] = fields.state;
     if (fields.zip !== undefined) airtableFields['Zip'] = fields.zip;
-    if (fields.plan !== undefined) airtableFields['Plan Name'] = [fields.plan];
-    if (fields.billingMethod !== undefined) airtableFields['Billing Method'] = fields.billingMethod;
-    if (fields.center !== undefined) airtableFields['Home Center'] = fields.center;
-    if (fields.sponsor !== undefined) airtableFields['Corporate Sponsor'] = fields.sponsor;
-    if (fields.access247 !== undefined) airtableFields['24/7 Access'] = fields.access247;
-    if (fields.badgeNumber !== undefined) airtableFields['Badge Number'] = fields.badgeNumber;
+    if (fields.passType !== undefined) airtableFields['Pass Type'] = fields.passType;
+    if (fields.center !== undefined) airtableFields['Center'] = fields.center;
+    if (fields.referringProvider !== undefined) airtableFields['Referring Provider'] = fields.referringProvider;
     if (fields.notes !== undefined) airtableFields['Notes'] = fields.notes;
-    if (fields.discountCode !== undefined) airtableFields['Discount Code'] = fields.discountCode;
-    if (fields.discountExpiration !== undefined) airtableFields['Discount Expiration'] = fields.discountExpiration || null;
-    if (fields.monthlyRate !== undefined) airtableFields['Monthly Rate'] = fields.monthlyRate;
+    if (fields.passActivated !== undefined) airtableFields['Pass Activated'] = fields.passActivated;
 
-    const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${MEMBERS_TABLE}/${airtableId}`, {
+    const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${VISITORS_TABLE}/${visitorAirtableId}`, {
       method: 'PATCH',
       headers: {
         'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
@@ -65,7 +50,7 @@ export async function POST(request) {
     return NextResponse.json({ success: true, record: data });
 
   } catch (error) {
-    console.error('Update member error:', error);
+    console.error('Update visitor error:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
