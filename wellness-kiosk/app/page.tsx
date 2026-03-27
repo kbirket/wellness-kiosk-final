@@ -201,13 +201,26 @@ export default function WellnessHub() {
 
   const handleUpdateProfile = async () => { setIsUpdating(true); const newEmail = document.getElementById('edit_email').value.trim(); const newPhone = document.getElementById('edit_phone').value.trim(); setActiveMember({...activeMember, email: newEmail, phone: newPhone}); setEditMode(false); try { await fetch('/api/update-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: activeMember.airtableId, email: newEmail, phone: newPhone }) }); } catch (err) { alert("App updated locally."); } setIsUpdating(false); };
 
-  const handleAddMemberSubmit = async (e) => {
+const handleAddMemberSubmit = async (e) => {
     e.preventDefault(); setIsAdding(true); setNewMemberPin(null);
-    const firstName = e.target.fname.value; const lastName = e.target.lname.value; const email = e.target.email.value; const phone = e.target.phone.value; const plan = e.target.plan.value; const center = e.target.center.value;
-    const needsOrientation = e.target.orientation?.checked || false; const isFamily = plan.includes('FAMILY'); const isCorporate = plan.includes('CORPORATE') || plan.includes('HD6');
+    const firstName = e.target.fname.value; 
+    const lastName = e.target.lname.value; // We are going to make sure we actually USE this!
+    const email = e.target.email.value; 
+    const phone = e.target.phone.value; 
+    const plan = e.target.plan.value; 
+    const center = e.target.center.value;
+    const needsOrientation = e.target.orientation?.checked || false; 
+    const isFamily = plan.includes('FAMILY'); 
+    const isCorporate = plan.includes('CORPORATE') || plan.includes('HD6');
     const sponsor = isCorporate ? (selectedSponsor === '__other__' ? customSponsor : selectedSponsor) : '';
-    const address = e.target.address?.value || ''; const city = e.target.city?.value || ''; const mstate = e.target.mstate?.value || 'KS'; const mzip = e.target.mzip?.value || '';
-    const billing = e.target.billing?.value || 'Month-to-Month'; const access247 = e.target.access247?.checked || false; const startDate = document.getElementById('startDate').value; const badgeNumber = e.target.badgenum?.value || '';
+    const address = e.target.address?.value || ''; 
+    const city = e.target.city?.value || ''; 
+    const mstate = e.target.mstate?.value || 'KS'; 
+    const mzip = e.target.mzip?.value || '';
+    const billing = e.target.billing?.value || 'Month-to-Month'; 
+    const access247 = e.target.access247?.checked || false; 
+    const startDate = document.getElementById('startDate').value; 
+    const badgeNumber = e.target.badgenum?.value || '';
     const discountCode = e.target.discount?.value || '';
     const discountExpiration = e.target.discount_exp?.value || '';
 
@@ -224,9 +237,11 @@ export default function WellnessHub() {
       } catch (err) { alert('Network error. Please try again.'); }
     } else if (isFamily && familyFlow) {
       try {
-        const res = await fetch('/api/add-family-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName, lastName: familyFlow.lastName, email: email || familyFlow.email, phone: phone || familyFlow.phone, plan: familyFlow.plan, center: familyFlow.center, familyRecordId: familyFlow.familyRecordId, corporateSponsor: familyFlow.corporateSponsor, needsOrientation, address, city, state: mstate, zip: mzip, access247, badgeNumber, discountCode, discountExpiration, monthlyRate: finalMonthlyRate }) });
+        // FIX: We are now sending `lastName` instead of forcing `familyFlow.lastName`
+        const res = await fetch('/api/add-family-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName, lastName, email: email || familyFlow.email, phone: phone || familyFlow.phone, plan: familyFlow.plan, center: familyFlow.center, familyRecordId: familyFlow.familyRecordId, corporateSponsor: familyFlow.corporateSponsor, needsOrientation, address, city, state: mstate, zip: mzip, access247, badgeNumber, discountCode, discountExpiration, monthlyRate: finalMonthlyRate }) });
         const result = await res.json();
-        if (result.success) { const updated = { ...familyFlow, addedMembers: [...familyFlow.addedMembers, { name: `${firstName} ${familyFlow.lastName}`, pin: result.pin, isPrimary: false }] }; setFamilyFlow(updated); setNewMemberPin({ name: `${firstName} ${familyFlow.lastName}`, pin: result.pin }); } else { alert('Error: ' + result.error); }
+        // FIX: Also updated the success state to use `lastName` instead of `familyFlow.lastName`
+        if (result.success) { const updated = { ...familyFlow, addedMembers: [...familyFlow.addedMembers, { name: `${firstName} ${lastName}`, pin: result.pin, isPrimary: false }] }; setFamilyFlow(updated); setNewMemberPin({ name: `${firstName} ${lastName}`, pin: result.pin }); } else { alert('Error: ' + result.error); }
       } catch (err) { alert('Network error. Please try again.'); }
     } else {
       try {
