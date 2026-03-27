@@ -32,7 +32,6 @@ export async function POST(request) {
     if (fields.notes !== undefined) airtableFields['Notes'] = fields.notes;
     if (fields.discountCode !== undefined) airtableFields['Discount Code'] = fields.discountCode;
     if (fields.discountExpiration !== undefined) airtableFields['Discount Expiration'] = fields.discountExpiration || null;
-    if (fields.monthlyRate !== undefined) airtableFields['Monthly Rate'] = fields.monthlyRate;
 
     // Membership Type is a linked record to the Pricing Reference table
     // We need to look up the record ID by plan name
