@@ -5,6 +5,9 @@ const AIRTABLE_API_KEY = process.env.AIRTABLE_PAT;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
 const MEMBERS_TABLE = process.env.AIRTABLE_MEMBERS_TABLE || 'Members';
 
+// Helper function to convert empty strings to null for Airtable
+const sanitize = (value) => (value === '' ? null : value);
+
 export async function POST(request) {
   try {
     const body = await request.json();
@@ -16,22 +19,25 @@ export async function POST(request) {
 
     const airtableFields = {};
 
-    if (fields.firstName !== undefined) airtableFields['First Name'] = fields.firstName;
-    if (fields.lastName !== undefined) airtableFields['Last Name'] = fields.lastName;
-    if (fields.email !== undefined) airtableFields['Email'] = fields.email;
-    if (fields.phone !== undefined) airtableFields['Phone'] = fields.phone;
-    if (fields.address !== undefined) airtableFields['Street Address'] = fields.address;
-    if (fields.city !== undefined) airtableFields['City'] = fields.city;
-    if (fields.state !== undefined) airtableFields['State'] = fields.state;
-    if (fields.zip !== undefined) airtableFields['Zip'] = fields.zip;
-    if (fields.billingMethod !== undefined) airtableFields['Billing Method'] = fields.billingMethod;
-    if (fields.center !== undefined) airtableFields['Home Center'] = fields.center;
-    if (fields.sponsor !== undefined) airtableFields['Corporate Sponsor'] = fields.sponsor;
+    // Apply the sanitize function to safely handle blank fields
+    if (fields.firstName !== undefined) airtableFields['First Name'] = sanitize(fields.firstName);
+    if (fields.lastName !== undefined) airtableFields['Last Name'] = sanitize(fields.lastName);
+    if (fields.email !== undefined) airtableFields['Email'] = sanitize(fields.email);
+    if (fields.phone !== undefined) airtableFields['Phone'] = sanitize(fields.phone);
+    if (fields.address !== undefined) airtableFields['Street Address'] = sanitize(fields.address);
+    if (fields.city !== undefined) airtableFields['City'] = sanitize(fields.city);
+    if (fields.state !== undefined) airtableFields['State'] = sanitize(fields.state);
+    if (fields.zip !== undefined) airtableFields['Zip'] = sanitize(fields.zip);
+    if (fields.billingMethod !== undefined) airtableFields['Billing Method'] = sanitize(fields.billingMethod);
+    if (fields.center !== undefined) airtableFields['Home Center'] = sanitize(fields.center);
+    if (fields.sponsor !== undefined) airtableFields['Corporate Sponsor'] = sanitize(fields.sponsor);
+    if (fields.badgeNumber !== undefined) airtableFields['Badge Number'] = sanitize(fields.badgeNumber);
+    if (fields.notes !== undefined) airtableFields['Notes'] = sanitize(fields.notes);
+    if (fields.discountCode !== undefined) airtableFields['Discount Code'] = sanitize(fields.discountCode);
+    if (fields.discountExpiration !== undefined) airtableFields['Discount Expiration'] = sanitize(fields.discountExpiration);
+    
+    // Booleans usually pass properly as true/false, so we can leave this one as is
     if (fields.access247 !== undefined) airtableFields['24/7 Access'] = fields.access247;
-    if (fields.badgeNumber !== undefined) airtableFields['Badge Number'] = fields.badgeNumber;
-    if (fields.notes !== undefined) airtableFields['Notes'] = fields.notes;
-    if (fields.discountCode !== undefined) airtableFields['Discount Code'] = fields.discountCode;
-    if (fields.discountExpiration !== undefined) airtableFields['Discount Expiration'] = fields.discountExpiration || null;
 
     // Membership Type is a linked record to the Pricing Reference table
     // We need to look up the record ID by plan name
