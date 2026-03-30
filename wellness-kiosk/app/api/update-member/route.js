@@ -35,12 +35,8 @@ export async function POST(request) {
     if (fields.notes !== undefined) airtableFields['Notes'] = sanitize(fields.notes);
     if (fields.discountCode !== undefined) airtableFields['Discount Code'] = sanitize(fields.discountCode);
     if (fields.discountExpiration !== undefined) airtableFields['Discount Expiration'] = sanitize(fields.discountExpiration);
-    if (req.body.nextPayment !== undefined) {
-  fields['Next Payment Due'] = req.body.nextPayment || null;
-}
-    if (typeof req.body.inactive === 'boolean') {
-  fields['Inactive'] = req.body.inactive;
-}
+ if (fields.nextPayment !== undefined) airtableFields['Next Payment Due'] = sanitize(fields.nextPayment);
+    if (typeof fields.inactive === 'boolean') airtableFields['Inactive'] = fields.inactive;
     
     // Booleans usually pass properly as true/false, so we can leave this one as is
     if (fields.access247 !== undefined) airtableFields['24/7 Access'] = fields.access247;
