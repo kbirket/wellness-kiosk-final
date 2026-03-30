@@ -27,7 +27,7 @@ const PeriodSelector = ({ value, onChange }) => (
 export default function WellnessHub() {
   const [isMounted, setIsMounted] = useState(false);
   const [currentDateString, setCurrentDateString] = useState('');
-  const [paymentModal, setPaymentModal] = useState(null);
+  const [paymentModal, setPaymentModal] = useState(null);   const [proratePayment, setProratePayment] = useState(false);
   const [view, setView] = useState('landing');
   const [user, setUser] = useState(null);
   const [activeMember, setActiveMember] = useState(null);
@@ -1690,7 +1690,7 @@ const handleAddMemberSubmit = async (e) => {
                     <button onClick={() => { processCheckIn(selectedMember.id, "Director Override"); setSelectedMember(null); }} className="col-span-2 md:col-span-3 bg-[#001f3f] text-white py-4 rounded-xl font-bold shadow-xl shadow-blue-900/20 active:scale-95 transition-all text-sm flex items-center justify-center gap-2"><CheckCircle size={18} /> Force Manual Check-In</button>
                     <button onClick={() => setEditMode(!editMode)} className="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs"><FileText size={20} /> Edit Member</button>
                     {selectedMember.type.includes('FAMILY') && (<button onClick={() => { setFamilyFlow({ familyRecordId: selectedMember.airtableId, familyName: selectedMember.familyName || `${selectedMember.lastName} Family`, lastName: selectedMember.lastName, plan: selectedMember.type, center: selectedMember.center, email: selectedMember.email, phone: selectedMember.phone, corporateSponsor: selectedMember.sponsorName, addedMembers: [] }); setShowAddModal(true); setSelectedMember(null); }} className="bg-purple-50 text-purple-600 hover:bg-purple-600 hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs"><Users size={20} /> Add to Family</button>)}
-                    <button onClick={() => setPaymentModal(selectedMember)} className="bg-green-50 text-green-600 hover:bg-green-600 hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs"><CreditCard size={20} /> Log Payment</button>
+                    <button onClick={() => { setProratePayment(false); setPaymentModal(selectedMember); }} className="bg-green-50 text-green-600 hover:bg-green-600 hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs"><CreditCard size={20} /> Log Payment</button>
                     <button onClick={() => { const isHarper = selectedMember.center && selectedMember.center.toLowerCase().includes('harper'); const centerName = isHarper ? 'Harper Wellness Center' : 'Anthony Wellness Center'; const centerAddr = isHarper ? '615 W 12th St, Harper, KS 67058' : '309 W Main St, Anthony, KS 67003'; const centerPhone = isHarper ? '(620) 896-1202' : '(620) 842-5190'; const centerHours = isHarper ? 'M-F 8am-12pm &amp; 5pm-8pm, Sat 9am-noon' : 'M-F 7am-8pm, Sat 8am-1pm'; const directorName = isHarper ? 'Patrick Johnson' : 'Deanna Smithhisler'; const addressBlock = selectedMember.address ? `${selectedMember.address}<br/>${selectedMember.city}, ${selectedMember.state} ${selectedMember.zip}` : 'Address not on file'; const w = window.open('', '_blank'); w.document.write(`<!DOCTYPE html><html><head><title>Payment Reminder - ${selectedMember.firstName} ${selectedMember.lastName}</title><style>@media print{body{margin:0}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}body{font-family:Arial,sans-serif;color:#1e293b;margin:0}.page{max-width:680px;margin:0 auto}.hdr{background:#003d6b;padding:20px 44px;display:flex;justify-content:space-between;align-items:center}.hdr-left{display:flex;align-items:center;gap:16px}.hdr-logo{height:36px;opacity:.95}.hdr-name{font-size:18px;font-weight:700;color:#fff}.hdr-sub{font-size:10px;color:#8bb8d9;letter-spacing:1px;margin-top:2px}.accent{height:3px;background:linear-gradient(to right,#dba51f,#dd6d22)}.body{padding:32px 44px}.top-row{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px}.addr{font-size:14px;line-height:1.6}.date{font-size:12px;color:#94a3b8}.greeting{font-size:13px;margin-bottom:10px}.intro{font-size:13px;color:#475569;line-height:1.8;margin-bottom:20px}.box{border:1.5px solid #003d6b;border-radius:6px;overflow:hidden;margin-bottom:20px}.box-hdr{background:#003d6b;padding:8px 16px;font-size:10px;font-weight:700;color:#fff;letter-spacing:1.5px}.box-body{padding:2px 16px}.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e2e8f0}.row:last-child{border-bottom:none}.lbl{font-size:12px;color:#64748b}.val{font-size:12px;font-weight:700;color:#003d6b}.val-due{font-size:12px;font-weight:700;color:#dd6d22}.opts{font-size:12px;color:#475569;line-height:2;margin-bottom:20px;padding-left:10px;border-left:3px solid #dba51f}.opt{padding-left:10px}.opt-b{color:#003d6b;font-weight:700}.disc{font-size:12px;color:#94a3b8;margin-bottom:24px}.sign{font-size:13px;margin-bottom:2px}.sign-name{font-size:13px;font-weight:700;color:#003d6b}.sign-title{font-size:11px;color:#94a3b8}.ftr{border-top:2px solid #003d6b;padding:10px 44px;display:flex;justify-content:space-between;align-items:center;margin-top:24px}.ftr-l{font-size:10px;color:#94a3b8}.ftr-r{font-size:10px;color:#1080ad}</style></head><body><div class="page"><div class="hdr"><div class="hdr-left"><img src="https://pattersonhc.org/sites/default/files/wellness_white.png" class="hdr-logo" /><div><div class="hdr-name">${centerName}</div><div class="hdr-sub">${centerAddr} | ${centerPhone}</div></div></div></div><div class="accent"></div><div class="body"><div class="top-row"><div class="addr"><strong>${selectedMember.firstName} ${selectedMember.lastName}</strong><br/>${addressBlock}</div><div class="date">${new Date().toLocaleDateString('en-US', {month:'long',day:'numeric',year:'numeric'})}</div></div><div class="greeting">Dear ${selectedMember.firstName},</div><div class="intro">Your wellness center membership payment is coming due. Please review the details below and make your payment at your earliest convenience.</div><div class="box"><div class="box-hdr">ACCOUNT DETAILS</div><div class="box-body"><div class="row"><span class="lbl">Member ID</span><span class="val">${selectedMember.id}</span></div><div class="row"><span class="lbl">Membership</span><span class="val">${selectedMember.type}</span></div><div class="row"><span class="lbl">Amount Due</span><span class="val-due">$${selectedMember.monthlyRate || 'See front desk'}</span></div><div class="row"><span class="lbl">Due Date</span><span class="val-due">${selectedMember.nextPayment ? new Date(selectedMember.nextPayment + 'T00:00:00').toLocaleDateString('en-US', {month:'long',day:'numeric',year:'numeric'}) : 'See front desk'}</span></div></div></div><div class="opts"><div class="opt"><span class="opt-b">In person</span> — Front desk: ${centerHours}</div><div class="opt"><span class="opt-b">By phone</span> — ${centerPhone}</div><div class="opt"><span class="opt-b">By mail</span> — ${centerAddr}</div></div><div class="disc">If you have already made your payment, please disregard this notice.</div><div class="sign">Sincerely,</div><div class="sign-name">${directorName}</div><div class="sign-title">Director, ${centerName}</div></div><div class="ftr"><span class="ftr-l">${centerName} | Harper County, KS</span><span class="ftr-r">pattersonhc.org/wellness-centers</span></div></div></body></html>`); 
                       w.document.close(); 
                       setTimeout(() => w.print(), 500); 
@@ -1706,8 +1706,15 @@ const handleAddMemberSubmit = async (e) => {
         </div>
       )}
 
-      {/* PAYMENT MODAL */}
-      {paymentModal && (
+{/* PAYMENT MODAL */}
+      {paymentModal && (() => {
+        const fullRate = parseFloat(String(paymentModal.monthlyRate).replace(/[^0-9.]/g, '')) || 0;
+        const today = new Date();
+        const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+        const daysRemaining = daysInMonth - today.getDate() + 1;
+        const proratedAmount = Math.round((fullRate / daysInMonth) * daysRemaining * 100) / 100;
+        const displayAmount = proratePayment ? proratedAmount : fullRate;
+        return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-white rounded-2xl w-full max-w-sm p-8 relative shadow-2xl">
             <button onClick={() => setPaymentModal(null)} className="absolute top-4 right-4 text-slate-300 hover:text-red-500"><X size={20}/></button>
@@ -1716,19 +1723,36 @@ const handleAddMemberSubmit = async (e) => {
               <h3 className="text-xl font-black text-[#001f3f]">Log Payment</h3>
               <p className="text-sm text-slate-400 mt-1">{paymentModal.firstName} {paymentModal.lastName}</p>
             </div>
+            {fullRate > 0 && (
+              <div className="mb-5">
+                <label onClick={() => setProratePayment(!proratePayment)} className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl p-4 cursor-pointer hover:bg-blue-100 transition-colors">
+                  <input type="checkbox" checked={proratePayment} onChange={() => setProratePayment(!proratePayment)} className="w-5 h-5 rounded border-slate-300 text-[#1080ad] focus:ring-[#1080ad]" />
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-[#001f3f]">Prorate First Month</p>
+                    <p className="text-[10px] text-blue-500">{daysRemaining} of {daysInMonth} days remaining this month</p>
+                  </div>
+                </label>
+                <div className="mt-3 text-center">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Amount Due</p>
+                  <p className="text-3xl font-black text-[#16a34a]">${displayAmount.toFixed(2)}</p>
+                  {proratePayment && <p className="text-[10px] text-slate-400 mt-1">Full rate: ${fullRate.toFixed(2)}/mo</p>}
+                </div>
+              </div>
+            )}
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Payment Method</p>
             <div className="grid grid-cols-2 gap-3 mb-6">
               {['Cash', 'Check', 'Card', 'ACH'].map(m => (
                 <button key={m} onClick={async () => {
-                  if (!window.confirm(`Log ${m} payment for ${paymentModal.firstName} ${paymentModal.lastName}?`)) return;
+                  const amtLabel = fullRate > 0 ? ` ($${displayAmount.toFixed(2)}${proratePayment ? ' prorated' : ''})` : '';
+                  if (!window.confirm(`Log ${m} payment${amtLabel} for ${paymentModal.firstName} ${paymentModal.lastName}?`)) return;
                   try {
-                    const res = await fetch('/api/log-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: paymentModal.airtableId, memberName: `${paymentModal.firstName} ${paymentModal.lastName}`, method: m, currentDueDate: paymentModal.nextPayment }) });
+                    const res = await fetch('/api/log-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: paymentModal.airtableId, memberName: `${paymentModal.firstName} ${paymentModal.lastName}`, method: m, currentDueDate: paymentModal.nextPayment, prorated: proratePayment, proratedAmount: proratePayment ? proratedAmount : null }) });
                     const result = await res.json();
                     if (result.success) {
                       setMembers(prev => prev.map(mem => mem.airtableId === paymentModal.airtableId ? { ...mem, status: 'ACTIVE', nextPayment: result.nextPaymentDue } : mem));
                       if (selectedMember && selectedMember.airtableId === paymentModal.airtableId) { setSelectedMember({ ...selectedMember, status: 'ACTIVE', nextPayment: result.nextPaymentDue }); }
                       setPaymentModal(null);
-                      alert(`Payment logged! Next payment due: ${result.nextPaymentDue}`);
+                      alert(`Payment logged!${proratePayment ? ' (Prorated: $' + proratedAmount.toFixed(2) + ')' : ''}\nNext payment due: ${result.nextPaymentDue}`);
                     } else { alert('Error: ' + result.error); }
                   } catch (err) { alert('Network error. Please try again.'); }
                 }} className="bg-slate-50 hover:bg-[#16a34a] hover:text-white text-[#001f3f] font-bold py-4 rounded-xl border border-slate-200 transition-all text-sm">{m}</button>
@@ -1737,7 +1761,8 @@ const handleAddMemberSubmit = async (e) => {
             <button onClick={() => setPaymentModal(null)} className="w-full text-slate-400 text-sm font-bold hover:text-slate-600">Cancel</button>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* CORPORATE PAYMENT MODAL */}
       {corpPaymentModal && (
