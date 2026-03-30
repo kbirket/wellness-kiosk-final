@@ -35,6 +35,9 @@ export async function POST(request) {
     if (fields.notes !== undefined) airtableFields['Notes'] = sanitize(fields.notes);
     if (fields.discountCode !== undefined) airtableFields['Discount Code'] = sanitize(fields.discountCode);
     if (fields.discountExpiration !== undefined) airtableFields['Discount Expiration'] = sanitize(fields.discountExpiration);
+    if (req.body.nextPayment !== undefined) {
+  fields['Next Payment Due'] = req.body.nextPayment || null;
+}
     if (typeof req.body.inactive === 'boolean') {
   fields['Inactive'] = req.body.inactive;
 }
