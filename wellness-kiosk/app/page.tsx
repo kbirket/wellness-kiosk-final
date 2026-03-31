@@ -1804,8 +1804,7 @@ const filteredMembers = scopedMembers.filter(m => { if (!(m.firstName + ' ' + m.
         const today = new Date();
         const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
         const daysRemaining = daysInMonth - today.getDate() + 1;
-        const proratedAmount = Math.round((fullRate / daysInMonth) * daysRemaining * 100) / 100;
-        const displayAmount = proratePayment ? proratedAmount : fullRate;
+const proratedAmount = daysRemaining * 5;        const displayAmount = proratePayment ? proratedAmount : fullRate;
         return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-white rounded-2xl w-full max-w-sm p-8 relative shadow-2xl">
@@ -1817,12 +1816,18 @@ const filteredMembers = scopedMembers.filter(m => { if (!(m.firstName + ' ' + m.
             </div>
             {fullRate > 0 && (
               <div className="mb-5">
-                <label onClick={() => setProratePayment(!proratePayment)} className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl p-4 cursor-pointer hover:bg-blue-100 transition-colors">
-                  <input type="checkbox" checked={proratePayment} onChange={() => setProratePayment(!proratePayment)} className="w-5 h-5 rounded border-slate-300 text-[#1080ad] focus:ring-[#1080ad]" />
+                <label onClick={() => setProratePayment(!proratePayment)} className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4 cursor-pointer hover:bg-amber-100 transition-colors">
+                  <input type="checkbox" checked={proratePayment} onChange={() => setProratePayment(!proratePayment)} className="w-5 h-5 rounded border-slate-300 text-[#f59e0b] focus:ring-[#f59e0b]" />
                   <div className="flex-1">
-                    <p className="text-sm font-bold text-[#001f3f]">Prorate First Month</p>
-                    <p className="text-[10px] text-blue-500">{daysRemaining} of {daysInMonth} days remaining this month</p>
+                    <p className="text-sm font-bold text-[#001f3f]">$5/Day Rate</p>
+                    <p className="text-[10px] text-amber-600">{daysRemaining} days remaining this month</p>
                   </div>
+                </label>
+                <div className="mt-3 text-center">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Amount Due</p>
+                  <p className="text-3xl font-black text-[#16a34a]">${displayAmount.toFixed(2)}</p>
+                  {proratePayment && <p className="text-[10px] text-slate-400 mt-1">Full rate: ${fullRate.toFixed(2)}/mo</p>}
+                </div>
                 </label>
                 <div className="mt-3 text-center">
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Amount Due</p>
