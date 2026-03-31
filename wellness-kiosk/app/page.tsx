@@ -711,70 +711,8 @@ const filteredMembers = scopedMembers.filter(m => { if (!(m.firstName + ' ' + m.
 
   if (view === 'corp_login') { return (<div className="min-h-screen bg-[#001f3f] flex items-center justify-center p-4 font-sans"><div className="bg-white rounded-[3rem] shadow-2xl p-12 w-full max-w-md border-t-8 border-[#8b5cf6]"><div className="flex justify-center mb-6"><Briefcase size={64} className="text-[#8b5cf6]" /></div><h2 className="text-4xl font-black text-center text-slate-900 mb-2 tracking-tight">Partner Login</h2><p className="text-slate-400 mb-10 text-center font-medium tracking-tight">Access your employee wellness roster.</p><input type="text" placeholder="Company Username" id="c_in" className="w-full p-5 bg-slate-100 rounded-2xl mb-4 outline-none border-2 border-transparent focus:border-purple-500/20 text-lg" onKeyDown={(e) => e.key === 'Enter' && handleCorpLogin()} /><input type="password" placeholder="Access PIN" id="c_pin" className="w-full p-5 bg-slate-100 rounded-2xl mb-8 outline-none border-2 border-transparent focus:border-purple-500/20 text-lg" onKeyDown={(e) => e.key === 'Enter' && handleCorpLogin()} /><button onClick={handleCorpLogin} className="w-full bg-[#8b5cf6] text-white p-5 rounded-2xl font-bold text-xl shadow-xl hover:bg-purple-700 transition-all">Sign In</button><button onClick={() => setView('landing')} className="w-full mt-6 text-slate-400 font-bold hover:text-slate-600 transition-colors">Return to Home</button></div></div>); }
 
-if (view === 'corp_portal' && activeCorp) { 
-    const corpMembers = members.filter(m => m.sponsorName.toLowerCase() === activeCorp.companyName.toLowerCase()); 
-    const totalCorpVisits = corpMembers.reduce((sum, m) => sum + m.visits, 0); 
-    const singlePlans = corpMembers.filter(m => m.type.includes('SINGLE')).length; 
-    const familyPlans = corpMembers.filter(m => m.type.includes('FAMILY')).length; 
-    
-    return (
-      <div className="min-h-screen bg-[#f0f2f5] font-sans print:bg-white">
-        <nav className="bg-[#001f3f] text-white p-4 shadow-md flex justify-between items-center sticky top-0 z-10 print:hidden">
-          <div className="flex items-center gap-3">
-            <img src={LOGO_URL} alt="Logo" className="h-6" />
-            <span className="font-bold tracking-tight border-l border-white/20 pl-3">Corporate Partner Portal</span>
-          </div>
-          <button onClick={handleLogout} className="bg-red-500/20 text-red-100 hover:bg-red-500 hover:text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold transition-all">
-            <LogOut size={16}/> Logout
-          </button>
-        </nav>
-        <main className="max-w-5xl mx-auto p-8 space-y-8 mt-4 print:p-0 print:m-0 print:max-w-none print:mt-0">
-          <div className="flex justify-between items-end print:hidden">
-            <div>
-              <h1 className="text-4xl font-black text-[#001f3f] tracking-tight mb-1">{activeCorp.companyName} Wellness Roster</h1>
-              <p className="text-slate-500 font-medium">Review your enrolled employees and gym utilization.</p>
-            </div>
-            <button onClick={() => window.print()} className="bg-white border border-slate-200 text-[#001f3f] px-6 py-3 rounded-xl font-bold text-sm shadow-sm flex items-center gap-2 hover:bg-slate-50 transition-all">
-              <Printer size={16} /> Print Roster
-            </button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 print:grid-cols-4 print:gap-4">
-            <ProStatCard value={corpMembers.length} label="Total Enrolled" color="#001f3f" />
-            <ProStatCard value={totalCorpVisits} label="Total Visits" color="#1080ad" />
-            <ProStatCard value={singlePlans} label="Individual Plans" color="#16a34a" />
-            <ProStatCard value={familyPlans} label="Family Plans" color="#f59e0b" />
-          </div>
-          <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-            <table className="w-full text-left border-collapse">
-              <thead className="bg-white text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
-                <tr>
-                  <th className="px-8 py-4">Employee Name</th>
-                  <th className="px-8 py-4">Member ID</th>
-                  <th className="px-8 py-4">Plan Type</th>
-                  <th className="px-8 py-4 text-right">Lifetime Visits</th>
-                </tr>
-              </thead>
-              <tbody className="text-sm">
-                {corpMembers.length === 0 ? (
-                  <tr><td colSpan="4" className="text-center py-12 text-slate-400 font-medium italic">No employees enrolled.</td></tr>
-                ) : (
-                  corpMembers.map(m => (
-                    <tr key={m.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors">
-                      <td className="px-8 py-5 font-bold text-slate-800">{m.firstName} {m.lastName}</td>
-                      <td className="px-8 py-5 font-mono text-slate-400">{m.id}</td>
-                      <td className="px-8 py-5"><span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black tracking-tight">{m.type}</span></td>
-                      <td className="px-8 py-5 text-right font-black text-[#1080ad] text-lg">{m.visits}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </main>
-      </div>
-    ); 
-  }
-           
+  if (view === 'corp_portal' && activeCorp) { const corpMembers = members.filter(m => m.sponsorName.toLowerCase() === activeCorp.companyName.toLowerCase()); const totalCorpVisits = corpMembers.reduce((sum, m) => sum + m.visits, 0); const singlePlans = corpMembers.filter(m => m.type.includes('SINGLE')).length; const familyPlans = corpMembers.filter(m => m.type.includes('FAMILY')).length; return (<div className="min-h-screen bg-[#f0f2f5] font-sans print:bg-white"><nav className="bg-[#001f3f] text-white p-4 shadow-md flex justify-between items-center sticky top-0 z-10 print:hidden"><div className="flex items-center gap-3"><img src={LOGO_URL} alt="Logo" className="h-6" /><span className="font-bold tracking-tight border-l border-white/20 pl-3">Corporate Partner Portal</span></div><button onClick={handleLogout} className="bg-red-500/20 text-red-100 hover:bg-red-500 hover:text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold transition-all"><LogOut size={16}/> Logout</button></nav><main className="max-w-5xl mx-auto p-8 space-y-8 mt-4 print:p-0 print:m-0 print:max-w-none print:mt-0"><div className="flex justify-between items-end print:hidden"><div><h1 className="text-4xl font-black text-[#001f3f] tracking-tight mb-1">{activeCorp.companyName} Wellness Roster</h1><p className="text-slate-500 font-medium">Review your enrolled employees and gym utilization.</p></div><button onClick={() => window.print()} className="bg-white border border-slate-200 text-[#001f3f] px-6 py-3 rounded-xl font-bold text-sm shadow-sm flex items-center gap-2 hover:bg-slate-50 transition-all"><Printer size={16} /> Print Roster</button></div><div className="hidden print:block mb-6 border-b-4 border-[#001f3f] pb-6 text-center"><img src={LOGO_URL} alt="Logo" className="h-12 mx-auto mb-4 invert grayscale" /><h1 className="text-3xl font-black text-[#001f3f] tracking-tight">{activeCorp.companyName} Wellness Roster</h1><p className="text-slate-500 font-bold uppercase tracking-widest mt-2">{currentDateString}</p></div><div className="grid grid-cols-1 md:grid-cols-4 gap-6 print:grid-cols-4 print:gap-4"><ProStatCard value={corpMembers.length} label="Total Enrolled" color="#001f3f" /><ProStatCard value={totalCorpVisits} label="Total Visits" color="#1080ad" /><ProStatCard value={singlePlans} label="Individual Plans" color="#16a34a" /><ProStatCard value={familyPlans} label="Family Plans" color="#f59e0b" /></div><div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden print:border-slate-300 print:shadow-none print:rounded-none"><div className="p-6 border-b border-slate-100 bg-slate-50 print:bg-white print:p-4"><h3 className="text-lg font-bold text-[#001f3f]">Employee Directory</h3></div><table className="w-full text-left border-collapse print:text-sm"><thead className="bg-white text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 print:border-b-2 print:border-slate-800"><tr><th className="px-8 py-4 print:py-2">Employee Name</th><th className="px-8 py-4 print:py-2">Member ID</th><th className="px-8 py-4 print:py-2">Plan Type</th><th className="px-8 py-4 print:py-2 text-right">Lifetime Visits</th></tr></thead><tbody className="text-sm">{corpMembers.length === 0 ? (<tr><td colSpan="4" className="text-center py-12 text-slate-400 font-medium italic">No employees currently enrolled.</td></tr>) : (corpMembers.map(m => (<tr key={m.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors print:border-slate-200"><td className="px-8 py-5 print:py-2 font-bold text-slate-800">{m.firstName} {m.lastName}</td><td className="px-8 py-5 print:py-2 font-mono text-slate-400">{m.id}</td><td className="px-8 py-5 print:py-2"><span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 print:bg-transparent print:px-0 print:text-black text-[10px] font-black tracking-tight">{m.type}</span></td><td className="px-8 py-5 print:py-2 text-right font-black text-[#1080ad] print:text-black text-lg print:text-base">{m.visits}</td></tr>)))}</tbody></table></div></main></div>); }
+
   // MAIN DIRECTOR DASHBOARD
   return (
     <div className="flex min-h-screen bg-[#f0f2f5] font-sans text-slate-800">
@@ -1353,57 +1291,37 @@ if (view === 'corp_portal' && activeCorp) {
                   ) : <p className="text-sm text-slate-400 italic">No payments collected this period.</p>}
                 </div>
 
-             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                  <h3 className="text-md font-black text-[#001f3f] mb-6 flex items-center gap-2">
-                    <TrendingUp size={18} className="text-[#1080ad]" /> 
-                    Monthly Revenue Progress
-                  </h3>
-                  {(() => {
-                    const target = viewingCenter === 'anthony' ? 4000 : viewingCenter === 'harper' ? 1000 : 5000;
-                    const progress = (totalCollected / target) * 100;
-                    return (
-                      <div className="space-y-6">
-                        <div>
-                          <div className="flex justify-between items-end mb-2">
-                            <div>
-                              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Collected</p>
-                              <p className="text-3xl font-black text-[#16a34a]">${Math.round(totalCollected).toLocaleString()}</p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Goal</p>
-                              <p className="text-lg font-black text-slate-400">${target.toLocaleString()}</p>
-                            </div>
-                          </div>
-                          <div className="w-full h-4 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
-                            <div 
-                              className="h-full bg-gradient-to-r from-[#16a34a] to-emerald-400 transition-all duration-1000" 
-                              style={{ width: `${Math.min(100, progress)}%` }}
-                            />
-                          </div>
-                          <p className="text-[10px] font-black text-slate-400 mt-2 uppercase tracking-widest">
-                            {Math.round(progress)}% of monthly target reached
-                          </p>
-                        </div>
-
-                        {/* Keep your mini breakdown stats below the bar */}
-                        <div className="grid grid-cols-3 gap-4 pt-2">
-                          <div className="bg-green-50 p-3 rounded-xl border border-green-100">
-                            <p className="text-[9px] font-black text-green-600 uppercase mb-1">Members</p>
-                            <p className="text-lg font-black text-[#16a34a]">${Math.round(actualRevenue).toLocaleString()}</p>
-                          </div>
-                          <div className="bg-purple-50 p-3 rounded-xl border border-purple-100">
-                            <p className="text-[9px] font-black text-purple-600 uppercase mb-1">Corporate</p>
-                            <p className="text-lg font-black text-[#8b5cf6]">${Math.round(corpCollected).toLocaleString()}</p>
-                          </div>
-                          <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                            <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Rate</p>
-                            <p className="text-lg font-black text-slate-700">{collectionRate}%</p>
-                          </div>
-                        </div>
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                  <h3 className="text-md font-black text-[#001f3f] mb-6 flex items-center gap-2"><Activity size={18} className="text-[#1080ad]" /> Actual Revenue</h3>
+                  <div className="space-y-6">
+                    <div>
+                      <div className="flex justify-between items-end mb-2">
+                        <div><p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Actual Monthly Revenue</p><p className="text-3xl font-black text-[#16a34a]">${Math.round(totalCollected).toLocaleString()}</p></div>
+                        <div className="text-right"><p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Expected</p><p className="text-lg font-black text-slate-400">${Math.round(expectedRevenue).toLocaleString()}</p></div>
                       </div>
-                    );
-                  })()}
+                    </div>
+                    <ProgressBar value={Math.round(totalCollected)} max={Math.round(expectedRevenue)} color="#16a34a" label="Collected vs Expected" />
+                    <div className="grid grid-cols-3 gap-4 mt-4">
+                      <div className="bg-green-50 p-4 rounded-xl border border-green-100">
+                        <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-1">Member Payments</p>
+                        <p className="text-2xl font-black text-[#16a34a]">${Math.round(actualRevenue).toLocaleString()}</p>
+                      </div>
+                      <div className="bg-purple-50 p-4 rounded-xl border border-purple-100">
+                        <p className="text-[10px] font-black text-purple-600 uppercase tracking-widest mb-1">Corporate Payments</p>
+                        <p className="text-2xl font-black text-[#8b5cf6]">${Math.round(corpCollected).toLocaleString()}</p>
+                      </div>
+                      <div className="bg-red-50 p-4 rounded-xl border border-red-100">
+                        <p className="text-[10px] font-black text-red-600 uppercase tracking-widest mb-1">Outstanding</p>
+                        <p className="text-2xl font-black text-red-500">${Math.round(Math.max(0, expectedRevenue - totalCollected)).toLocaleString()}</p>
+                      </div>
+                    </div>
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Collection Rate</p>
+                      <p className="text-3xl font-black" style={{ color: collectionRate >= 80 ? '#16a34a' : collectionRate >= 50 ? '#f59e0b' : '#ef4444' }}>{collectionRate}%</p>
+                    </div>
+                  </div>
                 </div>
+              </div>
 
               {/* EXISTING: TOP VISITORS + SLIPPING AWAY */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1812,208 +1730,52 @@ if (view === 'corp_portal' && activeCorp) {
         </div>
       )}
 
-      {{/* MEMBER DETAIL MODAL WITH EDIT MODE */}
+      {/* MEMBER DETAIL MODAL WITH EDIT MODE */}
       {selectedMember && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#001f3f]/90 backdrop-blur-md">
            <div className="bg-white rounded-[2rem] w-full max-w-4xl flex overflow-hidden shadow-2xl relative max-h-[90vh]">
               <button onClick={() => { setSelectedMember(null); setEditMode(false); }} className="absolute top-6 right-6 text-slate-300 hover:text-red-500 transition-all z-20"><X size={24}/></button>
-              
-              {/* Left Sidebar: QR & PIN */}
-              <div className="w-1/3 bg-slate-50 p-12 flex flex-col items-center justify-center border-r border-slate-100">
-                <div className="bg-white p-6 rounded-2xl shadow-xl mb-8 border border-slate-100">
-                  <QRCode data={selectedMember.id} size={180} />
-                </div>
-                <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Member Identity</p>
-                <p className="text-xl font-bold text-[#001f3f] mb-6">#{selectedMember.id}</p>
-                <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Kiosk PIN</p>
-                <p className="text-3xl font-black tracking-[0.2em] text-[#1080ad]">{selectedMember.password}</p>
-              </div>
-
-              {/* Main Content Area */}
+              <div className="w-1/3 bg-slate-50 p-12 flex flex-col items-center justify-center border-r border-slate-100"><div className="bg-white p-6 rounded-2xl shadow-xl mb-8 border border-slate-100"><QRCode data={selectedMember.id} size={180} /></div><p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Member Identity</p><p className="text-xl font-bold text-[#001f3f] mb-6">#{selectedMember.id}</p><p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Kiosk PIN</p><p className="text-3xl font-black tracking-[0.2em] text-[#1080ad]">{selectedMember.password}</p></div>
               <div className="flex-1 p-16 overflow-y-auto">
-                  {/* Status Banners */}
-                  {selectedMember.inactive && (
-                    <div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg flex justify-between items-center">
-                      <p className="text-red-800 font-bold text-sm">This member is marked INACTIVE.</p>
-                      <button onClick={async () => { 
-                        try { 
-                          await fetch('/api/update-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: selectedMember.airtableId, inactive: false }) }); 
-                          const updated = { ...selectedMember, inactive: false };
-                          setMembers(prev => prev.map(m => m.airtableId === selectedMember.airtableId ? updated : m)); 
-                          setSelectedMember(updated); 
-                        } catch (err) { alert('Could not update.'); } 
-                      }} className="bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-green-700 transition-colors whitespace-nowrap ml-4">Reactivate</button>
+                  {selectedMember.inactive && (<div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg flex justify-between items-center"><p className="text-red-800 font-bold text-sm">This member is marked INACTIVE. They cannot check in or access the Member Portal.</p><button onClick={async () => { try { await fetch('/api/update-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: selectedMember.airtableId, inactive: false }) }); setMembers(prev => prev.map(m => m.airtableId === selectedMember.airtableId ? { ...m, inactive: false } : m)); setSelectedMember({ ...selectedMember, inactive: false }); } catch (err) { alert('Could not update.'); } }} className="bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-green-700 transition-colors whitespace-nowrap ml-4">Reactivate</button></div>)}
+                 {selectedMember.needsOrientation && (<div className="mb-6 bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg flex justify-between items-center"><p className="text-blue-800 font-bold text-sm">This member has not completed their orientation.</p><button onClick={async () => { try { await fetch('/api/update-orientation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: selectedMember.airtableId, completed: true }) }); setMembers(prev => prev.map(m => m.airtableId === selectedMember.airtableId ? { ...m, needsOrientation: false } : m)); setSelectedMember({ ...selectedMember, needsOrientation: false }); } catch (err) { alert('Could not update.'); } }} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors whitespace-nowrap ml-4">Mark Complete</button></div>)}
+                 <span className={`px-4 py-1 rounded-full text-[10px] font-black tracking-widest ${getStoplight(selectedMember)==='green'?'bg-green-100 text-green-600':getStoplight(selectedMember)==='yellow'?'bg-yellow-100 text-yellow-600':'bg-red-100 text-red-600'}`}>{getStoplight(selectedMember)==='green'?'ACTIVE':getStoplight(selectedMember)==='yellow'?'GRACE PERIOD':'ACCOUNT LOCKED'}</span>
+                 <h2 className="text-6xl font-black text-slate-900 mt-6 mb-12 tracking-tighter leading-none">{selectedMember.firstName}<br/>{selectedMember.lastName}</h2>
+
+                 {!editMode ? (<>
+                 <div className="grid grid-cols-2 gap-8 gap-x-12">
+                    <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Membership Type</p><p className="text-lg font-bold text-slate-800">{selectedMember.type}</p></div>
+                    <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Contact Info</p><p className="text-sm font-bold text-slate-800 truncate">{selectedMember.email || 'No Email'}<br/>{selectedMember.phone || 'No Phone'}</p></div>
+                    <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Renewal Date</p><p className={`text-lg font-bold ${getStoplight(selectedMember)!=='green'?'text-red-500':'text-slate-800'}`}>{selectedMember.nextPayment ? new Date(selectedMember.nextPayment + 'T00:00:00').toLocaleDateString('en-US', {month:'long',day:'numeric',year:'numeric'}) : 'N/A'}</p></div>
+                    {selectedMember.address && (<div className="col-span-2"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Address</p><p className="text-sm font-bold text-slate-800">{[selectedMember.address, selectedMember.city, selectedMember.state, selectedMember.zip].filter(Boolean).join(', ')}</p></div>)}
+                    {selectedMember.sponsorName && (<div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Corporate Sponsor</p><p className="text-lg font-bold text-[#dd6d22]">{selectedMember.sponsorName}</p></div>)}
+                    {selectedMember.familyName && (<div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Family Group</p><p className="text-lg font-bold text-[#8b5cf6]">{selectedMember.familyName}</p></div>)}
+                    {selectedMember.access247 && (<div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">24/7 Access</p><p className="text-lg font-bold text-[#f59e0b]">Badge #{selectedMember.badgeNumber || 'N/A'}</p></div>)}
+                    {selectedMember.discountCode && (<div><p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-1">Active Discount</p><p className="text-lg font-black text-[#16a34a]">🎟️ {selectedMember.discountCode} <span className="text-xs font-medium text-slate-500 block mt-1">Expires: {selectedMember.discountExpiration ? new Date(selectedMember.discountExpiration + 'T00:00:00').toLocaleDateString() : 'Never'}</span></p></div>)}
+                 </div>
+                 {selectedMember.notes && (<div className="col-span-2 mt-6"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Director Notes</p><p className="text-sm text-slate-600 bg-slate-50 p-4 rounded-xl border border-slate-100 whitespace-pre-wrap">{selectedMember.notes}</p></div>)}
+                 <div className="col-span-2 mt-6">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Check-in History</p>
+                    {(() => { const memberVisits = visits.filter(v => v.name.toLowerCase() === `${selectedMember.firstName} ${selectedMember.lastName}`.toLowerCase()); const displayVisits = showAllMemberVisits ? memberVisits : memberVisits.slice(0, 5); if (memberVisits.length === 0) return <p className="text-sm text-slate-500 bg-slate-50 p-4 rounded-xl border border-slate-100 italic">No recent visits on file.</p>; return (<div><div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">{displayVisits.map((v, i) => (<div key={i} className="flex justify-between items-center bg-blue-50 p-3 rounded-xl border border-blue-100"><span className="font-bold text-slate-800 text-sm flex items-center gap-2"><CheckCircle size={14} className="text-[#1080ad]"/> {v.center} <span className="text-xs font-medium text-slate-500 hidden md:inline ml-1">({v.method || 'General Workout'})</span></span><span className="font-bold text-[#1080ad] text-xs">{new Date(v.time).toLocaleDateString()} @ {new Date(v.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span></div>))}</div>{memberVisits.length > 5 && (<button onClick={() => setShowAllMemberVisits(!showAllMemberVisits)} className="w-full py-2 mt-3 text-sm font-bold text-[#1080ad] hover:text-[#001f3f] transition-colors bg-blue-50/50 rounded-lg border border-blue-100 hover:bg-blue-50">{showAllMemberVisits ? 'Show Less ↑' : `See All ${memberVisits.length} Visits →`}</button>)}</div>); })()}
+                 </div>
+                 </>) : (<>
+                 <div className="space-y-4 mb-8">
+                    <div className="grid grid-cols-2 gap-4"><div><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">First Name</label><input id="ed_fname" defaultValue={selectedMember.firstName} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]" /></div><div><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Last Name</label><input id="ed_lname" defaultValue={selectedMember.lastName} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]" /></div></div>
+                    <div className="grid grid-cols-2 gap-4"><div><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Email</label><input id="ed_email" defaultValue={selectedMember.email} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]" /></div><div><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Phone</label><input id="ed_phone" defaultValue={selectedMember.phone} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]" /></div></div>
+                    <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Street Address</label><input id="ed_address" defaultValue={selectedMember.address} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]" /></div>
+                    <div className="grid grid-cols-3 gap-3"><div><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">City</label><input id="ed_city" defaultValue={selectedMember.city} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]" /></div><div><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">State</label><input id="ed_state" defaultValue={selectedMember.state || 'KS'} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]" /></div><div><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Zip</label><input id="ed_zip" defaultValue={selectedMember.zip} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]" /></div></div>
+                    <div className="grid grid-cols-2 gap-4"><div><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Plan Type</label><select id="ed_plan" defaultValue={selectedMember.type} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad] font-bold"><option value="SINGLE">Single</option><option value="FAMILY">Family</option><option value="SENIOR">Senior</option><option value="SENIOR FAMILY">Senior Family</option><option value="STUDENT">Student (14-22)</option><option value="CORPORATE">Corporate</option><option value="CORPORATE FAMILY">Corporate Family</option><option value="MILITARY">Military</option><option value="MILITARY FAMILY">Military Family</option><option value="HD6">Staff (HD6)</option><option value="HD6 FAMILY">Staff Family (HD6)</option><option value="LIFETIME">Lifetime Pass</option><option value="LIFETIME FAMILY">Lifetime Family</option></select></div><div><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Billing Method</label><select id="ed_billing" defaultValue={selectedMember.billingMethod || 'Month-to-Month'} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad] font-bold"><option value="Month-to-Month">Month-to-Month</option><option value="Auto-Draft">Auto-Draft</option><option value="6-Month Prepay">6-Month Prepay</option><option value="12-Month Prepay">12-Month Prepay</option></select></div></div>
+                    <div className="grid grid-cols-2 gap-4"><div><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Home Center</label><select id="ed_center" defaultValue={selectedMember.center} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad] font-bold"><option value="Anthony Wellness Center">Anthony</option><option value="Harper Wellness Center">Harper</option></select></div><div><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Corporate Sponsor</label><select id="ed_sponsor" defaultValue={selectedMember.sponsorName} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad] font-bold"><option value="">None</option>{corporatePartners.map(cp => (<option key={cp.name} value={cp.sponsorMatch}>{cp.name}</option>))}</select></div></div>
+                    <div className="grid grid-cols-2 gap-4"><label className="flex items-center gap-3 bg-amber-50 border border-amber-100 rounded-xl p-3 cursor-pointer"><input type="checkbox" id="ed_247" defaultChecked={selectedMember.access247} className="w-4 h-4 rounded" /><span className="text-sm font-bold text-amber-800">24/7 Access</span></label><div><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Badge Number</label><input id="ed_badge" defaultValue={selectedMember.badgeNumber} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]" /></div></div>
+                     <div><label className="text-xs font-bold text-[#dd6d22] uppercase mb-1 block tracking-widest">Next Payment Due</label><input type="date" id="ed_nextpayment" defaultValue={selectedMember.nextPayment || ''} className="w-full p-3 bg-orange-50 border border-orange-200 rounded-xl text-sm outline-none focus:border-[#dd6d22] font-bold text-[#dd6d22]" /></div>
+                    <div className="grid grid-cols-2 gap-4"><div><label className="text-xs font-bold text-green-600 uppercase mb-1 block tracking-widest">Discount / Promo</label><input id="ed_discount" defaultValue={selectedMember.discountCode} placeholder="e.g. Farm Bureau $10" className="w-full p-3 bg-green-50 border border-green-200 rounded-xl text-sm outline-none focus:border-green-600 font-bold text-green-800 placeholder:text-green-300" /></div><div><label className="text-xs font-bold text-green-600 uppercase mb-1 block tracking-widest">Expiration Date</label><input type="date" id="ed_discount_exp" defaultValue={selectedMember.discountExpiration || ''} className="w-full p-3 bg-green-50 border border-green-200 rounded-xl text-sm outline-none focus:border-green-600 font-bold text-green-800" /></div></div>
+                    <div className="col-span-2 mt-2 mb-4"><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Director Notes</label><textarea id="ed_notes" defaultValue={selectedMember.notes || ''} placeholder="Add private notes about this member..." className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad] min-h-[100px]"></textarea></div>
+                   <div className="flex gap-3 mt-4">
+                      <button onClick={async () => { const selectedPlan = document.getElementById('ed_plan').value; const selectedBilling = document.getElementById('ed_billing').value; const enteredDiscount = document.getElementById('ed_discount').value; const basePrice = getBaseRate(selectedPlan, selectedBilling); const discountMatch = enteredDiscount.match(/\$(\d+)/); const discountAmount = discountMatch ? parseInt(discountMatch[1], 10) : 0; const finalMonthlyRate = Math.max(0, basePrice - discountAmount); const updates = { airtableId: selectedMember.airtableId, firstName: document.getElementById('ed_fname').value, lastName: document.getElementById('ed_lname').value, email: document.getElementById('ed_email').value, phone: document.getElementById('ed_phone').value, address: document.getElementById('ed_address').value, city: document.getElementById('ed_city').value, state: document.getElementById('ed_state').value, zip: document.getElementById('ed_zip').value, plan: selectedPlan, billingMethod: selectedBilling, center: document.getElementById('ed_center').value, sponsor: document.getElementById('ed_sponsor').value, access247: document.getElementById('ed_247').checked, badgeNumber: document.getElementById('ed_badge').value, notes: (() => { var newNotes = document.getElementById('ed_notes').value; var oldNotes = selectedMember.notes || ''; if (newNotes === oldNotes || newNotes.trim() === '') return newNotes; if (oldNotes.trim() === '') { var d = new Date(); return '[' + d.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}) + '] ' + newNotes; } if (newNotes.length > oldNotes.length && newNotes.startsWith(oldNotes)) { var addedText = newNotes.substring(oldNotes.length).trim(); if (addedText.length > 0) { var d2 = new Date(); return oldNotes + '\n[' + d2.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}) + '] ' + addedText; } } return newNotes; })(), discountCode: enteredDiscount, discountExpiration: document.getElementById('ed_discount_exp').value, monthlyRate: finalMonthlyRate, nextPayment: document.getElementById('ed_nextpayment').value || null }; try { const res = await fetch('/api/update-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates) }); const result = await res.json(); if (result.success || res.ok) { const updated = { ...selectedMember, firstName: updates.firstName, lastName: updates.lastName, email: updates.email, phone: updates.phone, address: updates.address, city: updates.city, state: updates.state, zip: updates.zip, type: updates.plan, billingMethod: updates.billingMethod, center: updates.center, sponsorName: updates.sponsor, access247: updates.access247, badgeNumber: updates.badgeNumber, notes: updates.notes, discountCode: updates.discountCode, discountExpiration: updates.discountExpiration, monthlyRate: updates.monthlyRate, nextPayment: updates.nextPayment }; setSelectedMember(updated); setMembers(prev => prev.map(m => m.airtableId === selectedMember.airtableId ? updated : m)); setEditMode(false); } else { alert('Airtable Error: ' + result.error); } } catch (err) { alert('Network error.'); } }} className="flex-1 bg-[#1080ad] text-white py-3 rounded-xl font-bold text-sm hover:bg-blue-700 transition-colors">Save Changes</button>
+                      <button onClick={() => setEditMode(false)} className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold text-sm hover:bg-slate-200 transition-colors">Cancel</button>
                     </div>
-                  )}
-                  
-                  {selectedMember.needsOrientation && (
-                    <div className="mb-6 bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg flex justify-between items-center">
-                      <p className="text-blue-800 font-bold text-sm">Needs orientation.</p>
-                      <button onClick={async () => { 
-                        try { 
-                          await fetch('/api/update-orientation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: selectedMember.airtableId, completed: true }) }); 
-                          const updated = { ...selectedMember, needsOrientation: false };
-                          setMembers(prev => prev.map(m => m.airtableId === selectedMember.airtableId ? updated : m)); 
-                          setSelectedMember(updated); 
-                        } catch (err) { alert('Could not update.'); } 
-                      }} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors whitespace-nowrap ml-4">Mark Complete</button>
-                    </div>
-                  )}
-
-                  <span className={`px-4 py-1 rounded-full text-[10px] font-black tracking-widest ${getStoplight(selectedMember)==='green'?'bg-green-100 text-green-600':getStoplight(selectedMember)==='yellow'?'bg-yellow-100 text-yellow-600':'bg-red-100 text-red-600'}`}>
-                    {selectedMember.inactive ? 'INACTIVE' : getStoplight(selectedMember)==='green'?'ACTIVE':getStoplight(selectedMember)==='yellow'?'GRACE PERIOD':'ACCOUNT LOCKED'}
-                  </span>
-                  
-                  <h2 className="text-6xl font-black text-slate-900 mt-6 mb-12 tracking-tighter leading-none">{selectedMember.firstName}<br/>{selectedMember.lastName}</h2>
-
-                  {!editMode ? (
-                    <>
-                      <div className="grid grid-cols-2 gap-8 gap-x-12">
-                        <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Membership Type</p><p className="text-lg font-bold text-slate-800">{selectedMember.type}</p></div>
-                        <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Contact Info</p><p className="text-sm font-bold text-slate-800 truncate">{selectedMember.email || 'No Email'}<br/>{selectedMember.phone || 'No Phone'}</p></div>
-                        <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Renewal Date</p><p className={`text-lg font-bold ${getStoplight(selectedMember)!=='green'?'text-red-500':'text-slate-800'}`}>{selectedMember.nextPayment ? new Date(selectedMember.nextPayment + 'T00:00:00').toLocaleDateString('en-US', {month:'long',day:'numeric',year:'numeric'}) : 'N/A'}</p></div>
-                        <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Current Method</p><p className="text-lg font-bold text-slate-800">{selectedMember.paymentMethod || 'None logged'}</p></div>
-                        {selectedMember.address && (<div className="col-span-2"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Address</p><p className="text-sm font-bold text-slate-800">{[selectedMember.address, selectedMember.city, selectedMember.state, selectedMember.zip].filter(Boolean).join(', ')}</p></div>)}
-                      </div>
-
-                      {selectedMember.notes && (<div className="col-span-2 mt-6"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Director Notes</p><p className="text-sm text-slate-600 bg-slate-50 p-4 rounded-xl border border-slate-100 whitespace-pre-wrap">{selectedMember.notes}</p></div>)}
-                      
-                      <div className="col-span-2 mt-6">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Check-in History</p>
-                        {(() => { 
-                          const memberVisits = visits.filter(v => v.name.toLowerCase() === `${selectedMember.firstName} ${selectedMember.lastName}`.toLowerCase()); 
-                          const displayVisits = showAllMemberVisits ? memberVisits : memberVisits.slice(0, 5); 
-                          if (memberVisits.length === 0) return <p className="text-sm text-slate-500 bg-slate-50 p-4 rounded-xl border border-slate-100 italic">No recent visits on file.</p>; 
-                          return (
-                            <div>
-                              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
-                                {displayVisits.map((v, i) => (
-                                  <div key={i} className="flex justify-between items-center bg-blue-50 p-3 rounded-xl border border-blue-100">
-                                    <span className="font-bold text-slate-800 text-sm flex items-center gap-2"><CheckCircle size={14} className="text-[#1080ad]"/> {v.center} <span className="text-xs font-medium text-slate-500 hidden md:inline ml-1">({v.method || 'General Workout'})</span></span>
-                                    <span className="font-bold text-[#1080ad] text-xs">{new Date(v.time).toLocaleDateString()} @ {new Date(v.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                                  </div>
-                                ))}
-                              </div>
-                              {memberVisits.length > 5 && (<button onClick={() => setShowAllMemberVisits(!showAllMemberVisits)} className="w-full py-2 mt-3 text-sm font-bold text-[#1080ad] hover:text-[#001f3f] transition-colors bg-blue-50/50 rounded-lg border border-blue-100 hover:bg-blue-50">{showAllMemberVisits ? 'Show Less ↑' : `See All ${memberVisits.length} Visits →`}</button>)}
-                            </div>
-                          ); 
-                        })()}
-                      </div>
-                    </>
-                  ) : (
-                    /* Edit Form Section */
-                    <div className="space-y-4 mb-8">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">First Name</label><input id="ed_fname" defaultValue={selectedMember.firstName} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]" /></div>
-                        <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Last Name</label><input id="ed_lname" defaultValue={selectedMember.lastName} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]" /></div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Email</label><input id="ed_email" defaultValue={selectedMember.email} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]" /></div>
-                        <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Phone</label><input id="ed_phone" defaultValue={selectedMember.phone} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]" /></div>
-                      </div>
-                      <div className="col-span-2">
-                        <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Director Notes</label>
-                        <textarea id="ed_notes" defaultValue={selectedMember.notes || ''} placeholder="Add private notes..." className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad] min-h-[100px]"></textarea>
-                      </div>
-                      <div className="flex gap-3 mt-4">
-                        <button onClick={async () => {
-                          const updates = { 
-                            airtableId: selectedMember.airtableId, 
-                            firstName: document.getElementById('ed_fname').value, 
-                            lastName: document.getElementById('ed_lname').value,
-                            email: document.getElementById('ed_email').value,
-                            phone: document.getElementById('ed_phone').value,
-                            notes: document.getElementById('ed_notes').value
-                          };
-                          try {
-                            const res = await fetch('/api/update-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates) });
-                            if (res.ok) {
-                              const updated = { ...selectedMember, ...updates };
-                              setSelectedMember(updated);
-                              setMembers(prev => prev.map(m => m.airtableId === selectedMember.airtableId ? updated : m));
-                              setEditMode(false);
-                            }
-                          } catch (err) { alert('Update failed'); }
-                        }} className="flex-1 bg-[#1080ad] text-white py-3 rounded-xl font-bold text-sm">Save Changes</button>
-                        <button onClick={() => setEditMode(false)} className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold text-sm">Cancel</button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Action Buttons Grid */}
-                  {user?.role !== 'business' && (
-                    <div className="mt-14 grid grid-cols-2 md:grid-cols-3 gap-3">
-                      <button onClick={() => { processCheckIn(selectedMember.id, "Director Override"); setSelectedMember(null); }} className="col-span-2 md:col-span-3 bg-[#001f3f] text-white py-4 rounded-xl font-bold active:scale-95 transition-all text-sm flex items-center justify-center gap-2">
-                        <CheckCircle size={18} /> Force Manual Check-In
-                      </button>
-                      
-                      <button onClick={() => setEditMode(!editMode)} className="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white py-4 rounded-xl font-bold transition-all flex flex-col items-center justify-center gap-2 text-xs">
-                        <FileText size={20} /> Edit Member
-                      </button>
-
-                      <button onClick={() => { setProratePayment(false); setPaymentModal(selectedMember); }} className="bg-green-50 text-green-600 hover:bg-green-600 hover:text-white py-4 rounded-xl font-bold transition-all flex flex-col items-center justify-center gap-2 text-xs">
-                        <CreditCard size={20} /> Log Payment
-                      </button>
-
-                      <button 
-                        onClick={async () => {
-                          const newMethod = prompt("Fix Method to: Cash, Check, Card, or ACH", selectedMember.paymentMethod);
-                          if (!newMethod || !['Cash', 'Check', 'Card', 'ACH'].includes(newMethod)) return;
-                          
-                          let checkNum = "";
-                          if (newMethod === "Check") { checkNum = prompt("Enter Check Number:") || ""; }
-
-                          try {
-                            const res = await fetch('/api/log-payment', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ 
-                                airtableId: selectedMember.airtableId, 
-                                method: newMethod, 
-                                checkNumber: checkNum,
-                                isCorrectionOnly: true 
-                              })
-                            });
-                            if (res.ok) {
-                              const updated = { ...selectedMember, paymentMethod: newMethod };
-                              setSelectedMember(updated);
-                              setMembers(prev => prev.map(m => m.airtableId === selectedMember.airtableId ? updated : m));
-                              alert("Payment method corrected!");
-                            }
-                          } catch (e) { alert("Failed to update."); }
-                        }}
-                        className="bg-amber-50 text-amber-700 hover:bg-amber-600 hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs"
-                      >
-                        <Filter size={20} /> Fix Payment Method
-                      </button>
-
-                      <button onClick={() => handleResetPin(selectedMember)} className="bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white py-4 rounded-xl font-bold transition-all flex flex-col items-center justify-center gap-2 text-xs">
-                        <KeyRound size={20}/> Reset PIN
-                      </button>
-
-                      <button onClick={async () => { 
-                        if (!window.confirm(`Mark as ${selectedMember.inactive ? 'ACTIVE' : 'INACTIVE'}?`)) return; 
-                        try { 
-                          await fetch('/api/update-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: selectedMember.airtableId, inactive: !selectedMember.inactive }) }); 
-                          const updated = { ...selectedMember, inactive: !selectedMember.inactive };
-                          setSelectedMember(updated); 
-                          setMembers(prev => prev.map(m => m.airtableId === selectedMember.airtableId ? updated : m)); 
-                        } catch (err) { alert('Could not update.'); } 
-                      }} className={`${selectedMember.inactive ? 'bg-green-50 text-green-600 hover:bg-green-600' : 'bg-red-50 text-red-600 hover:bg-red-600'} hover:text-white py-4 rounded-xl font-bold transition-all flex flex-col items-center justify-center gap-2 text-xs`}>
-                        <AlertCircle size={20}/> {selectedMember.inactive ? 'Reactivate' : 'Mark Inactive'}
-                      </button>
-
-                      {user?.role === 'admin' && (
-                        <button onClick={handleDeleteMember} disabled={isDeleting} className="bg-red-50 text-red-600 hover:bg-red-600 hover:text-white py-4 rounded-xl font-bold transition-all flex flex-col items-center justify-center gap-2 text-xs">
-                          {isDeleting ? '...' : <Trash2 size={20}/>} Delete Member
-                        </button>
-                      )}
-                    </div>
-                  )}
-              </div>
-           </div>
-        </div>
-      )}
+                 </div>
+                 </>)}
 
                  {user?.role !== 'business' && (<div className="mt-14 grid grid-cols-2 md:grid-cols-3 gap-3">
                     <button onClick={() => { processCheckIn(selectedMember.id, "Director Override"); setSelectedMember(null); }} className="col-span-2 md:col-span-3 bg-[#001f3f] text-white py-4 rounded-xl font-bold shadow-xl shadow-blue-900/20 active:scale-95 transition-all text-sm flex items-center justify-center gap-2"><CheckCircle size={18} /> Force Manual Check-In</button>
@@ -2037,82 +1799,58 @@ if (view === 'corp_portal' && activeCorp) {
       )}
 
 {/* PAYMENT MODAL */}
-{paymentModal && (() => {
-  const fullRate = parseFloat(String(paymentModal.monthlyRate).replace(/[^0-9.]/g, '')) || 0;
-  // Use local state or a temporary variable for the method
-  const [selMethod, setSelMethod] = useState('');
-  
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl w-full max-w-sm p-8 relative shadow-2xl">
-        <button onClick={() => setPaymentModal(null)} className="absolute top-4 right-4 text-slate-300 hover:text-red-500"><X size={20}/></button>
-        <div className="text-center mb-6">
-          <CreditCard size={40} className="text-[#16a34a] mx-auto mb-3" />
-          <h3 className="text-xl font-black text-[#001f3f]">Log Payment</h3>
-          <p className="text-sm text-slate-400 mt-1">{paymentModal.firstName} {paymentModal.lastName}</p>
-        </div>
-
-        <div className="space-y-4 mb-6">
-          <div>
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 block">Payment Method</label>
-            <div className="grid grid-cols-2 gap-2">
+      {paymentModal && (() => {
+        const fullRate = parseFloat(String(paymentModal.monthlyRate).replace(/[^0-9.]/g, '')) || 0;
+        const today = new Date();
+        const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+        const daysRemaining = daysInMonth - today.getDate() + 1;
+        const proratedAmount = proratePayment === 16 ? 16 : proratePayment === 5 ? 5 : 0;
+        const displayAmount = proratePayment ? proratedAmount : fullRate;
+        return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-8 relative shadow-2xl">
+            <button onClick={() => setPaymentModal(null)} className="absolute top-4 right-4 text-slate-300 hover:text-red-500"><X size={20}/></button>
+            <div className="text-center mb-6">
+              <CreditCard size={40} className="text-[#16a34a] mx-auto mb-3" />
+              <h3 className="text-xl font-black text-[#001f3f]">Log Payment</h3>
+              <p className="text-sm text-slate-400 mt-1">{paymentModal.firstName} {paymentModal.lastName}</p>
+            </div>
+         <div className="mb-5">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Payment Amount</p>
+              <div className="grid grid-cols-3 gap-2">
+                <button type="button" onClick={() => setProratePayment(false)} className={"p-3 rounded-xl border-2 text-center transition-all " + (!proratePayment ? "border-[#16a34a] bg-green-50" : "border-slate-200 bg-white hover:bg-slate-50")}><p className="text-lg font-black text-[#16a34a]">${fullRate.toFixed(2)}</p><p className="text-[9px] font-bold text-slate-400 uppercase">Full Month</p></button>
+                <button type="button" onClick={() => setProratePayment(16)} className={"p-3 rounded-xl border-2 text-center transition-all " + (proratePayment === 16 ? "border-[#f59e0b] bg-amber-50" : "border-slate-200 bg-white hover:bg-slate-50")}><p className="text-lg font-black text-[#f59e0b]">$16.00</p><p className="text-[9px] font-bold text-slate-400 uppercase">Rest of Month</p></button>
+                <button type="button" onClick={() => setProratePayment(5)} className={"p-3 rounded-xl border-2 text-center transition-all " + (proratePayment === 5 ? "border-[#1080ad] bg-blue-50" : "border-slate-200 bg-white hover:bg-slate-50")}><p className="text-lg font-black text-[#1080ad]">$5.00</p><p className="text-[9px] font-bold text-slate-400 uppercase">Day Pass</p></button>
+              </div>
+            </div>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Payment Method</p>
+            <div className="grid grid-cols-2 gap-3 mb-6">
               {['Cash', 'Check', 'Card', 'ACH'].map(m => (
-                <button 
-                  key={m} 
-                  type="button"
-                  onClick={() => setSelMethod(m)}
-                  className={`py-3 rounded-xl border-2 font-bold transition-all text-xs ${
-                    selMethod === m ? "bg-[#16a34a] border-[#16a34a] text-white" : "bg-slate-50 border-slate-100 text-[#001f3f]"
-                  }`}
-                >
-                  {m}
-                </button>
+                <button key={m} onClick={async () => {
+                  const amtLabel = fullRate > 0 ? ` ($${displayAmount.toFixed(2)}${proratePayment ? ' prorated' : ''})` : '';
+                  if (!window.confirm(`Log ${m} payment${amtLabel} for ${paymentModal.firstName} ${paymentModal.lastName}?`)) return;
+                  try {
+                    const res = await fetch('/api/log-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: paymentModal.airtableId, memberName: `${paymentModal.firstName} ${paymentModal.lastName}`, method: m, currentDueDate: paymentModal.nextPayment, prorated: proratePayment, proratedAmount: proratePayment ? proratedAmount : null }) });
+                    const result = await res.json();
+                    if (result.success) {
+                      setMembers(prev => prev.map(mem => mem.airtableId === paymentModal.airtableId ? { ...mem, status: 'ACTIVE', nextPayment: result.nextPaymentDue } : mem));
+                      if (selectedMember && selectedMember.airtableId === paymentModal.airtableId) { setSelectedMember({ ...selectedMember, status: 'ACTIVE', nextPayment: result.nextPaymentDue }); }
+              const receiptAmt = proratePayment ? proratedAmount.toFixed(2) : fullRate.toFixed(2);
+                      const memberCopy = {...paymentModal};
+                      setPaymentModal(null);
+                      if (window.confirm(`Payment logged! Next payment due: ${result.nextPaymentDue}\n\nPrint a receipt?`)) {
+                        printReceipt(memberCopy, m, receiptAmt, proratePayment, result.nextPaymentDue);
+                      }
+                    } else { alert('Error: ' + result.error); }
+                  } catch (err) { alert('Network error. Please try again.'); }
+                }} className="bg-slate-50 hover:bg-[#16a34a] hover:text-white text-[#001f3f] font-bold py-4 rounded-xl border border-slate-200 transition-all text-sm">{m}</button>
               ))}
             </div>
+            <button onClick={() => setPaymentModal(null)} className="w-full text-slate-400 text-sm font-bold hover:text-slate-600">Cancel</button>
           </div>
-
-          {selMethod === 'Check' && (
-            <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 block">Check Number</label>
-              <input id="check_num_val" className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#16a34a]" placeholder="e.g. 1234" />
-            </div>
-          )}
-
-          <button 
-            onClick={async () => {
-              if (!selMethod) return alert("Please select a payment method.");
-              const checkNum = document.getElementById('check_num_val')?.value || "";
-              
-              try {
-                const res = await fetch('/api/log-payment', { 
-                  method: 'POST', 
-                  headers: { 'Content-Type': 'application/json' }, 
-                  body: JSON.stringify({ 
-                    airtableId: paymentModal.airtableId, 
-                    method: selMethod, 
-                    checkNumber: checkNum,
-                    amount: proratePayment ? 16 : fullRate, // Simplified amount logic
-                    currentDueDate: paymentModal.nextPayment,
-                    isCorrectionOnly: false
-                  }) 
-                });
-                const result = await res.json();
-                if (result.success) {
-                  setMembers(prev => prev.map(m => m.airtableId === paymentModal.airtableId ? {...m, status: 'ACTIVE', nextPayment: result.nextPaymentDue, paymentMethod: selMethod} : m));
-                  setPaymentModal(null);
-                  alert("Payment logged!");
-                }
-              } catch (err) { alert("Error saving payment."); }
-            }}
-            className="w-full bg-[#16a34a] text-white py-4 rounded-xl font-bold shadow-lg hover:bg-green-700 transition-all mt-4"
-          >
-            Confirm ${proratePayment ? '16.00' : fullRate.toFixed(2)} Payment
-          </button>
         </div>
-      </div>
-    </div>
-  );
-})()}
+        );
+      })()}
 
       {/* CORPORATE PAYMENT MODAL */}
       {corpPaymentModal && (
