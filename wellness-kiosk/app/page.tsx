@@ -774,46 +774,7 @@ if (view === 'corp_portal' && activeCorp) {
       </div>
     ); 
   }
-              <Printer size={16} /> Print Roster
-            </button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 print:grid-cols-4 print:gap-4">
-            <ProStatCard value={corpMembers.length} label="Total Enrolled" color="#001f3f" />
-            <ProStatCard value={totalCorpVisits} label="Total Visits" color="#1080ad" />
-            <ProStatCard value={singlePlans} label="Individual Plans" color="#16a34a" />
-            <ProStatCard value={familyPlans} label="Family Plans" color="#f59e0b" />
-          </div>
-          <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-            <table className="w-full text-left border-collapse">
-              <thead className="bg-white text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
-                <tr>
-                  <th className="px-8 py-4">Employee Name</th>
-                  <th className="px-8 py-4">Member ID</th>
-                  <th className="px-8 py-4">Plan Type</th>
-                  <th className="px-8 py-4 text-right">Lifetime Visits</th>
-                </tr>
-              </thead>
-              <tbody className="text-sm">
-                {corpMembers.length === 0 ? (
-                  <tr><td colSpan="4" className="text-center py-12 text-slate-400 font-medium italic">No employees enrolled.</td></tr>
-                ) : (
-                  corpMembers.map(m => (
-                    <tr key={m.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors">
-                      <td className="px-8 py-5 font-bold text-slate-800">{m.firstName} {m.lastName}</td>
-                      <td className="px-8 py-5 font-mono text-slate-400">{m.id}</td>
-                      <td className="px-8 py-5"><span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black tracking-tight">{m.type}</span></td>
-                      <td className="px-8 py-5 text-right font-black text-[#1080ad] text-lg">{m.visits}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </main>
-      </div>
-    ); 
-  }
-
+           
   // MAIN DIRECTOR DASHBOARD
   return (
     <div className="flex min-h-screen bg-[#f0f2f5] font-sans text-slate-800">
