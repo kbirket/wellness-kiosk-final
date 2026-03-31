@@ -1634,7 +1634,7 @@ const filteredMembers = scopedMembers.filter(m => { if (!(m.firstName + ' ' + m.
                         const today = new Date();
                         const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
                         const daysRemaining = daysInMonth - today.getDate() + 1;
-                        const proratedAmount = Math.round((fullRate / daysInMonth) * daysRemaining * 100) / 100;
+                        const proratedAmount = proratePayment === 16 ? 16 : proratePayment === 5 ? 5 : 0;
                         const displayAmount = firstPayment.prorated ? proratedAmount : fullRate;
                         return (
                           <div className="bg-white border-2 border-[#16a34a] rounded-2xl p-6">
@@ -1804,7 +1804,7 @@ const filteredMembers = scopedMembers.filter(m => { if (!(m.firstName + ' ' + m.
         const today = new Date();
         const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
         const daysRemaining = daysInMonth - today.getDate() + 1;
-        const proratedAmount = Math.round((fullRate / daysInMonth) * daysRemaining * 100) / 100;
+        const proratedAmount = proratePayment === 16 ? 16 : proratePayment === 5 ? 5 : 0;
         const displayAmount = proratePayment ? proratedAmount : fullRate;
         return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
