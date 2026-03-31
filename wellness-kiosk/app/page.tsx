@@ -1815,22 +1815,14 @@ const filteredMembers = scopedMembers.filter(m => { if (!(m.firstName + ' ' + m.
               <h3 className="text-xl font-black text-[#001f3f]">Log Payment</h3>
               <p className="text-sm text-slate-400 mt-1">{paymentModal.firstName} {paymentModal.lastName}</p>
             </div>
-            {fullRate > 0 && (
-              <div className="mb-5">
-                <label onClick={() => setProratePayment(!proratePayment)} className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl p-4 cursor-pointer hover:bg-blue-100 transition-colors">
-                  <input type="checkbox" checked={proratePayment} onChange={() => setProratePayment(!proratePayment)} className="w-5 h-5 rounded border-slate-300 text-[#1080ad] focus:ring-[#1080ad]" />
-                  <div className="flex-1">
-                    <p className="text-sm font-bold text-[#001f3f]">Prorate First Month</p>
-                    <p className="text-[10px] text-blue-500">{daysRemaining} of {daysInMonth} days remaining this month</p>
-                  </div>
-                </label>
-                <div className="mt-3 text-center">
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Amount Due</p>
-                  <p className="text-3xl font-black text-[#16a34a]">${displayAmount.toFixed(2)}</p>
-                  {proratePayment && <p className="text-[10px] text-slate-400 mt-1">Full rate: ${fullRate.toFixed(2)}/mo</p>}
-                </div>
+         <div className="mb-5">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Payment Amount</p>
+              <div className="grid grid-cols-3 gap-2">
+                <button type="button" onClick={() => setProratePayment(false)} className={"p-3 rounded-xl border-2 text-center transition-all " + (!proratePayment ? "border-[#16a34a] bg-green-50" : "border-slate-200 bg-white hover:bg-slate-50")}><p className="text-lg font-black text-[#16a34a]">${fullRate.toFixed(2)}</p><p className="text-[9px] font-bold text-slate-400 uppercase">Full Month</p></button>
+                <button type="button" onClick={() => setProratePayment(16)} className={"p-3 rounded-xl border-2 text-center transition-all " + (proratePayment === 16 ? "border-[#f59e0b] bg-amber-50" : "border-slate-200 bg-white hover:bg-slate-50")}><p className="text-lg font-black text-[#f59e0b]">$16.00</p><p className="text-[9px] font-bold text-slate-400 uppercase">Rest of Month</p></button>
+                <button type="button" onClick={() => setProratePayment(5)} className={"p-3 rounded-xl border-2 text-center transition-all " + (proratePayment === 5 ? "border-[#1080ad] bg-blue-50" : "border-slate-200 bg-white hover:bg-slate-50")}><p className="text-lg font-black text-[#1080ad]">$5.00</p><p className="text-[9px] font-bold text-slate-400 uppercase">Day Pass</p></button>
               </div>
-            )}
+            </div>
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Payment Method</p>
             <div className="grid grid-cols-2 gap-3 mb-6">
               {['Cash', 'Check', 'Card', 'ACH'].map(m => (
