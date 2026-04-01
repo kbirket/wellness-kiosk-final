@@ -56,7 +56,7 @@ export async function POST(request) {
           const pricingData = await pricingRes.json();
           // Find the record whose name matches the plan
           const planRecord = pricingData.records.find(r => {
-            const name = r.fields['Plan Name'] || r.fields['Name'] || r.fields['Plan'] || '';
+            const name = r.fields['Membership Type'] || r.fields['Plan Name'] || r.fields['Name'] || '';
             return String(name).toUpperCase().trim() === String(fields.plan).toUpperCase().trim();
           });
           
