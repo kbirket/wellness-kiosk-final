@@ -171,7 +171,23 @@ if (['MILITARY', 'MILITARY FAMILY', 'HD6', 'HD6 FAMILY', 'FIRST DAY FREE', 'LIFE
       }
     } catch (err) { alert("Failed to update orientation."); }
   };
-
+const handleSelfieUpload = async (imageData, memberId) => {
+    try {
+      const res = await fetch('/api/upload-photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ airtableId: memberId, fileData: imageData })
+      });
+      const result = await res.json();
+      if (result.success) {
+        setMembers(prev => prev.map(m => m.airtableId === memberId ? { ...m, photoUrl: result.photoUrl } : m));
+        setActiveMember(prev => ({ ...prev, photoUrl: result.photoUrl }));
+        alert("Headshot updated! Check-in to see your new photo.");
+      }
+    } catch (err) {
+      alert("Camera upload failed. Check your connection.");
+    }
+  };
   const SESSION_TIMEOUT = 8 * 60 * 60 * 1000;
   useEffect(() => { const u = () => setLastActivity(Date.now()); window.addEventListener('click', u); window.addEventListener('keydown', u); window.addEventListener('scroll', u); window.addEventListener('touchstart', u); return () => { window.removeEventListener('click', u); window.removeEventListener('keydown', u); window.removeEventListener('scroll', u); window.removeEventListener('touchstart', u); }; }, []);
   useEffect(() => { if (!user && !activeCorp) return; const interval = setInterval(() => { if (Date.now() - lastActivity > SESSION_TIMEOUT) { alert('Your session has expired due to inactivity. Please log in again.'); handleLogout(); } }, 60 * 1000); return () => clearInterval(interval); }, [user, activeCorp, lastActivity]);
@@ -622,12 +638,34 @@ const filteredMembers = scopedMembers.filter(m => { if (!(m.firstName + ' ' + m.
               </div>
             </div>
             <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
-              <h3 className="text-lg font-bold text-[#001f3f] mb-6">My QR Badge</h3>
-              <div className="flex flex-col items-center">
-                <MemberPhoto src={currentMember.photoUrl} name={currentMember.firstName} size={100} className="mb-4 border-4 border-slate-100 shadow-lg" />
-                <QRCode data={currentMember.id} size={180} />
-                <p className="mt-4 text-xs text-slate-400 font-bold">Scan at the kiosk for quick check-in</p>
-              </div>
+             <div className="flex flex-col items-center">
+  <div className="relative mb-4">
+    {/* Member Photo with Camera Overlay */}
+    <MemberPhoto src={currentMember.photoUrl} name={currentMember.firstName} size={110} className="border-4 border-white shadow-xl" />
+    
+    <label className="absolute bottom-0 right-0 bg-[#1080ad] text-white p-2.5 rounded-full cursor-pointer shadow-lg hover:scale-110 active:scale-95 transition-all border-2 border-white">
+      <input 
+        type="file" 
+        accept="image/*" 
+        capture="user" 
+        className="hidden" 
+        onChange={(e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = (ev) => handleSelfieUpload(ev.target.result, currentMember.airtableId);
+          reader.readAsDataURL(file);
+        }} 
+      />
+      <Camera size={18} />
+    </label>
+  </div>
+  
+  <p className="text-[10px] font-black text-[#1080ad] uppercase tracking-widest mb-6">Tap Camera to Update Photo</p>
+  
+  <QRCode data={currentMember.id} size={180} />
+  <p className="mt-4 text-xs text-slate-400 font-bold">Scan at the kiosk for quick check-in</p>
+</div>
             </div>
           </div>
           <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
