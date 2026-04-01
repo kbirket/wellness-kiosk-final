@@ -310,7 +310,18 @@ const handleAddMemberSubmit = async (e) => {
     const handleResetPin = async (member) => { if (!window.confirm(`Reset PIN for ${member.firstName} ${member.lastName}?`)) return; try { const newPin = String(Math.floor(1000 + Math.random() * 9000)); await fetch('/api/update-pin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ recordId: member.airtableId, newPin }) }); setMembers(prev => prev.map(m => m.airtableId === member.airtableId ? { ...m, password: newPin } : m)); alert(`New PIN for ${member.firstName}: ${newPin}\n\nPlease give this to the member.`); } catch (err) { alert('Could not reset PIN.'); } };
  const getStoplight = (member) => { if (!member || !member.nextPayment) return 'green'; const comped = ['HD6', 'HD6 FAMILY', 'HCHF', 'MILITARY', 'MILITARY FAMILY', 'FIRST DAY FREE', 'LIFETIME', 'LIFETIME FAMILY']; if (comped.includes(member.type)) return 'green'; if (member.inactive) return 'red'; const due = new Date(member.nextPayment + 'T00:00:00'); const today = new Date(); const diffMs = today - due; const daysPastDue = Math.ceil(diffMs / (1000*60*60*24)); const daysUntilDue = Math.ceil((due - today) / (1000*60*60*24)); if (daysPastDue > 2) return 'red'; if (daysUntilDue <= 5) return 'yellow'; return 'green'; };
 const filteredMembers = scopedMembers.filter(m => { if (!(m.firstName + ' ' + m.lastName + ' ' + m.id).toLowerCase().includes(searchQuery.toLowerCase())) return false; const today = new Date(); const firstOfNextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1); const paidThisPeriod = m.nextPayment && new Date(m.nextPayment + 'T00:00:00') >= firstOfNextMonth; const isComped = ['HD6', 'HD6 FAMILY', 'HCHF', 'MILITARY', 'MILITARY FAMILY', 'FIRST DAY FREE', 'LIFETIME', 'LIFETIME FAMILY'].includes(m.type); if (memberFilter === 'paid') return paidThisPeriod || isComped; if (memberFilter === 'unpaid') return !paidThisPeriod && !isComped; if (memberFilter === 'overdue') return getStoplight(m) === 'red'; if (memberFilter === '247') return m.access247; if (memberFilter === 'orientation') return m.needsOrientation; if (memberFilter === 'inactive') return m.inactive; if (memberFilter === 'corporate') return m.type.includes('CORPORATE') || m.sponsorName; if (memberFilter === 'family') return m.type.includes('FAMILY') || m.familyName; if (memberFilter === 'notes') return m.notes && m.notes.trim() !== ''; return true; }).sort((a, b) => a.lastName.localeCompare(b.lastName));
-  const processCheckIn = async (memberId, method = "Manual Entry") => { const id = memberId.toUpperCase().trim(); const m = membersRef.current.find(m => m.id === id); if(m) {
+  const processCheckIn = async (memberId, method = "Manual Entry") => {
+    const id = memberId.toUpperCase().trim();
+    const m = membersRef.current.find(m => m.id === id);
+
+    if (m) {
+      if (m.inactive) {
+        setKioskMessage({ text: 'Membership Inactive', type: 'error', subtext: 'Please see the front desk.' });
+        setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4500);
+        return false;
+      }
+
+      // Check for location-specific orientation
       const currentLoc = centerRef.current.toLowerCase(); 
       const needsAnthony = currentLoc.includes('anthony') && !m.orientationAnthony;
       const needsHarper = currentLoc.includes('harper') && !m.orientationHarper;
@@ -324,7 +335,69 @@ const filteredMembers = scopedMembers.filter(m => { if (!(m.firstName + ' ' + m.
         });
         setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 5000);
         return false;
-      }if(m) { if (m.inactive) { setKioskMessage({ text: 'Membership Inactive', type: 'error', subtext: 'Please see the front desk.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4500); return false; } const checkCenter = centerRef.current === 'both' ? m.center : centerRef.current;               const isAnthony = checkCenter && checkCenter.toLowerCase().includes('anthony');               const isHarper = checkCenter && checkCenter.toLowerCase().includes('harper');               const needsOrientationHere = (isAnthony && !m.orientationAnthony) || (isHarper && !m.orientationHarper) || (!isAnthony && !isHarper && m.needsOrientation);               if (needsOrientationHere) { setKioskMessage({ text: 'Orientation Required', type: 'error', subtext: `Please see front desk to complete your ${isHarper ? 'Harper' : 'Anthony'} orientation.` }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 5000); return false; } const light = getStoplight(m); if (light === 'red') { setKioskMessage({ text: 'Please see front desk.', type: 'error', subtext: 'We need to quickly update your account.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4500); return false; } const currentCenter = centerRef.current; const scanCenter = currentCenter === 'both' ? m.center : currentCenter.charAt(0).toUpperCase() + currentCenter.slice(1); const currentTime = new Date().toISOString(); try { const res = await fetch('/api/visits', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: m.airtableId, center: scanCenter, time: currentTime, method: method }) }); const result = await res.json(); if (!result.success) { setKioskMessage({ text: 'System Error', type: 'error', subtext: 'Please see the front desk.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4000); return false; } setVisits(prev => [{name: m.firstName + ' ' + m.lastName, center: scanCenter, time: currentTime, type: m.type, method: method}, ...prev]); setMembers(prev => prev.map(member => member.id === id ? { ...member, visits: member.visits + 1 } : member)); if (activeMember && activeMember.id === id) setActiveMember(prev => ({...prev, visits: prev.visits + 1})); if (light === 'yellow') { setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'warning', subtext: 'Please see the front desk at your convenience.', photoUrl: m.photoUrl }); } else { setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'success', subtext: '', photoUrl: m.photoUrl }); } setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 5000); return true; } catch (err) { setKioskMessage({ text: 'Network Error', type: 'error', subtext: 'Please try again.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4000); return false; } } else { setKioskMessage({ text: 'ID not found.', type: 'error', subtext: 'Please see front desk.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 3500); return false; } };
+      }
+
+      const light = getStoplight(m);
+      if (light === 'red') {
+        setKioskMessage({ text: 'Please see front desk.', type: 'error', subtext: 'We need to quickly update your account.' });
+        setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4500);
+        return false;
+      }
+
+      const scanCenter = currentLoc === 'both' ? m.center : currentLoc.charAt(0).toUpperCase() + currentLoc.slice(1);
+      const currentTime = new Date().toISOString();
+
+      try {
+        const res = await fetch('/api/visits', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ airtableId: m.airtableId, center: scanCenter, time: currentTime, method: method })
+        });
+        const result = await res.json();
+        if (!result.success) {
+          setKioskMessage({ text: 'System Error', type: 'error', subtext: 'Please see the front desk.' });
+          setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4000);
+          return false;
+        }
+        setVisits(prev => [{name: m.firstName + ' ' + m.lastName, center: scanCenter, time: currentTime, type: m.type, method: method}, ...prev]);
+        setMembers(prev => prev.map(member => member.id === id ? { ...member, visits: member.visits + 1 } : member));
+        if (activeMember && activeMember.id === id) setActiveMember(prev => ({...prev, visits: prev.visits + 1}));
+        
+        if (light === 'yellow') {
+          setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'warning', subtext: 'Please see the front desk at your convenience.', photoUrl: m.photoUrl });
+        } else {
+          setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'success', subtext: '', photoUrl: m.photoUrl });
+        }
+        setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 5000);
+        return true;
+      } catch (err) {
+        setKioskMessage({ text: 'Network Error', type: 'error', subtext: 'Please try again.' });
+        setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4000);
+        return false;
+      }
+    } else {
+      // START OF RECOVERY LOGIC (If member not found in live data)
+      const backup = JSON.parse(localStorage.getItem('wellness_backup_roster') || '[]');
+      const offlineMember = backup.find(bm => bm.id === id);
+      
+      if (offlineMember) {
+        setKioskMessage({ 
+          text: `Welcome, ${offlineMember.name.split(' ')[0]}!`, 
+          type: 'warning', 
+          subtext: 'Offline mode: Check-in saved locally.' 
+        });
+        const pending = JSON.parse(localStorage.getItem('pending_visits') || '[]');
+        pending.push({ id, time: new Date().toISOString(), center: centerRef.current });
+        localStorage.setItem('pending_visits', JSON.stringify(pending));
+        setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 5000);
+        return true;
+      }
+      
+      setKioskMessage({ text: 'ID not found.', type: 'error', subtext: 'Please see front desk.' });
+      setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 3500);
+      return false;
+    }
+  };
 
   const processVisitorCheckIn = async (visitor) => {
     const currentCenter = centerRef.current;
