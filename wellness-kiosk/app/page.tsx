@@ -27,7 +27,7 @@ const PeriodSelector = ({ value, onChange }) => (
 export default function WellnessHub() {
   const [isMounted, setIsMounted] = useState(false);
   const [currentDateString, setCurrentDateString] = useState('');
-  const [paymentModal, setPaymentModal] = useState(null);   const [proratePayment, setProratePayment] = useState(false);
+  const [paymentModal, setPaymentModal] = useState(null);   const [checkNumber, setCheckNumber] = useState(''); const [proratePayment, setProratePayment] = useState(false);
     const [firstPayment, setFirstPayment] = useState({ open: false, prorated: false, method: null, memberData: null });
   const [view, setView] = useState('landing');
   const [user, setUser] = useState(null);
@@ -1824,6 +1824,11 @@ const filteredMembers = scopedMembers.filter(m => { if (!(m.firstName + ' ' + m.
               </div>
             </div>
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Payment Method</p>
+            {checkNumber !== '' && (
+              <div className="mb-3">
+                <input value={checkNumber} onChange={(e) => setCheckNumber(e.target.value)} placeholder="Check #" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#16a34a] text-sm font-bold text-[#001f3f] placeholder-slate-300" autoFocus />
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3 mb-6">
               {['Cash', 'Check', 'Card', 'ACH'].map(m => (
                 <button key={m} onClick={async () => {
