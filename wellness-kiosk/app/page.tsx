@@ -147,19 +147,29 @@ if (['MILITARY', 'MILITARY FAMILY', 'HD6', 'HD6 FAMILY', 'FIRST DAY FREE', 'LIFE
   const handleLogin = async () => { const u = document.getElementById('u_in').value.toLowerCase().trim(); const p = document.getElementById('p_in').value.trim(); try { const res = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: u, password: p, loginType: 'director' }) }); const data = await res.json(); if (data.success) { setUser(data.user); setSessionToken(data.token); setViewingCenter(data.user.center); setLastActivity(Date.now()); localStorage.setItem('wellnessToken', data.token); localStorage.setItem('wellnessCenter', data.user.center); if (data.user.role === 'business') { setActiveTab('reports'); } setView('dashboard'); } else { alert('Incorrect credentials.'); } } catch (err) { alert('Login failed. Please try again.'); } };
   const handleCorpLogin = async () => { const u = document.getElementById('c_in').value.toLowerCase().trim(); const p = document.getElementById('c_pin').value.trim(); try { const res = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: u, password: p, loginType: 'corporate' }) }); const data = await res.json(); if (data.success) { setActiveCorp(data.corp); setSessionToken(data.token); setLastActivity(Date.now()); localStorage.setItem('wellnessToken', data.token); setView('corp_portal'); } else { alert('Incorrect corporate credentials.'); } } catch (err) { alert('Login failed. Please try again.'); } };
   const handleLogout = () => { setUser(null); setActiveCorp(null); setSessionToken(null); localStorage.removeItem('wellnessToken'); localStorage.removeItem('wellnessCenter'); setView('landing'); };
-  const handleMarkOrientation = async (center) => {
+ const handleMarkOrientation = async (center) => {
+    // Determine which field we are flipping
+    const field = center === 'anthony' ? 'orientationAnthony' : 'orientationHarper';
+    // If it's currently true, we want to set it to false (uncheck it)
+    const newValue = !selectedMember[field];
+
     try {
       const res = await fetch('/api/update-orientation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ airtableId: selectedMember.airtableId, center: center })
+        body: JSON.stringify({ 
+          airtableId: selectedMember.airtableId, 
+          center: center,
+          status: newValue // Pass the new true/false status to your API
+        })
       });
+      
       if (res.ok) {
-        const field = center === 'anthony' ? 'orientationAnthony' : 'orientationHarper';
-        setSelectedMember({...selectedMember, [field]: true});
-        setMembers(prev => prev.map(m => m.airtableId === selectedMember.airtableId ? {...m, [field]: true} : m));
+        const updated = { ...selectedMember, [field]: newValue };
+        setSelectedMember(updated);
+        setMembers(prev => prev.map(m => m.airtableId === updated.airtableId ? updated : m));
       }
-    } catch (err) { alert("Failed to sync."); }
+    } catch (err) { alert("Failed to update orientation."); }
   };
 
   const SESSION_TIMEOUT = 8 * 60 * 60 * 1000;
@@ -1899,18 +1909,37 @@ const filteredMembers = scopedMembers.filter(m => { if (!(m.firstName + ' ' + m.
               <div className="w-1/3 bg-slate-50 p-12 flex flex-col items-center justify-center border-r border-slate-100"><div className="mb-6 relative group"><MemberPhoto src={selectedMember.photoUrl} name={selectedMember.firstName} size={140} className="shadow-xl border-4 border-white" /><div className="absolute inset-0 rounded-full bg-black/0 group-hover:bg-black/40 flex items-center justify-center transition-all gap-2"><label className="cursor-pointer p-2 bg-white/90 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-white" title="Upload photo"><input type="file" accept="image/*" className="hidden" onChange={function(e) { var file = e.target.files[0]; if (!file) return; var img = new Image(); var reader = new FileReader(); reader.onload = function(ev) { img.onload = function() { var canvas = document.createElement('canvas'); canvas.width = 200; canvas.height = 200; var ctx = canvas.getContext('2d'); var minDim = Math.min(img.width, img.height); var sx = (img.width - minDim) / 2; var sy = (img.height - minDim) / 2; ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, 200, 200); var compressed = canvas.toDataURL('image/jpeg', 0.8); fetch('/api/upload-photo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: selectedMember.airtableId, fileData: compressed }) }).then(function(res) { return res.json(); }).then(function(result) { if (result.success && result.photoUrl) { setMembers(function(prev) { return prev.map(function(m) { return m.airtableId === selectedMember.airtableId ? Object.assign({}, m, { photoUrl: result.photoUrl }) : m; }); }); setSelectedMember(Object.assign({}, selectedMember, { photoUrl: result.photoUrl })); } else { alert('Upload failed: ' + (result.error || 'Unknown error')); } }).catch(function() { alert('Network error uploading photo.'); }); }; img.src = ev.target.result; }; reader.readAsDataURL(file); }} /><Camera size={16} className="text-[#001f3f]" /></label><label className="cursor-pointer p-2 bg-white/90 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-white" title="Take photo"><input type="file" accept="image/*" capture="environment" className="hidden" onChange={function(e) { var file = e.target.files[0]; if (!file) return; var img = new Image(); var reader = new FileReader(); reader.onload = function(ev) { img.onload = function() { var canvas = document.createElement('canvas'); canvas.width = 200; canvas.height = 200; var ctx = canvas.getContext('2d'); var minDim = Math.min(img.width, img.height); var sx = (img.width - minDim) / 2; var sy = (img.height - minDim) / 2; ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, 200, 200); var compressed = canvas.toDataURL('image/jpeg', 0.8); fetch('/api/upload-photo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: selectedMember.airtableId, fileData: compressed }) }).then(function(res) { return res.json(); }).then(function(result) { if (result.success && result.photoUrl) { setMembers(function(prev) { return prev.map(function(m) { return m.airtableId === selectedMember.airtableId ? Object.assign({}, m, { photoUrl: result.photoUrl }) : m; }); }); setSelectedMember(Object.assign({}, selectedMember, { photoUrl: result.photoUrl })); } else { alert('Upload failed: ' + (result.error || 'Unknown error')); } }).catch(function() { alert('Network error uploading photo.'); }); }; img.src = ev.target.result; }; reader.readAsDataURL(file); }} /><UserCircle size={16} className="text-[#001f3f]" /></label></div></div><div className="bg-white p-6 rounded-2xl shadow-xl mb-8 border border-slate-100"><QRCode data={selectedMember.id} size={180} /></div><p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Member Identity</p><p className="text-xl font-bold text-[#001f3f] mb-6">#{selectedMember.id}</p><p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Kiosk PIN</p><p className="text-3xl font-black tracking-[0.2em] text-[#1080ad]">{selectedMember.password}</p></div>
               <div className="flex-1 p-16 overflow-y-auto">
                 {/* DUAL ORIENTATION TRACKER */}
-                 <div className="mb-8 bg-blue-50 border-l-4 border-blue-500 p-6 rounded-r-xl">
-                   <h3 className="text-blue-800 font-bold text-sm mb-4 uppercase tracking-widest">Facility Orientations</h3>
-                   <div className="grid grid-cols-2 gap-4">
-                     <div className={`p-4 rounded-xl border-2 ${selectedMember.orientationAnthony ? 'bg-green-50 border-green-200' : 'bg-white border-blue-100'}`}>
-                       <p className="text-[10px] font-black text-slate-400 uppercase mb-2">Anthony Center</p>
-                       {selectedMember.orientationAnthony ? "✅ Done" : <button onClick={() => handleMarkOrientation('anthony')} className="bg-blue-600 text-white px-2 py-1 rounded text-[10px]">Mark Complete</button>}
-                     </div>
-                     <div className={`p-4 rounded-xl border-2 ${selectedMember.orientationHarper ? 'bg-green-50 border-green-200' : 'bg-white border-orange-100'}`}>
-                       <p className="text-[10px] font-black text-slate-400 uppercase mb-2">Harper Center</p>
-                       {selectedMember.orientationHarper ? "✅ Done" : <button onClick={() => handleMarkOrientation('harper')} className="bg-orange-600 text-white px-2 py-1 rounded text-[10px]">Mark Complete</button>}
-                     </div>
-                   </div>
+             <div className="grid grid-cols-2 gap-4">
+  {/* Anthony Center Box */}
+  <div className={`p-4 rounded-xl border-2 transition-all ${selectedMember.orientationAnthony ? 'bg-green-50 border-green-200' : 'bg-white border-blue-100'}`}>
+    <p className="text-[10px] font-black text-slate-400 uppercase mb-2">Anthony Center</p>
+    <button 
+      onClick={() => handleMarkOrientation('anthony')}
+      className={`w-full py-2 rounded-lg font-bold text-xs transition-all ${
+        selectedMember.orientationAnthony 
+          ? 'bg-green-600 text-white hover:bg-red-500 hover:after:content-["_Reset"]' 
+          : 'bg-blue-600 text-white hover:bg-blue-700'
+      }`}
+    >
+      {selectedMember.orientationAnthony ? "✅ Orientation Done" : "Mark Complete"}
+    </button>
+  </div>
+
+  {/* Harper Center Box */}
+  <div className={`p-4 rounded-xl border-2 transition-all ${selectedMember.orientationHarper ? 'bg-green-50 border-green-200' : 'bg-white border-orange-100'}`}>
+    <p className="text-[10px] font-black text-slate-400 uppercase mb-2">Harper Center</p>
+    <button 
+      onClick={() => handleMarkOrientation('harper')}
+      className={`w-full py-2 rounded-lg font-bold text-xs transition-all ${
+        selectedMember.orientationHarper 
+          ? 'bg-green-600 text-white hover:bg-red-500' 
+          : 'bg-orange-600 text-white hover:bg-orange-700'
+      }`}
+    >
+      {selectedMember.orientationHarper ? "✅ Orientation Done" : "Mark Complete"}
+    </button>
+  </div>
+</div>
                  </div>
                   {selectedMember.inactive && (<div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg flex justify-between items-center"><p className="text-red-800 font-bold text-sm">This member is marked INACTIVE. They cannot check in or access the Member Portal.</p><button onClick={async () => { try { await fetch('/api/update-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: selectedMember.airtableId, inactive: false }) }); setMembers(prev => prev.map(m => m.airtableId === selectedMember.airtableId ? { ...m, inactive: false } : m)); setSelectedMember({ ...selectedMember, inactive: false }); } catch (err) { alert('Could not update.'); } }} className="bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-green-700 transition-colors whitespace-nowrap ml-4">Reactivate</button></div>)}
                  
