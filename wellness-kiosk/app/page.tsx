@@ -93,6 +93,49 @@ export default function WellnessHub() {
   const [editingVisitor, setEditingVisitor] = useState(null);
   const [corpSearch, setCorpSearch] = useState('');
   const [renewMenuOpen, setRenewMenuOpen] = useState(null);
+  // --- NEW: ORIENTATION HANDLER ---
+  const handleMarkOrientation = async (center) => {
+    try {
+      const res = await fetch('/api/update-orientation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ airtableId: selectedMember.airtableId, center: center })
+      });
+      if (res.ok) {
+        const field = center === 'anthony' ? 'orientationAnthony' : 'orientationHarper';
+        const updated = { ...selectedMember, [field]: true };
+        setSelectedMember(updated);
+        setMembers(prev => prev.map(m => m.airtableId === updated.airtableId ? updated : m));
+      }
+    } catch (err) { alert("Failed to update orientation."); }
+  };
+
+  // --- NEW: SELFIE UPLOADER ---
+  const handleSelfieUpload = async (imageData, memberId) => {
+    try {
+      const res = await fetch('/api/upload-photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ airtableId: memberId, fileData: imageData })
+      });
+      const result = await res.json();
+      if (result.success) {
+        setMembers(prev => prev.map(m => m.airtableId === memberId ? { ...m, photoUrl: result.photoUrl } : m));
+        setActiveMember(prev => ({ ...prev, photoUrl: result.photoUrl }));
+      }
+    } catch (err) { alert("Camera upload failed."); }
+  };
+
+  // --- NEW: OFFLINE SYNC LOGIC ---
+  useEffect(() => {
+    if (members.length > 0) {
+      const backupData = members.map(m => ({
+        id: m.id, name: `${m.firstName} ${m.lastName}`, pin: m.password,
+        inactive: m.inactive, authAnthony: m.orientationAnthony, authHarper: m.orientationHarper
+      }));
+      localStorage.setItem('wellness_backup_roster', JSON.stringify(backupData));
+    }
+  }, [members]);
 
   useEffect(() => { localStorage.setItem('wellnessUsagePrefs', JSON.stringify(usageBasedCorps)); }, [usageBasedCorps]);
 
@@ -287,7 +330,28 @@ const handleAddMemberSubmit = async (e) => {
     const handleResetPin = async (member) => { if (!window.confirm(`Reset PIN for ${member.firstName} ${member.lastName}?`)) return; try { const newPin = String(Math.floor(1000 + Math.random() * 9000)); await fetch('/api/update-pin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ recordId: member.airtableId, newPin }) }); setMembers(prev => prev.map(m => m.airtableId === member.airtableId ? { ...m, password: newPin } : m)); alert(`New PIN for ${member.firstName}: ${newPin}\n\nPlease give this to the member.`); } catch (err) { alert('Could not reset PIN.'); } };
  const getStoplight = (member) => { if (!member || !member.nextPayment) return 'green'; const comped = ['HD6', 'HD6 FAMILY', 'HCHF', 'MILITARY', 'MILITARY FAMILY', 'FIRST DAY FREE', 'LIFETIME', 'LIFETIME FAMILY']; if (comped.includes(member.type)) return 'green'; if (member.inactive) return 'red'; const due = new Date(member.nextPayment + 'T00:00:00'); const today = new Date(); const diffMs = today - due; const daysPastDue = Math.ceil(diffMs / (1000*60*60*24)); const daysUntilDue = Math.ceil((due - today) / (1000*60*60*24)); if (daysPastDue > 2) return 'red'; if (daysUntilDue <= 5) return 'yellow'; return 'green'; };
 const filteredMembers = scopedMembers.filter(m => { if (!(m.firstName + ' ' + m.lastName + ' ' + m.id).toLowerCase().includes(searchQuery.toLowerCase())) return false; const today = new Date(); const firstOfNextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1); const paidThisPeriod = m.nextPayment && new Date(m.nextPayment + 'T00:00:00') >= firstOfNextMonth; const isComped = ['HD6', 'HD6 FAMILY', 'HCHF', 'MILITARY', 'MILITARY FAMILY', 'FIRST DAY FREE', 'LIFETIME', 'LIFETIME FAMILY'].includes(m.type); if (memberFilter === 'paid') return paidThisPeriod || isComped; if (memberFilter === 'unpaid') return !paidThisPeriod && !isComped; if (memberFilter === 'overdue') return getStoplight(m) === 'red'; if (memberFilter === '247') return m.access247; if (memberFilter === 'orientation') return m.needsOrientation; if (memberFilter === 'inactive') return m.inactive; if (memberFilter === 'corporate') return m.type.includes('CORPORATE') || m.sponsorName; if (memberFilter === 'family') return m.type.includes('FAMILY') || m.familyName; if (memberFilter === 'notes') return m.notes && m.notes.trim() !== ''; return true; }).sort((a, b) => a.lastName.localeCompare(b.lastName));
-  const processCheckIn = async (memberId, method = "Manual Entry") => { const id = memberId.toUpperCase().trim(); const m = membersRef.current.find(m => m.id === id); if(m) { if (m.inactive) { setKioskMessage({ text: 'Membership Inactive', type: 'error', subtext: 'Please see the front desk.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4500); return false; } const checkCenter = centerRef.current === 'both' ? m.center : centerRef.current;               const isAnthony = checkCenter && checkCenter.toLowerCase().includes('anthony');               const isHarper = checkCenter && checkCenter.toLowerCase().includes('harper');               const needsOrientationHere = (isAnthony && !m.orientationAnthony) || (isHarper && !m.orientationHarper) || (!isAnthony && !isHarper && m.needsOrientation);               if (needsOrientationHere) { setKioskMessage({ text: 'Orientation Required', type: 'error', subtext: `Please see front desk to complete your ${isHarper ? 'Harper' : 'Anthony'} orientation.` }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 5000); return false; } const light = getStoplight(m); if (light === 'red') { setKioskMessage({ text: 'Please see front desk.', type: 'error', subtext: 'We need to quickly update your account.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4500); return false; } const currentCenter = centerRef.current; const scanCenter = currentCenter === 'both' ? m.center : currentCenter.charAt(0).toUpperCase() + currentCenter.slice(1); const currentTime = new Date().toISOString(); try { const res = await fetch('/api/visits', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: m.airtableId, center: scanCenter, time: currentTime, method: method }) }); const result = await res.json(); if (!result.success) { setKioskMessage({ text: 'System Error', type: 'error', subtext: 'Please see the front desk.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4000); return false; } setVisits(prev => [{name: m.firstName + ' ' + m.lastName, center: scanCenter, time: currentTime, type: m.type, method: method}, ...prev]); setMembers(prev => prev.map(member => member.id === id ? { ...member, visits: member.visits + 1 } : member)); if (activeMember && activeMember.id === id) setActiveMember(prev => ({...prev, visits: prev.visits + 1})); if (light === 'yellow') { setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'warning', subtext: 'Please see the front desk at your convenience.', photoUrl: m.photoUrl }); } else { setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'success', subtext: '', photoUrl: m.photoUrl }); } setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 5000); return true; } catch (err) { setKioskMessage({ text: 'Network Error', type: 'error', subtext: 'Please try again.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4000); return false; } } else { setKioskMessage({ text: 'ID not found.', type: 'error', subtext: 'Please see front desk.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 3500); return false; } };
+  const processCheckIn = async (memberId, method = "Manual Entry") => { const id = memberId.toUpperCase().trim(); const m = membersRef.current.find(m => m.id === id); if(m) { if (m.inactive) { setKioskMessage({ text: 'Membership Inactive', type: 'error', subtext: 'Please see the front desk.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4500); return false; } const checkCenter = centerRef.current === 'both' ? m.center : centerRef.current;               const isAnthony = checkCenter && checkCenter.toLowerCase().includes('anthony');               const isHarper = checkCenter && checkCenter.toLowerCase().includes('harper');               const needsOrientationHere = (isAnthony && !m.orientationAnthony) || (isHarper && !m.orientationHarper) || (!isAnthony && !isHarper && m.needsOrientation);               if (needsOrientationHere) { setKioskMessage({ text: 'Orientation Required', type: 'error', subtext: `Please see front desk to complete your ${isHarper ? 'Harper' : 'Anthony'} orientation.` }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 5000); return false; } const light = getStoplight(m); if (light === 'red') { setKioskMessage({ text: 'Please see front desk.', type: 'error', subtext: 'We need to quickly update your account.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4500); return false; } const currentCenter = centerRef.current; const scanCenter = currentCenter === 'both' ? m.center : currentCenter.charAt(0).toUpperCase() + currentCenter.slice(1); const currentTime = new Date().toISOString(); try { const res = await fetch('/api/visits', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: m.airtableId, center: scanCenter, time: currentTime, method: method }) }); const result = await res.json(); if (!result.success) { setKioskMessage({ text: 'System Error', type: 'error', subtext: 'Please see the front desk.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4000); return false; } setVisits(prev => [{name: m.firstName + ' ' + m.lastName, center: scanCenter, time: currentTime, type: m.type, method: method}, ...prev]); setMembers(prev => prev.map(member => member.id === id ? { ...member, visits: member.visits + 1 } : member)); if (activeMember && activeMember.id === id) setActiveMember(prev => ({...prev, visits: prev.visits + 1})); if (light === 'yellow') { setKioskMessage({ text: `Welcome, ${m.firstName}!`, type: 'warning', subtext: 'Please see the front desk at your convenience.', photoUrl: m.photoUrl }); } } else {
+      // START OF RECOVERY LOGIC
+      const backup = JSON.parse(localStorage.getItem('wellness_backup_roster') || '[]');
+      const offlineMember = backup.find(bm => bm.id === id);
+      
+      if (offlineMember) {
+        setKioskMessage({ 
+          text: `Welcome, ${offlineMember.name.split(' ')[0]}!`, 
+          type: 'warning', 
+          subtext: 'Offline mode: Check-in saved locally.' 
+        });
+        const pending = JSON.parse(localStorage.getItem('pending_visits') || '[]');
+        pending.push({ id, time: new Date().toISOString(), center: centerRef.current });
+        localStorage.setItem('pending_visits', JSON.stringify(pending));
+        setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 5000);
+        return true;
+      }
+      
+      setKioskMessage({ text: 'ID not found.', type: 'error', subtext: 'Please see front desk.' });
+      setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 3500);
+      return false;
+    }
 
   const processVisitorCheckIn = async (visitor) => {
     const currentCenter = centerRef.current;
@@ -504,10 +568,25 @@ const filteredMembers = scopedMembers.filter(m => { if (!(m.firstName + ' ' + m.
             <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
               <h3 className="text-lg font-bold text-[#001f3f] mb-6">My QR Badge</h3>
               <div className="flex flex-col items-center">
-                <MemberPhoto src={currentMember.photoUrl} name={currentMember.firstName} size={100} className="mb-4 border-4 border-slate-100 shadow-lg" />
-                <QRCode data={currentMember.id} size={180} />
-                <p className="mt-4 text-xs text-slate-400 font-bold">Scan at the kiosk for quick check-in</p>
-              </div>
+  <div className="relative mb-4">
+    <MemberPhoto src={currentMember.photoUrl} name={currentMember.firstName} size={100} className="border-4 border-slate-100 shadow-lg" />
+    <label className="absolute bottom-0 right-0 bg-[#1080ad] text-white p-2 rounded-full cursor-pointer shadow-lg hover:scale-110 transition-transform">
+      <input type="file" accept="image/*" capture="user" className="hidden" 
+        onChange={(e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = (ev) => handleSelfieUpload(ev.target.result, currentMember.airtableId);
+          reader.readAsDataURL(file);
+        }}
+      />
+      <Camera size={16} />
+    </label>
+  </div>
+  <p className="text-[9px] text-slate-400 font-bold uppercase mb-4">Tap camera to update photo</p>
+  <QRCode data={currentMember.id} size={180} />
+  <p className="mt-4 text-xs text-slate-400 font-bold">Scan at the kiosk for quick check-in</p>
+</div>
             </div>
           </div>
           <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
@@ -1791,6 +1870,28 @@ const filteredMembers = scopedMembers.filter(m => { if (!(m.firstName + ' ' + m.
                   {selectedMember.inactive && (<div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg flex justify-between items-center"><p className="text-red-800 font-bold text-sm">This member is marked INACTIVE. They cannot check in or access the Member Portal.</p><button onClick={async () => { try { await fetch('/api/update-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: selectedMember.airtableId, inactive: false }) }); setMembers(prev => prev.map(m => m.airtableId === selectedMember.airtableId ? { ...m, inactive: false } : m)); setSelectedMember({ ...selectedMember, inactive: false }); } catch (err) { alert('Could not update.'); } }} className="bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-green-700 transition-colors whitespace-nowrap ml-4">Reactivate</button></div>)}
                  
                  <span className={`px-4 py-1 rounded-full text-[10px] font-black tracking-widest ${getStoplight(selectedMember)==='green'?'bg-green-100 text-green-600':getStoplight(selectedMember)==='yellow'?'bg-yellow-100 text-yellow-600':'bg-red-100 text-red-600'}`}>{getStoplight(selectedMember)==='green'?'ACTIVE':getStoplight(selectedMember)==='yellow'?'GRACE PERIOD':'ACCOUNT LOCKED'}</span>
+                {/* DUAL ORIENTATION TRACKER */}
+<div className="mb-8 bg-blue-50 border-l-4 border-blue-500 p-6 rounded-r-xl">
+  <h3 className="text-blue-800 font-bold text-xs mb-4 uppercase tracking-widest">Facility Orientation Requirements</h3>
+  <div className="grid grid-cols-2 gap-4">
+    <div className={`p-4 rounded-xl border-2 ${selectedMember.orientationAnthony ? 'bg-green-50 border-green-200' : 'bg-white border-blue-100'}`}>
+      <p className="text-[10px] font-black text-slate-400 uppercase mb-2">Anthony Center</p>
+      {selectedMember.orientationAnthony ? (
+        <span className="text-green-600 font-bold text-sm flex items-center gap-1"><CheckCircle size={14}/> Complete</span>
+      ) : (
+        <button onClick={() => handleMarkOrientation('anthony')} className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold text-[10px]">Mark Done</button>
+      )}
+    </div>
+    <div className={`p-4 rounded-xl border-2 ${selectedMember.orientationHarper ? 'bg-green-50 border-green-200' : 'bg-white border-orange-100'}`}>
+      <p className="text-[10px] font-black text-slate-400 uppercase mb-2">Harper Center</p>
+      {selectedMember.orientationHarper ? (
+        <span className="text-green-600 font-bold text-sm flex items-center gap-1"><CheckCircle size={14}/> Complete</span>
+      ) : (
+        <button onClick={() => handleMarkOrientation('harper')} className="w-full bg-orange-600 text-white py-2 rounded-lg font-bold text-[10px]">Mark Done</button>
+      )}
+    </div>
+  </div>
+</div>
                  <h2 className="text-6xl font-black text-slate-900 mt-6 mb-12 tracking-tighter leading-none">{selectedMember.firstName}<br/>{selectedMember.lastName}</h2>
 {(selectedMember.needsOrientation || !selectedMember.orientationAnthony || !selectedMember.orientationHarper) && (<div className="mb-6 bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
                    <p className="text-blue-800 font-bold text-sm mb-3">Orientation Status</p>
