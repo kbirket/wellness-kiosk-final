@@ -64,7 +64,7 @@ export async function POST(request) {
     if (!body.familyRecordId) {
       
       // FIX: Use the frontend's family name if provided, otherwise default to the last name
-      const familyName = body.familyName || `The ${body.lastName}s`;
+      const familyName = body.familyName || `${body.firstName} ${body.lastName} Family`;
 
       const familyRes = await fetch(`https://api.airtable.com/v0/${baseId}/${familiesTable}`, {
         method: 'POST',
