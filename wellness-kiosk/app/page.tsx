@@ -1786,59 +1786,7 @@ const filteredMembers = scopedMembers.filter(m => { if (!(m.firstName + ' ' + m.
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#001f3f]/90 backdrop-blur-md">
            <div className="bg-white rounded-[2rem] w-full max-w-4xl flex overflow-hidden shadow-2xl relative max-h-[90vh]">
               <button onClick={() => { setSelectedMember(null); setEditMode(false); }} className="absolute top-6 right-6 text-slate-300 hover:text-red-500 transition-all z-20"><X size={24}/></button>
-              <div className="w-1/3 bg-slate-50 p-12 flex flex-col items-center justify-center border-r border-slate-100">// 1. ADD THESE HELPERS ABOVE YOUR 'return (' block (around line 720)
-const handlePhotoUpload = async (e, memberId) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  if (file.size > 2 * 1024 * 1024) {
-    alert('Photo must be under 2MB.');
-    return;
-  }
-  const img = new Image();
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = 200; canvas.height = 200;
-      const ctx = canvas.getContext('2d');
-      const minDim = Math.min(img.width, img.height);
-      const sx = (img.width - minDim) / 2;
-      const sy = (img.height - minDim) / 2;
-      ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, 200, 200);
-      const compressed = canvas.toDataURL('image/jpeg', 0.8);
-      
-      fetch('/api/upload-photo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ airtableId: memberId, fileData: compressed })
-      })
-      .then(res => res.json())
-      .then(result => {
-        if (result.success && result.photoUrl) {
-          setMembers(prev => prev.map(m => m.airtableId === memberId ? { ...m, photoUrl: result.photoUrl } : m));
-          setSelectedMember(prev => ({ ...prev, photoUrl: result.photoUrl }));
-        }
-      }).catch(() => alert('Upload failed.'));
-    };
-    img.src = ev.target.result;
-  };
-  reader.readAsDataURL(file);
-};
-
-// 2. REPLACE THE CORRUPT JSX SECTION (Around line 705) WITH THIS:
-<div className="mb-6 relative group">
-  <MemberPhoto src={selectedMember.photoUrl} name={selectedMember.firstName} size={140} className="shadow-xl border-4 border-white" />
-  <div className="absolute inset-0 rounded-full bg-black/0 group-hover:bg-black/40 flex items-center justify-center transition-all gap-2">
-    <label className="cursor-pointer p-2 bg-white/90 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-white" title="Upload photo">
-      <input type="file" accept="image/*" className="hidden" onChange={(e) => handlePhotoUpload(e, selectedMember.airtableId)} />
-      <Camera size={16} className="text-[#001f3f]" />
-    </label>
-    <label className="cursor-pointer p-2 bg-white/90 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-white" title="Take photo">
-      <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handlePhotoUpload(e, selectedMember.airtableId)} />
-      <UserCircle size={16} className="text-[#001f3f]" />
-    </label>
-  </div>
-</div><p className="text-3xl font-black tracking-[0.2em] text-[#1080ad]">{selectedMember.password}</p></div>
+              <div className="w-1/3 bg-slate-50 p-12 flex flex-col items-center justify-center border-r border-slate-100"><div className="mb-6 relative group"><MemberPhoto src={selectedMember.photoUrl} name={selectedMember.firstName} size={140} className="shadow-xl border-4 border-white" /><div className="absolute inset-0 rounded-full bg-black/0 group-hover:bg-black/40 flex items-center justify-center transition-all gap-2"><label className="cursor-pointer p-2 bg-white/90 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-white" title="Upload photo"><input type="file" accept="image/*" className="hidden" onChange={function(e) { var file = e.target.files[0]; if (!file) return; var img = new Image(); var reader = new FileReader(); reader.onload = function(ev) { img.onload = function() { var canvas = document.createElement('canvas'); canvas.width = 200; canvas.height = 200; var ctx = canvas.getContext('2d'); var minDim = Math.min(img.width, img.height); var sx = (img.width - minDim) / 2; var sy = (img.height - minDim) / 2; ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, 200, 200); var compressed = canvas.toDataURL('image/jpeg', 0.8); fetch('/api/upload-photo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: selectedMember.airtableId, fileData: compressed }) }).then(function(res) { return res.json(); }).then(function(result) { if (result.success && result.photoUrl) { setMembers(function(prev) { return prev.map(function(m) { return m.airtableId === selectedMember.airtableId ? Object.assign({}, m, { photoUrl: result.photoUrl }) : m; }); }); setSelectedMember(Object.assign({}, selectedMember, { photoUrl: result.photoUrl })); } else { alert('Upload failed: ' + (result.error || 'Unknown error')); } }).catch(function() { alert('Network error uploading photo.'); }); }; img.src = ev.target.result; }; reader.readAsDataURL(file); }} /><Camera size={16} className="text-[#001f3f]" /></label><label className="cursor-pointer p-2 bg-white/90 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-white" title="Take photo"><input type="file" accept="image/*" capture="environment" className="hidden" onChange={function(e) { var file = e.target.files[0]; if (!file) return; var img = new Image(); var reader = new FileReader(); reader.onload = function(ev) { img.onload = function() { var canvas = document.createElement('canvas'); canvas.width = 200; canvas.height = 200; var ctx = canvas.getContext('2d'); var minDim = Math.min(img.width, img.height); var sx = (img.width - minDim) / 2; var sy = (img.height - minDim) / 2; ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, 200, 200); var compressed = canvas.toDataURL('image/jpeg', 0.8); fetch('/api/upload-photo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: selectedMember.airtableId, fileData: compressed }) }).then(function(res) { return res.json(); }).then(function(result) { if (result.success && result.photoUrl) { setMembers(function(prev) { return prev.map(function(m) { return m.airtableId === selectedMember.airtableId ? Object.assign({}, m, { photoUrl: result.photoUrl }) : m; }); }); setSelectedMember(Object.assign({}, selectedMember, { photoUrl: result.photoUrl })); } else { alert('Upload failed: ' + (result.error || 'Unknown error')); } }).catch(function() { alert('Network error uploading photo.'); }); }; img.src = ev.target.result; }; reader.readAsDataURL(file); }} /><UserCircle size={16} className="text-[#001f3f]" /></label></div></div><div className="bg-white p-6 rounded-2xl shadow-xl mb-8 border border-slate-100"><QRCode data={selectedMember.id} size={180} /></div><p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Member Identity</p><p className="text-xl font-bold text-[#001f3f] mb-6">#{selectedMember.id}</p><p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Kiosk PIN</p><p className="text-3xl font-black tracking-[0.2em] text-[#1080ad]">{selectedMember.password}</p></div>
               <div className="flex-1 p-16 overflow-y-auto">
                   {selectedMember.inactive && (<div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg flex justify-between items-center"><p className="text-red-800 font-bold text-sm">This member is marked INACTIVE. They cannot check in or access the Member Portal.</p><button onClick={async () => { try { await fetch('/api/update-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: selectedMember.airtableId, inactive: false }) }); setMembers(prev => prev.map(m => m.airtableId === selectedMember.airtableId ? { ...m, inactive: false } : m)); setSelectedMember({ ...selectedMember, inactive: false }); } catch (err) { alert('Could not update.'); } }} className="bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-green-700 transition-colors whitespace-nowrap ml-4">Reactivate</button></div>)}
                  {(selectedMember.needsOrientation || !selectedMember.orientationAnthony || !selectedMember.orientationHarper) && (<div className="mb-6 bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">                    <p className="text-blue-800 font-bold text-sm mb-3">Orientation Status</p>                    <div className="flex gap-3">                      <div className={`flex-1 p-3 rounded-lg border ${selectedMember.orientationAnthony ? 'bg-green-50 border-green-200' : 'bg-white border-blue-200'}`}>                        <p className={"text-[10px] font-black uppercase tracking-widest mb-1 " + (selectedMember.orientationAnthony ? "text-green-600" : "text-blue-600")}>Anthony</p>                        {selectedMember.orientationAnthony ? <p className="text-xs font-bold text-green-600">Complete</p> : <button onClick={async () => { try { await fetch('/api/update-orientation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: selectedMember.airtableId, center: 'anthony' }) }); const bothDone = selectedMember.orientationHarper; setMembers(prev => prev.map(m => m.airtableId === selectedMember.airtableId ? { ...m, orientationAnthony: true, needsOrientation: !bothDone } : m)); setSelectedMember({ ...selectedMember, orientationAnthony: true, needsOrientation: !bothDone }); } catch (err) { alert('Could not update.'); } }} className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold hover:bg-blue-700 transition-colors">Mark Complete</button>}                      </div>                      <div className={`flex-1 p-3 rounded-lg border ${selectedMember.orientationHarper ? 'bg-green-50 border-green-200' : 'bg-white border-orange-200'}`}>                        <p className={"text-[10px] font-black uppercase tracking-widest mb-1 " + (selectedMember.orientationHarper ? "text-green-600" : "text-orange-600")}>Harper</p>                        {selectedMember.orientationHarper ? <p className="text-xs font-bold text-green-600">Complete</p> : <button onClick={async () => { try { await fetch('/api/update-orientation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: selectedMember.airtableId, center: 'harper' }) }); const bothDone = selectedMember.orientationAnthony; setMembers(prev => prev.map(m => m.airtableId === selectedMember.airtableId ? { ...m, orientationHarper: true, needsOrientation: !bothDone } : m)); setSelectedMember({ ...selectedMember, orientationHarper: true, needsOrientation: !bothDone }); } catch (err) { alert('Could not update.'); } }} className="bg-orange-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold hover:bg-orange-700 transition-colors">Mark Complete</button>}                      </div>                    </div>                  </div>)}
