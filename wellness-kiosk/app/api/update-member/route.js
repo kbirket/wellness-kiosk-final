@@ -40,6 +40,7 @@ export async function POST(request) {
     
     // Booleans usually pass properly as true/false, so we can leave this one as is
     if (fields.access247 !== undefined) airtableFields['24/7 Access'] = fields.access247;
+    if (fields.monthlyRate !== undefined) airtableFields['Monthly Rate'] = fields.monthlyRate;
 
     // Membership Type is a linked record to the Pricing Reference table
     // We need to look up the record ID by plan name
