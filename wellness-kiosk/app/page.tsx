@@ -2007,18 +2007,7 @@ const filteredMembers = scopedMembers.filter(m => { if (!(m.firstName + ' ' + m.
                    if (famMembers.length === 0) return null;
                    return (
                      <div className="mt-6 bg-purple-50 border border-purple-200 rounded-xl p-4">
-                       <p className="text-[10px] font-black text-purple-600 uppercase tracking-widest mb-3">Family Members — {selectedMember.familyName}</p>
-                       <div className="space-y-2">
-                         {famMembers.map(fm => (
-                           <button key={fm.airtableId} onClick={() => setSelectedMember(fm)} className="w-full flex justify-between items-center bg-white p-3 rounded-lg border border-purple-100 hover:border-purple-300 hover:bg-purple-50 transition-all group text-left">
-                             <div>
-                               <p className="font-bold text-[#001f3f] group-hover:text-[#8b5cf6] transition-colors">{fm.firstName} {fm.lastName}</p>
-                               <p className="text-[9px] text-slate-400 uppercase tracking-widest">{fm.id} • {fm.type}</p>
-                             </div>
-                             <ChevronRight size={14} className="text-slate-300 group-hover:text-[#8b5cf6] transition-colors" />
-                           </button>
-                         ))}
-                       </div>
+              <p className="text-[10px] font-black text-purple-600 uppercase tracking-widest mb-3">Family Members — {selectedMember.familyName}</p><div className="space-y-2">{famMembers.map(fm => (<div key={fm.airtableId} className="flex justify-between items-center bg-white p-3 rounded-lg border border-purple-100 hover:border-purple-300 hover:bg-purple-50 transition-all group"><button onClick={() => setSelectedMember(fm)} className="flex-1 text-left"><p className="font-bold text-[#001f3f] group-hover:text-[#8b5cf6] transition-colors">{fm.firstName} {fm.lastName}</p><p className="text-[9px] text-slate-400 uppercase tracking-widest">{fm.id} • {fm.type}</p></button><div className="flex items-center gap-2"><ChevronRight size={14} className="text-slate-300 group-hover:text-[#8b5cf6] transition-colors" /><button onClick={async (e) => { e.stopPropagation(); if (!window.confirm("Remove " + fm.firstName + " " + fm.lastName + " from this family group? They will keep their individual membership.")) return; try { var res = await fetch('/api/update-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: fm.airtableId, familyGroup: null }) }); if (res.ok) { setMembers(function(prev) { return prev.map(function(m) { return m.airtableId === fm.airtableId ? Object.assign({}, m, { familyName: '' }) : m; }); }); alert(fm.firstName + " has been removed from the family group."); } else { alert("Could not remove from family."); } } catch (err) { alert("Network error."); } }} className="text-slate-300 hover:text-red-500 transition-colors p-1 shrink-0" title="Remove from family"><X size={14}/></button></div></div>))}</div>
                      </div>
                    );
                  })()}
