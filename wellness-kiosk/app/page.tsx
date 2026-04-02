@@ -1330,7 +1330,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                     const monthName = new Date(yr, mo).toLocaleDateString('en-US', { month: 'long' });
                     
                     // Visit data for the selected month
-                    const monthVisits = visits.filter(v => { if (!v.time) return false; const d = new Date(v.time); return d.getFullYear() === yr && d.getMonth() === mo; });
+                    const monthVisits = visits.filter(v => { if (!v.time) return false; const d = new Date(v.time); if (d.getFullYear() !== yr || d.getMonth() !== mo) return false; if (viewingCenter === 'both') return true; return v.center && v.center.toLowerCase().includes(viewingCenter); });
                     const monthDayPasses = monthVisits.filter(v => v.type && v.type.includes('VISITOR')).length;
                     const daysInMonth = new Date(yr, mo + 1, 0).getDate();
                     const avgPerDay = daysInMonth > 0 ? Math.round(monthVisits.length / daysInMonth) : 0;
