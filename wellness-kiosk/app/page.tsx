@@ -1895,9 +1895,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                                     if (result.success) {
                                       setMembers(prev => prev.map(mem => mem.airtableId === member.airtableId ? { ...mem, status: 'ACTIVE', nextPayment: result.nextPaymentDue } : mem));
                                       setFirstPayment({ open: true, prorated: firstPayment.prorated, method: m, memberData: { ...member, nextPayment: result.nextPaymentDue } });
-                                      if (window.confirm(`Payment logged! Next due: ${result.nextPaymentDue}\n\nPrint a receipt?`)) {
-                                        printReceipt(member, m, displayAmount.toFixed(2), firstPayment.prorated, result.nextPaymentDue);
-                                      }
+                                      showToast('Payment logged! Next due: ' + result.nextPaymentDue, 'success', 5000);
                                     } else { alert('Error: ' + result.error); }
                                   } catch (err) { alert('Network error. Please try again.'); }
                                 }} className="bg-slate-50 hover:bg-[#16a34a] hover:text-white text-[#001f3f] font-bold py-3 rounded-xl border border-slate-200 transition-all text-xs">{m}</button>
@@ -2128,10 +2126,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                      const memberCopy = {...paymentModal};
                       setPaymentModal(null);
                       setCheckNumber('');
-                      showToast('Payment logged! Next due: ' + result.nextPaymentDue, 'success', 5000);
-                      if (window.confirm('Print a receipt?')) {
-                        printReceipt(memberCopy, m, receiptAmt, proratePayment, result.nextPaymentDue);
-                      }
+                     showToast('Payment logged! Next due: ' + result.nextPaymentDue, 'success', 5000);
                     } else { alert('Error: ' + result.error); }
                   } catch (err) { alert('Network error. Please try again.'); }
                 }} className="bg-slate-50 hover:bg-[#16a34a] hover:text-white text-[#001f3f] font-bold py-4 rounded-xl border border-slate-200 transition-all text-sm">{m}</button>
