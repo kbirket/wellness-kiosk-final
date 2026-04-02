@@ -1204,7 +1204,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
           let displayPeriod = '';
           if (periodStr.startsWith('Q')) { const q = parseInt(periodStr.replace('Q', '')); targetMonths = [ (q-1)*3, (q-1)*3 + 1, (q-1)*3 + 2 ]; displayPeriod = `Q${q} ${y}`; } else { targetMonths = [ parseInt(periodStr) - 1 ]; displayPeriod = new Date(y, targetMonths[0]).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }); }
 
-          const currentPeriodVisits = visits.filter(v => { if (!v.time) return false; const d = new Date(v.time); return d.getFullYear() === y && targetMonths.includes(d.getMonth()); });
+          const currentPeriodVisits = visits.filter(v => { if (!v.time) return false; const d = new Date(v.time); if (d.getFullYear() !== y || !targetMonths.includes(d.getMonth())) return false; if (viewingCenter === 'both') return true; return v.center && v.center.toLowerCase().includes(viewingCenter); });
           const newMembersThisPeriod = members.filter(mem => { if (!mem.startDate) return false; const d = new Date(mem.startDate); return d.getFullYear() === y && targetMonths.includes(d.getMonth()); });
           const visitCounts = currentPeriodVisits.reduce((acc, v) => { const name = v.name; acc[name] = (acc[name] || 0) + 1; return acc; }, {});
           const topMembers = Object.entries(visitCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
