@@ -39,7 +39,8 @@ export async function POST(request) {
       body: JSON.stringify({
         fields: {
           "Next Payment Due": nextPaymentDue,
-          "Membership Status": "Active"
+          "Membership Status": "Active",
+          "Payment Method": method
         }
       })
     });
