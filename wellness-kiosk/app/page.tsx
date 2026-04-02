@@ -980,7 +980,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                   <div className="py-4"><DonutChart data={planChartData} totalLabel="Members" /></div>
                 </ProListCard>
                 <ProListCard title={"Peak Hours Heatmap (" + heatmapData.reduce(function(s,v) { return s + v; }, 0) + " visits, " + maxVisits + " max)"}>
-                  <div className="flex items-end justify-between h-48 mt-8 gap-2">
+                  <div style={{display: 'flex', alignItems: 'flex-end', height: '192px', marginTop: '32px', gap: '8px'}}>
                     {heatmapData.map(function(count, i) { var hp = count === 0 ? 5 : (count / maxVisits) * 100; var hl = (i + 6) > 12 ? String((i + 6) - 12) + 'P' : String(i + 6) + 'A'; return (<div key={i} style={{flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px'}}><div style={{width: '100%', height: '100%', background: '#e2e8f0', borderRadius: '6px 6px 0 0', position: 'relative', display: 'flex', alignItems: 'flex-end'}}><div style={{width: '100%', height: hp + '%', background: '#1080ad', borderRadius: '6px 6px 0 0', minHeight: '2px'}}></div></div><span style={{fontSize: '10px', fontWeight: 700, color: '#94a3b8'}}>{hl}</span></div>); })}
                   </div>
                 </ProListCard>
