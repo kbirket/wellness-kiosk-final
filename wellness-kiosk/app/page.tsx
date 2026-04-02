@@ -979,7 +979,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                 <ProListCard title="Membership Breakdown">
                   <div className="py-4"><DonutChart data={planChartData} totalLabel="Members" /></div>
                 </ProListCard>
-                <ProListCard title="Peak Hours Heatmap">
+                <ProListCard title={"Peak Hours Heatmap (" + heatmapData.reduce(function(s,v) { return s + v; }, 0) + " visits, " + maxVisits + " max)"}>
                   <div className="flex items-end justify-between h-48 mt-8 gap-2">
                     {heatmapData.map(function(count, i) { var hp = count === 0 ? 5 : (count / maxVisits) * 100; var hl = (i + 6) > 12 ? String((i + 6) - 12) + 'P' : String(i + 6) + 'A'; return (<div key={i} className="flex-1 flex flex-col items-center gap-2 group"><div className="w-full rounded-t-md relative flex items-end justify-center transition-colors" style={{height: '100%', backgroundColor: '#dbeafe'}}><div className="w-full rounded-t-md transition-all duration-500 relative" style={{height: hp + '%', backgroundColor: '#1080ad'}}><span className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold text-[#001f3f] opacity-0 group-hover:opacity-100 transition-opacity">{count}</span></div></div><span className="text-[10px] font-bold text-slate-400">{hl}</span></div>); })}
                   </div>
