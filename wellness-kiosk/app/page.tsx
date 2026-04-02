@@ -1337,7 +1337,8 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                     
                     // Employee + family visits
                     const empVisits = monthVisits.filter(v => !v.type || !v.type.includes('VISITOR'));
-                    const corpVisits = empVisits.filter(v => v.type && (v.type.includes('CORPORATE') || v.type.includes('HD6')));
+                    const corpVisits = monthVisits.filter(v => v.type && (v.type.includes('CORPORATE') || v.type.includes('HD6')));
+                    const empVisits = monthVisits.filter(v => (!v.type || !v.type.includes('VISITOR')) && !(v.type && (v.type.includes('CORPORATE') || v.type.includes('HD6'))));
                     
                     // Membership stats
                     const singleCount = scopedMembers.filter(m => m.type === 'SINGLE').length;
