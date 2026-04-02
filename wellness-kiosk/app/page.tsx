@@ -1351,9 +1351,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                     // Corporate breakdown
                     const corpMemsSingle = scopedMembers.filter(m => m.type === 'CORPORATE').length;
                     const corpMemsFam = scopedMembers.filter(m => m.type === 'CORPORATE FAMILY').length;
-                    const corpMemsStudent = scopedMembers.filter(m => m.type.includes('STUDENT') && m.sponsorName).length;
-                    const corpMemsSenior = scopedMembers.filter(m => (m.type.includes('SENIOR')) && m.sponsorName).length;
-                    
+                                        
                     // New members
                     const newMembers = scopedMembers.filter(mem => { if (!mem.startDate) return false; const d = new Date(mem.startDate); return d.getFullYear() === yr && d.getMonth() === mo; });
                     
@@ -1409,8 +1407,6 @@ var showToast = function(message, type, duration) { setToast({ message: message,
 <table><thead><tr><th>Category</th><th style="text-align:right">Count</th></tr></thead><tbody>
 <tr><td class="stat-label">Single Memberships</td><td class="stat-value">${corpMemsSingle}</td></tr>
 <tr><td class="stat-label">Family Memberships</td><td class="stat-value">${corpMemsFam}</td></tr>
-<tr><td class="stat-label">Student Memberships</td><td class="stat-value">${corpMemsStudent}</td></tr>
-<tr><td class="stat-label">Senior Memberships</td><td class="stat-value">${corpMemsSenior}</td></tr>
 </tbody></table>
 </div>
 <div>
