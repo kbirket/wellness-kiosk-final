@@ -2119,7 +2119,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                   const amtLabel = fullRate > 0 ? ` ($${displayAmount.toFixed(2)}${proratePayment ? ' prorated' : ''})` : '';
                   if (!window.confirm(`Log ${m} payment${amtLabel} for ${paymentModal.firstName} ${paymentModal.lastName}?`)) return;
                   try {
-                    const res = await fetch('/api/log-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: paymentModal.airtableId, memberName: `${paymentModal.firstName} ${paymentModal.lastName}`, method: payMethod, currentDueDate: paymentModal.nextPayment, prorated: proratePayment, proratedAmount: proratePayment ? proratedAmount : null }) });
+                    const res = await fetch('/api/log-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: paymentModal.airtableId, memberName: `${paymentModal.firstName} ${paymentModal.lastName}`, method: payMethod, amount: displayAmount, currentDueDate: paymentModal.nextPayment, prorated: proratePayment, proratedAmount: proratePayment ? proratedAmount : null }) });
                     const result = await res.json();
                     if (result.success) {
                       setMembers(prev => prev.map(mem => mem.airtableId === paymentModal.airtableId ? { ...mem, status: 'ACTIVE', nextPayment: result.nextPaymentDue } : mem));
