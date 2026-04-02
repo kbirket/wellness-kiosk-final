@@ -193,7 +193,6 @@ const handleSelfieUpload = async (imageData, memberId) => {
   useEffect(() => { if (!user && !activeCorp) return; const interval = setInterval(() => { if (Date.now() - lastActivity > SESSION_TIMEOUT) { alert('Your session has expired due to inactivity. Please log in again.'); handleLogout(); } }, 60 * 1000); return () => clearInterval(interval); }, [user, activeCorp, lastActivity]);
 
   useEffect(() => {
-    fetch('/api/members').then(res => res.json()).then(data => { /* handled below */ });
     fetch('/api/get-corporate-partners').then(res => res.json()).then(data => {
       console.log('[Wellness Hub] Corporate Partners raw:', data.records?.length, 'records', data.records?.map(r => r.fields['Company Name']));
       if (data.records) { setCorporatePartners(data.records.map(r => { const rawName = r.fields['Company Name']; const name = Array.isArray(rawName) ? rawName[0] : (rawName || ''); const rawMatch = r.fields['Sponsor Match']; const sponsorMatch = Array.isArray(rawMatch) ? rawMatch[0] : (rawMatch || name); return { id: r.id, name: String(name).trim(), sponsorMatch: String(sponsorMatch).trim(), contactName: r.fields['Contact Name'] || '', contactEmail: r.fields['Contact Email'] || '', paidMonths: r.fields['Paid Months'] || '', address: r.fields['Street Address'] || '', city: r.fields['City'] || '', state: r.fields['State'] || 'KS', zip: r.fields['Zip'] || '' }; }).filter(p => p.name).sort((a,b) => a.name.localeCompare(b.name))); }
@@ -372,6 +371,13 @@ const filteredMembers = scopedMembers.filter(m => { if (!(m.firstName + ' ' + m.
 
       const scanCenter = currentLoc === 'both' ? m.center : currentLoc.charAt(0).toUpperCase() + currentLoc.slice(1);
       const currentTime = new Date().toISOString();
+
+      var recentDupe = visits.some(function(v) { return v.name === (m.firstName + ' ' + m.lastName) && (new Date(currentTime) - new Date(v.time)) < 5 * 60 * 1000; });
+      if (recentDupe) {
+        setKioskMessage({ text: 'Already checked in!', type: 'warning', subtext: m.firstName + ' was checked in less than 5 minutes ago.' });
+        setTimeout(function() { setKioskMessage({ text: '', type: '', subtext: '' }); }, 4500);
+        return false;
+      }
 
       try {
         const res = await fetch('/api/visits', {
