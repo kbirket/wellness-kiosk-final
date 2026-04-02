@@ -84,13 +84,3 @@ export async function POST(request) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
-```
-
-Now update the delete button in `page.tsx` to call this API. Find the replacement I just gave you and update the onClick. Search for:
-```
-if (!window.confirm('Delete this check-in from '
-```
-
-Replace that entire `onClick` handler (from `onClick={function(e)` to the closing `}}`) with:
-```
-onClick={async function(e) { e.stopPropagation(); if (!window.confirm('Delete this check-in from ' + new Date(v.time).toLocaleDateString() + ' at ' + new Date(v.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + '?')) return; try { await fetch('/api/delete-visit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ memberAirtableId: selectedMember.airtableId, visitTime: v.time, visitCenter: v.center }) }); } catch (err) { console.error('Could not delete from Airtable:', err); } setVisits(function(prev) { return prev.filter(function(visit) { return !(visit.name === v.name && visit.time === v.time && visit.center === v.center); }); }); setMembers(function(prev) { return prev.map(function(m) { return m.id === selectedMember.id ? Object.assign({}, m, { visits: Math.max(0, m.visits - 1) }) : m; }); }); setSelectedMember(Object.assign({}, selectedMember, { visits: Math.max(0, selectedMember.visits - 1) })); }
