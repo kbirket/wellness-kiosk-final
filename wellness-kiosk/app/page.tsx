@@ -64,7 +64,7 @@ export default function WellnessHub() {
   const [pinModal, setPinModal] = useState(null);
   const [pinInput, setPinInput] = useState('');
   const [visitors, setVisitors] = useState([]);
-  const [showAllCheckins, setShowAllCheckins] = useState(false);
+  const [showAllCheckins, setShowAllCheckins] = useState(false);   const [checkinDate, setCheckinDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [showAllMemberVisits, setShowAllMemberVisits] = useState(false);
   const [activeClass, setActiveClass] = useState(null);
   const [kioskMode, setKioskMode] = useState('Gym');
@@ -916,10 +916,11 @@ const filteredMembers = scopedMembers.filter(m => { if (!(m.firstName + ' ' + m.
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 relative"><h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Search size={14}/> Quick Member Lookup</h3><div className="relative"><input className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] text-sm" placeholder="Type a name, ID, or email..." value={quickSearch} onChange={e => setQuickSearch(e.target.value)} />{quickResults.length > 0 && (<div className="absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 overflow-hidden">{quickResults.map(m => (<button key={m.id} onClick={() => { setSelectedMember(m); setQuickSearch(''); }} className="w-full p-4 border-b border-slate-50 last:border-0 hover:bg-blue-50 transition-colors flex justify-between items-center text-left"><div><p className="font-bold text-[#001f3f]">{m.firstName} {m.lastName}</p><p className="text-[10px] text-slate-400">{m.id} · {m.type}</p></div><span className={`px-2 py-1 rounded-full text-[9px] font-black ${getStoplight(m)==='green'?'bg-green-100 text-green-600':getStoplight(m)==='yellow'?'bg-yellow-100 text-yellow-600':'bg-red-100 text-red-600'}`}>{getStoplight(m)==='green'?'ACTIVE':getStoplight(m)==='yellow'?'GRACE':'LOCKED'}</span></button>))}</div>)}</div></div><div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between"><h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><FileText size={14}/> Quick Export</h3><div className="space-y-3"><button onClick={exportTodaysLog} className="w-full bg-[#1080ad] text-white py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors shadow-sm"><Download size={16}/> Export Today's Check-in Log</button><button onClick={handleExportCSV} className="w-full bg-slate-100 text-[#001f3f] py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-slate-200 transition-colors"><Download size={16}/> Export Full Member List</button></div></div></div>
               
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <ProListCard title="Today's Check-ins">
+               <ProListCard title="Check-in Log" actions={<input type="date" value={checkinDate} onChange={(e) => { setCheckinDate(e.target.value); setShowAllCheckins(false); }} className="p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-[#001f3f] outline-none focus:border-[#1080ad] cursor-pointer" />}>
                   {(() => {
-                    const todayStr = new Date().toDateString();
-                    const todayVisits = filteredVisits.filter(v => new Date(v.time).toDateString() === todayStr);
+                    const selectedDateStr = new Date(checkinDate + 'T00:00:00').toDateString();
+                    const isToday = selectedDateStr === new Date().toDateString();
+                    const todayVisits = filteredVisits.filter(v => new Date(v.time).toDateString() === selectedDateStr);
                     const todayByPlan = todayVisits.reduce((acc, v) => { acc[v.type] = (acc[v.type] || 0) + 1; return acc; }, {});
                     const displayedVisits = showAllCheckins ? todayVisits : todayVisits.slice(0, 5);
                     return (
@@ -936,7 +937,7 @@ const filteredMembers = scopedMembers.filter(m => { if (!(m.firstName + ' ' + m.
                         )}
                         <div className="space-y-4">
                           {todayVisits.length === 0 ? (
-                            <p className="text-slate-400 italic text-sm">Waiting for activity...</p>
+                            <p className="text-slate-400 italic text-sm">{isToday ? 'Waiting for activity...' : 'No check-ins on this date.'}</p>
                           ) : (
                             displayedVisits.map((v, i) => (
                              <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
@@ -956,7 +957,7 @@ const filteredMembers = scopedMembers.filter(m => { if (!(m.firstName + ' ' + m.
                         </div>
                         {todayVisits.length > 5 && (
                           <button onClick={() => setShowAllCheckins(!showAllCheckins)} className="w-full py-2 mt-2 text-sm font-bold text-[#1080ad] hover:text-[#001f3f] transition-colors bg-blue-50/50 rounded-lg border border-blue-100 hover:bg-blue-50">
-                            {showAllCheckins ? 'Collapse List ↑' : `See All ${todayVisits.length} Check-ins →`}
+                            {showAllCheckins ? 'Collapse List ↑' : 'See All ' + todayVisits.length + ' Check-ins \u2192'}
                           </button>
                         )}
                       </div>
