@@ -37,7 +37,9 @@ export async function POST(request) {
       "Password": newPIN,
       "Membership Status": "ACTIVE",
       "Start Date": body.startDate || today,
-      "Needs Orientation": body.needsOrientation, 
+      "Needs Orientation": body.needsOrientation,       
+      "Orientation Anthony": !body.needsOrientation,       
+      "Orientation Harper": !body.needsOrientation, 
       ...(body.corporateSponsor ? { "Corporate Sponsor": body.corporateSponsor } : {}),
     };
 
