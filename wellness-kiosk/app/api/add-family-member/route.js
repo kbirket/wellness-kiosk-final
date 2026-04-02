@@ -45,6 +45,8 @@ export async function POST(request) {
             "Membership Status": "ACTIVE",
             "Start Date": body.startDate || today,
             "Needs Orientation": body.needsOrientation === true,
+            "Orientation Anthony": body.needsOrientation !== true,
+            "Orientation Harper": body.needsOrientation !== true,
             ...(body.corporateSponsor ? { "Corporate Sponsor": body.corporateSponsor } : {}),
           }
         }],
