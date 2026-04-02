@@ -220,7 +220,7 @@ const handleSelfieUpload = async (imageData, memberId) => {
         });
         setMembers(mappedMembers); setApiError('');
         fetch('/api/get-visits').then(res => res.json()).then(visitData => {
-          if (visitData.records) { const mappedVisits = visitData.records.map(v => { const linkedArray = v.fields['Member'] || v.fields['Members'] || []; const linkId = linkedArray[0]; const foundMember = mappedMembers.find(m => m.airtableId === linkId); const fallbackName = Array.isArray(v.fields['Name']) ? v.fields['Name'][0] : v.fields['Name'] || 'Unknown Member'; return { name: foundMember ? `${foundMember.firstName} ${foundMember.lastName}` : fallbackName, center: v.fields['Center'] || v.fields['Location'] || 'Both', time: v.fields['Time'] || v.fields['Date'] || v.createdTime, type: foundMember ? foundMember.type : 'Unknown', method: v.fields['Method'] || 'General' }; }); mappedVisits.sort((a,b) => new Date(b.time) - new Date(a.time)); setVisits(mappedVisits); }
+          if (visitData.records) { const mappedVisits = visitData.records.map(v => { const linkedArray = v.fields['Member'] || v.fields['Members'] || []; const linkId = linkedArray[0]; const foundMember = mappedMembers.find(m => m.airtableId === linkId); const fallbackName = Array.isArray(v.fields['Name']) ? v.fields['Name'][0] : v.fields['Name'] || 'Unknown Member'; return { name: foundMember ? `${foundMember.firstName} ${foundMember.lastName}` : fallbackName, center: v.fields['Center'] || v.fields['Location'] || 'Both', time: v.fields['Check-in Time'] || v.fields['Time'] || v.fields['Date'] || v.createdTime, type: foundMember ? foundMember.type : 'Unknown', method: v.fields['Check-in Method'] || v.fields['Method'] || 'General' }; }); mappedVisits.sort((a,b) => new Date(b.time) - new Date(a.time)); setVisits(mappedVisits); }
           setLoading(false);
         }).catch(err => { console.error("Could not fetch historical visits:", err); setLoading(false); });
       } else { setLoading(false); }
@@ -291,7 +291,7 @@ const handleAddMemberSubmit = async (e) => {
     } else if (isFamily && familyFlow) {
       try {
         // FIX: We are now sending `lastName` instead of forcing `familyFlow.lastName`
-        const res = await fetch('/api/add-family-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName, lastName, email: email || familyFlow.email, phone: phone || familyFlow.phone, plan: familyFlow.plan, center: familyFlow.center, familyRecordId: familyFlow.familyRecordId, corporateSponsor: familyFlow.corporateSponsor, needsOrientation, address, city, state: mstate, zip: mzip, access247, badgeNumber, discountCode, discountExpiration, monthlyRate: finalMonthlyRate }) });
+        const res = await fetch('/api/add-family-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName, lastName, email: email || familyFlow.email, phone: phone || familyFlow.phone, plan: familyFlow.plan, center: familyFlow.center, familyRecordId: familyFlow.familyRecordId, corporateSponsor: familyFlow.corporateSponsor, needsOrientation, address, city, state: mstate, zip: mzip, access247, badgeNumber, discountCode, discountExpiration, monthlyRate: 0 }) });
         const result = await res.json();
         // FIX: Also updated the success state to use `lastName` instead of `familyFlow.lastName`
         if (result.success) { const updated = { ...familyFlow, addedMembers: [...familyFlow.addedMembers, { name: `${firstName} ${lastName}`, pin: result.pin, isPrimary: false }] }; setFamilyFlow(updated); setNewMemberPin({ name: `${firstName} ${lastName}`, pin: result.pin }); } else { alert('Error: ' + result.error); }
@@ -939,15 +939,16 @@ const filteredMembers = scopedMembers.filter(m => { if (!(m.firstName + ' ' + m.
                             <p className="text-slate-400 italic text-sm">Waiting for activity...</p>
                           ) : (
                             displayedVisits.map((v, i) => (
-                              <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
+                             <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
                                 <div>
                                   <p className="font-bold text-slate-800">{v.name}</p>
                                   <p className="text-[11px] font-bold text-[#f59e0b] uppercase">
                                     {v.center?.toLowerCase() === 'harper' ? 'Harper Wellness Center' : v.center?.toLowerCase() === 'anthony' ? 'Anthony Wellness Center' : v.center} • {v.type}
                                   </p>
                                 </div>
-                                <div className="flex items-center gap-2 text-slate-400 text-xs font-medium">
+                                <div className="flex items-center gap-3 text-slate-400 text-xs font-medium">
                                   <Clock size={14}/> {new Date(v.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                  <button onClick={function(e) { e.stopPropagation(); if (!window.confirm('Remove check-in for ' + v.name + ' at ' + new Date(v.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + '?')) return; var matchMem = members.find(function(m) { return (m.firstName + ' ' + m.lastName) === v.name; }); if (matchMem) { fetch('/api/delete-visit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ memberAirtableId: matchMem.airtableId, visitTime: v.time, visitCenter: v.center }) }).catch(function(err) { console.error('Delete visit error:', err); }); setMembers(function(prev) { return prev.map(function(m) { return m.id === matchMem.id ? Object.assign({}, m, { visits: Math.max(0, m.visits - 1) }) : m; }); }); } setVisits(function(prev) { return prev.filter(function(visit) { return !(visit.name === v.name && visit.time === v.time && visit.center === v.center); }); }); }} className="text-slate-300 hover:text-red-500 transition-colors p-1 rounded-lg hover:bg-red-50" title="Remove this check-in"><X size={14}/></button>
                                 </div>
                               </div>
                             ))
@@ -1107,7 +1108,7 @@ const filteredMembers = scopedMembers.filter(m => { if (!(m.firstName + ' ' + m.
                  const isUsageBased = !!usageBasedCorps[corp.id];
                  const corpMembers = members.filter(mem => mem.sponsorName === corp.sponsorMatch);
                  let totalOwed = 0; let totalPeriodVisits = 0;
-                 const enrichedMembers = corpMembers.map(mem => { const memVisits = currentPeriodVisits.filter(v => v.name.toLowerCase() === `${mem.firstName} ${mem.lastName}`.toLowerCase()); totalPeriodVisits += memVisits.length; const rate = parseFloat(String(mem.monthlyRate).replace(/[^0-9.]/g, '')) || 0; let memberOwed = 0; let activeMonthsCount = 0; if (isUsageBased) { targetMonths.forEach(mIdx => { const visitedInMonth = memVisits.some(v => new Date(v.time).getMonth() === mIdx); if (visitedInMonth) { memberOwed += rate; activeMonthsCount++; } }); } else { if (mem.status === 'ACTIVE') { memberOwed = rate * targetMonths.length; activeMonthsCount = targetMonths.length; } } totalOwed += memberOwed; return { ...mem, periodVisits: memVisits.length, memberOwed, activeMonthsCount }; });
+                 var famPrimary = {}; corpMembers.forEach(function(cm) { if (cm.familyName && !famPrimary[cm.familyName]) famPrimary[cm.familyName] = cm.airtableId; }); const enrichedMembers = corpMembers.map(mem => { const memVisits = currentPeriodVisits.filter(v => v.name.toLowerCase() === `${mem.firstName} ${mem.lastName}`.toLowerCase()); totalPeriodVisits += memVisits.length; var rawRate = parseFloat(String(mem.monthlyRate).replace(/[^0-9.]/g, '')) || 0; var isDependent = mem.familyName && famPrimary[mem.familyName] && famPrimary[mem.familyName] !== mem.airtableId; var rate = isDependent ? 0 : rawRate; let memberOwed = 0; let activeMonthsCount = 0; if (isUsageBased) { targetMonths.forEach(mIdx => { const visitedInMonth = memVisits.some(v => new Date(v.time).getMonth() === mIdx); if (visitedInMonth) { memberOwed += rate; activeMonthsCount++; } }); } else { if (mem.status === 'ACTIVE') { memberOwed = rate * targetMonths.length; activeMonthsCount = targetMonths.length; } } totalOwed += memberOwed; return { ...mem, periodVisits: memVisits.length, memberOwed, activeMonthsCount }; });
                  const activeMembersCount = enrichedMembers.filter(m => m.memberOwed > 0 || m.status === 'ACTIVE').length;
                  const paidMatch = corp.paidMonths ? corp.paidMonths.split(',').find(str => str.startsWith(reportMonth)) : null;
                  const isPaid = !!paidMatch;
@@ -2084,17 +2085,19 @@ const filteredMembers = scopedMembers.filter(m => { if (!(m.firstName + ' ' + m.
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Payment Method</p>
             {checkNumber !== '' && (
               <div className="mb-3">
-                <input value={checkNumber} onChange={(e) => setCheckNumber(e.target.value)} placeholder="Check #" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#16a34a] text-sm font-bold text-[#001f3f] placeholder-slate-300" autoFocus />
+                <input value={checkNumber === 'showInput' ? '' : checkNumber} onChange={(e) => setCheckNumber(e.target.value || 'showInput')} placeholder="Enter check number..." className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#16a34a] text-sm font-bold text-[#001f3f] placeholder-slate-300" autoFocus />
               </div>
             )}
             <div className="grid grid-cols-2 gap-3 mb-6">
               {['Cash', 'Check', 'Card', 'ACH'].map(m => (
                 <button key={m} onClick={async () => {
-                  if (m === 'Check' && checkNumber === '') { setCheckNumber(' '); return; }
+                  if (m === 'Check' && !checkNumber) { setCheckNumber('showInput'); return; }
+                  var cleanCheckNum = checkNumber && checkNumber !== 'showInput' ? checkNumber.trim() : '';
+                  var payMethod = m === 'Check' && cleanCheckNum ? 'Check #' + cleanCheckNum : m;
                   const amtLabel = fullRate > 0 ? ` ($${displayAmount.toFixed(2)}${proratePayment ? ' prorated' : ''})` : '';
                   if (!window.confirm(`Log ${m} payment${amtLabel} for ${paymentModal.firstName} ${paymentModal.lastName}?`)) return;
                   try {
-                    const res = await fetch('/api/log-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: paymentModal.airtableId, memberName: `${paymentModal.firstName} ${paymentModal.lastName}`, method: m === 'Check' && checkNumber ? `Check #${checkNumber}` : m, currentDueDate: paymentModal.nextPayment, prorated: proratePayment, proratedAmount: proratePayment ? proratedAmount : null }) });
+                    const res = await fetch('/api/log-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: paymentModal.airtableId, memberName: `${paymentModal.firstName} ${paymentModal.lastName}`, method: payMethod, currentDueDate: paymentModal.nextPayment, prorated: proratePayment, proratedAmount: proratePayment ? proratedAmount : null }) });
                     const result = await res.json();
                     if (result.success) {
                       setMembers(prev => prev.map(mem => mem.airtableId === paymentModal.airtableId ? { ...mem, status: 'ACTIVE', nextPayment: result.nextPaymentDue } : mem));
@@ -2130,14 +2133,14 @@ const filteredMembers = scopedMembers.filter(m => { if (!(m.firstName + ' ' + m.
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Payment Method</p>
             {checkNumber !== '' && (
               <div className="mb-3">
-                <input value={checkNumber} onChange={(e) => setCheckNumber(e.target.value)} placeholder="Check #" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#8b5cf6] text-sm font-bold text-[#001f3f] placeholder-slate-300" autoFocus />
+                <input value={checkNumber === 'showInput' ? '' : checkNumber} onChange={(e) => setCheckNumber(e.target.value || 'showInput')} placeholder="Enter check number..." className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#8b5cf6] text-sm font-bold text-[#001f3f] placeholder-slate-300" autoFocus />
               </div>
             )}
             <div className="grid grid-cols-2 gap-3 mb-6">
               {['Check', 'ACH', 'Card', 'Cash'].map(m => (
                 <button key={m} onClick={async () => {
-                  if (m === 'Check' && checkNumber === '') { setCheckNumber(' '); return; }
-                  const methodLabel = m === 'Check' && checkNumber.trim() ? `Check #${checkNumber.trim()}` : m;
+                  if (m === 'Check' && !checkNumber) { setCheckNumber('showInput'); return; }
+                  var cleanCorpCheck = checkNumber && checkNumber !== 'showInput' ? checkNumber.trim() : ''; var methodLabel = m === 'Check' && cleanCorpCheck ? 'Check #' + cleanCorpCheck : m;
                   const entry = `${corpPaymentModal.reportMonth}:${methodLabel}`;
                   const newPaidMonths = corpPaymentModal.paidMonths ? `${corpPaymentModal.paidMonths},${entry}` : entry;
                   
