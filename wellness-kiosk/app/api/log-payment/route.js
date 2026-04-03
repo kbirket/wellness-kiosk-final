@@ -15,6 +15,9 @@ export async function POST(request) {
     
     // 2. Create the Payment Record
     const payAmount = Number(amount) || 0;
+    const checkNum = method.startsWith('Check #') ? method.replace('Check #', '') : '';
+    const payMethod = method.startsWith('Check') ? 'Check' : method;
+    const noteText = checkNum ? 'Check #' + checkNum + ' - Logged by staff via Wellness Hub' : 'Logged by staff via Wellness Hub';
     const payRes = await fetch(`https://api.airtable.com/v0/${baseId}/Payments`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -24,9 +27,9 @@ export async function POST(request) {
             "Member": [airtableId],
             "Amount": payAmount,
             "Payment Date": new Date().toISOString().split('T')[0],
-            "Payment Method": method,
+            "Payment Method": payMethod,
             "Status": "Completed",
-            "Notes": "Logged by staff via Wellness Hub"
+            "Notes": noteText
           }
         }]
       })
