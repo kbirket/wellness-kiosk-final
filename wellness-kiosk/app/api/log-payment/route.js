@@ -36,15 +36,14 @@ export async function POST(request) {
       console.error('Payment record error:', payData.error);
     }
     
-    // 3. Update the Member record
+    // 3. Update the Member's Next Payment Due date in the "Members" table
     const memRes = await fetch(`https://api.airtable.com/v0/${baseId}/Members/${airtableId}`, {
       method: 'PATCH',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         fields: {
           "Next Payment Due": nextPaymentDue,
-          "Membership Status": "Active",
-          "Payment Method": method
+          "Membership Status": "Active"
         }
       })
     });
