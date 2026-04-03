@@ -13,7 +13,7 @@ export async function POST(request) {
     nextDate.setMonth(nextDate.getMonth() + 1);
     const nextPaymentDue = nextDate.toISOString().split('T')[0];
     
- // 2. Create the Payment Record
+    // 2. Create the Payment Record
     const payAmount = Number(amount) || 0;
     const checkNum = method.startsWith('Check #') ? method.replace('Check #', '') : '';
     const payMethod = method.startsWith('Check') ? 'Check' : method;
@@ -37,36 +37,20 @@ export async function POST(request) {
       })
     });
     const payData = await payRes.json();
-    console.log('PAYMENT FULL RESPONSE:', JSON.stringify(payData));
-    console.log('Payment API response:', JSON.stringify(payData));
     if (payData.error) {
       console.error('Payment record error:', payData.error);
     }
     
-    // 3. Update the Member's Next Payment Due date in the "Members" table
+    // 3. Update the Member record
     const memRes = await fetch(`https://api.airtable.com/v0/${baseId}/Members/${airtableId}`, {
       method: 'PATCH',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-       fields: {
+        fields: {
           "Next Payment Due": nextPaymentDue,
           "Membership Status": "Active",
           "Check Number": checkNum || ""
         }
-```
-
-That writes the check number (or clears it for non-check payments) directly on the member record every time a payment is logged.
-
-**Step 3: Read it on the frontend**
-
-In your member mapping (the big `data.records.map` block), add `checkNumber` to the mapped fields. **FIND:**
-```
-paymentMethod: Array.isArray(r.fields['Payment Method']) ? r.fields['Payment Method'][r.fields['Payment Method'].length - 1] : (r.fields['Payment Method'] || ''),
-```
-
-checkNumber: r.fields['Check Number'] || '',
-```
-
       })
     });
     const memData = await memRes.json();
