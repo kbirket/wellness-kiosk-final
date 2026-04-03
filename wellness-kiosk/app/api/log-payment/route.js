@@ -13,7 +13,7 @@ export async function POST(request) {
     nextDate.setMonth(nextDate.getMonth() + 1);
     const nextPaymentDue = nextDate.toISOString().split('T')[0];
     
-    // 2. Create the Payment Record
+  // 2. Create the Payment Record
     const payAmount = Number(amount) || 0;
     const checkNum = method.startsWith('Check #') ? method.replace('Check #', '') : '';
     const payMethod = method.startsWith('Check') ? 'Check' : method;
