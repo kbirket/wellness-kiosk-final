@@ -13,24 +13,26 @@ export async function POST(request) {
     nextDate.setMonth(nextDate.getMonth() + 1);
     const nextPaymentDue = nextDate.toISOString().split('T')[0];
     
-  // 2. Create the Payment Record
+ // 2. Create the Payment Record
     const payAmount = Number(amount) || 0;
     const checkNum = method.startsWith('Check #') ? method.replace('Check #', '') : '';
     const payMethod = method.startsWith('Check') ? 'Check' : method;
     const noteText = checkNum ? 'Check #' + checkNum + ' - Logged by staff via Wellness Hub' : 'Logged by staff via Wellness Hub';
+    const payFields = {
+      "Member": [airtableId],
+      "Amount": payAmount,
+      "Payment Date": new Date().toISOString().split('T')[0],
+      "Payment Method": payMethod,
+      "Status": "Completed",
+      "Notes": noteText
+    };
+    if (checkNum) payFields["Check Number"] = checkNum;
     const payRes = await fetch(`https://api.airtable.com/v0/${baseId}/Payments`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         records: [{
-          fields: {
-            "Member": [airtableId],
-            "Amount": payAmount,
-            "Payment Date": new Date().toISOString().split('T')[0],
-            "Payment Method": payMethod,
-            "Status": "Completed",
-            "Notes": noteText
-          }
+          fields: payFields
         }]
       })
     });
