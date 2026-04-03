@@ -32,6 +32,7 @@ export async function POST(request) {
       })
     });
     const payData = await payRes.json();
+    console.log('Payment API response:', JSON.stringify(payData));
     if (payData.error) {
       console.error('Payment record error:', payData.error);
     }
