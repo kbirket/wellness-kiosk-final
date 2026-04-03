@@ -907,7 +907,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
           const briefingItems = [...overdueMembers.map(m => ({name:`${m.firstName} ${m.lastName}`,detail:`Overdue since ${m.nextPayment}`,type:'overdue',id:m.id})),...dueTodayMembers.map(m => ({name:`${m.firstName} ${m.lastName}`,detail:'Payment due today',type:'due',id:m.id})),...orientationMembers.map(m => ({name:`${m.firstName} ${m.lastName}`,detail:'Needs facility orientation',type:'orientation',id:m.id})),...expiringThisWeek.map(m => ({name:`${m.firstName} ${m.lastName}`,detail:`Expires ${m.nextPayment}`,type:'expiring',id:m.id}))];
           const quickResults = quickSearch.length >= 2 ? scopedMembers.filter(m => `${m.firstName} ${m.lastName} ${m.id} ${m.email}`.toLowerCase().includes(quickSearch.toLowerCase())).slice(0,5) : [];
           const exportTodaysLog = () => { const tv = filteredVisits.filter(v => new Date(v.time).toDateString() === todayStr); if (tv.length === 0) { alert('No check-ins today yet.'); return; } const csv = ["Name,Center,Time,Type,Check-In Method",...tv.map(v => `"${v.name}","${v.center}","${new Date(v.time).toLocaleTimeString()}","${v.type}","${v.method || 'General Workout'}"`)].join('\n'); const b = new Blob([csv],{type:'text/csv'}); const u = window.URL.createObjectURL(b); const a = document.createElement('a'); a.href=u; a.download=`Check_Ins_${new Date().toISOString().slice(0,10)}.csv`; a.click(); window.URL.revokeObjectURL(u); };          
-          const heatmapData = Array(15).fill(0); filteredVisits.filter(function(v) { return new Date(v.time).toDateString() === today.toDateString(); }).forEach(function(v) { var hour = new Date(v.time).getHours(); if (hour >= 6 && hour <= 20) heatmapData[hour - 6]++; }); const maxVisits = Math.max(...heatmapData, 1);           const greeting = today.getHours() < 12 ? 'Good morning' : today.getHours() < 17 ? 'Good afternoon' : 'Good evening';
+          const greeting = today.getHours() < 12 ? 'Good morning' : today.getHours() < 17 ? 'Good afternoon' : 'Good evening';
           
           const ninetyMinsAgo = new Date(Date.now() - 90 * 60 * 1000);
           const currentOccupancy = filteredVisits.filter(v => new Date(v.time) > ninetyMinsAgo).length;
@@ -980,9 +980,26 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                 <ProListCard title="Membership Breakdown">
                   <div className="py-4"><DonutChart data={planChartData} totalLabel="Members" /></div>
                 </ProListCard>
-                <ProListCard title={"Peak Hours Heatmap (" + heatmapData.reduce(function(s,v) { return s + v; }, 0) + " visits, " + maxVisits + " max)"}>
-                  <div style={{display: 'flex', alignItems: 'flex-end', height: '192px', marginTop: '32px', gap: '8px'}}>
-                    {heatmapData.map(function(count, i) { var hp = count === 0 ? 5 : (count / maxVisits) * 100; var hl = (i + 6) > 12 ? String((i + 6) - 12) + 'P' : String(i + 6) + 'A'; return (<div key={i} style={{flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px'}}><div style={{width: '100%', height: '100%', background: '#e2e8f0', borderRadius: '6px 6px 0 0', position: 'relative', display: 'flex', alignItems: 'flex-end'}}><div style={{width: '100%', height: hp + '%', background: '#1080ad', borderRadius: '6px 6px 0 0', minHeight: '2px'}}></div></div><span style={{fontSize: '10px', fontWeight: 700, color: '#94a3b8'}}>{hl}</span></div>); })}
+                <ProListCard title="7-Day Visit Streak">
+                  <div className="space-y-3 mt-4">
+                    {Array(7).fill(0).map(function(_, i) {
+                      var d = new Date(); d.setDate(d.getDate() - (6 - i));
+                      var dayStr = d.toDateString();
+                      var dayLabel = d.toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric'});
+                      var isToday = dayStr === new Date().toDateString();
+                      var dayCount = filteredVisits.filter(function(v) { return new Date(v.time).toDateString() === dayStr; }).length;
+                      var maxDay = Math.max.apply(null, Array(7).fill(0).map(function(__, j) { var dd = new Date(); dd.setDate(dd.getDate() - (6 - j)); return filteredVisits.filter(function(v) { return new Date(v.time).toDateString() === dd.toDateString(); }).length; })) || 1;
+                      var pct = Math.max(4, Math.round((dayCount / maxDay) * 100));
+                      return (
+                        <div key={i} className="flex items-center gap-3">
+                          <span className={"text-[10px] font-bold w-20 text-right " + (isToday ? "text-[#1080ad]" : "text-slate-400")}>{isToday ? 'Today' : dayLabel}</span>
+                          <div className="flex-1 h-6 bg-slate-100 rounded-lg overflow-hidden relative">
+                            <div className="h-full rounded-lg transition-all duration-700" style={{width: pct + '%', background: isToday ? '#1080ad' : dayCount > 0 ? '#003d6b' : '#e2e8f0'}}></div>
+                          </div>
+                          <span className={"text-sm font-black w-8 " + (isToday ? "text-[#1080ad]" : dayCount > 0 ? "text-[#001f3f]" : "text-slate-300")}>{dayCount}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </ProListCard>
               </div>
