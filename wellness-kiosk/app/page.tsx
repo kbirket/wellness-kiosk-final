@@ -197,7 +197,7 @@ const handleSelfieUpload = async (imageData, memberId) => {
       console.log('[Wellness Hub] Corporate Partners raw:', data.records?.length, 'records', data.records?.map(r => r.fields['Company Name']));
       if (data.records) { setCorporatePartners(data.records.map(r => { const rawName = r.fields['Company Name']; const name = Array.isArray(rawName) ? rawName[0] : (rawName || ''); const rawMatch = r.fields['Sponsor Match']; const sponsorMatch = Array.isArray(rawMatch) ? rawMatch[0] : (rawMatch || name); return { id: r.id, name: String(name).trim(), sponsorMatch: String(sponsorMatch).trim(), contactName: r.fields['Contact Name'] || '', contactEmail: r.fields['Contact Email'] || '', paidMonths: r.fields['Paid Months'] || '', address: r.fields['Street Address'] || '', city: r.fields['City'] || '', state: r.fields['State'] || 'KS', zip: r.fields['Zip'] || '' }; }).filter(p => p.name).sort((a,b) => a.name.localeCompare(b.name))); }
     }).catch(() => {});
-     fetch('/api/get-payments').then(res => res.json()).then(data => { if (data.records) { setPayments(data.records.map(function(r) { var memberId = r.fields['Member ID'] || r.fields['Member'] || ''; if (Array.isArray(memberId)) memberId = memberId[0] || ''; return { airtableId: r.id, memberId: String(memberId).trim(), amount: r.fields['Amount'] || 0, date: r.fields['Payment Date'] || '', method: r.fields['Payment Method'] || '', checkNumber: r.fields['Check Number'] || '', status: r.fields['Status'] || '', notes: r.fields['Notes'] || '' }; })); } }).catch(function() {});
+     fetch('/api/get-payments').then(res => res.json()).then(data => { if (data.records) { setPayments(data.records.map(function(r) { var memberLink = r.fields['Member'] || []; var memberRecId = Array.isArray(memberLink) ? memberLink[0] || '' : memberLink; return { airtableId: r.id, memberRecId: String(memberRecId).trim(), amount: r.fields['Amount'] || 0, date: r.fields['Payment Date'] || '', method: r.fields['Payment Method'] || '', checkNumber: r.fields['Check Number'] || '', status: r.fields['Status'] || '', notes: r.fields['Notes'] || '' }; })); } }).catch(function() {});
     fetch('/api/get-class-rosters').then(res => res.json()).then(data => {       if (data.records) {         var rosterMap = {};         data.records.forEach(function(r) {           var key = r.fields['Class Name'] + '_' + r.fields['Center'] + '_' + r.fields['Date'];           var attendees = [];           try { attendees = JSON.parse(r.fields['Attendees'] || '[]'); } catch(e) {}           rosterMap[key] = { airtableId: r.id, className: r.fields['Class Name'], center: r.fields['Center'], date: r.fields['Date'], attendees: attendees };         });         setSavedClassRosters(rosterMap);       }     }).catch(function() {});     fetch('/api/get-visitors').then(res => res.json()).then(data => {
       if (data.records) {
         setVisitors(data.records.map(r => ({
@@ -1204,7 +1204,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
           var periodPayments = payments.filter(function(p) { if (!p.date) return false; var d = new Date(p.date); return d.getFullYear() === yr && d.getMonth() === mo; });
           if (viewingCenter !== 'both') {
             periodPayments = periodPayments.filter(function(p) {
-              var mem = members.find(function(m) { return m.id === p.memberId; });
+              var mem = members.find(function(m) { return m.airtableId === p.memberRecId; });
               return mem && mem.center && mem.center.toLowerCase().includes(viewingCenter);
             });
           }
@@ -1258,12 +1258,12 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                     {periodPayments.length === 0 ? (
                       <tr><td colSpan="7" className="text-center py-12 text-slate-400 font-medium italic">No payments logged for {monthName}.</td></tr>
                     ) : periodPayments.map(function(p) {
-                      var mem = members.find(function(m) { return m.id === p.memberId; });
+                      var mem = members.find(function(m) { return m.airtableId === p.memberRecId; });
                       var displayMethod = p.method === 'Check' && p.checkNumber ? 'Check #' + p.checkNumber : p.method;
                       return (
                         <tr key={p.airtableId} className="border-b hover:bg-slate-50/80">
-                          <td className="px-6 py-4 font-bold text-slate-800">{mem ? mem.firstName + ' ' + mem.lastName : p.memberId || 'Unknown'}</td>
-                          <td className="px-4 py-4 font-mono text-slate-400 text-xs">{p.memberId || '—'}</td>
+                          <td className="px-6 py-4 font-bold text-slate-800">{mem ? mem.firstName + ' ' + mem.lastName : 'Unknown'}</td>
+                          <td className="px-4 py-4 font-mono text-slate-400 text-xs">{mem ? mem.id : '—'}</td>
                           <td className="px-4 py-4 font-black text-[#16a34a]">${(parseFloat(p.amount) || 0).toFixed(2)}</td>
                           <td className="px-4 py-4"><span className={"px-3 py-1 rounded-full text-[10px] font-black " + (p.method === 'Cash' ? 'bg-green-100 text-green-700' : p.method === 'Check' ? 'bg-amber-100 text-amber-700' : p.method === 'Card' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700')}>{displayMethod}</span></td>
                           <td className="px-4 py-4 text-xs text-slate-600">{p.date ? new Date(p.date + 'T00:00:00').toLocaleDateString('en-US', {month: 'short', day: 'numeric'}) : '—'}</td>
@@ -1281,7 +1281,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
               </div>
               {periodPayments.length > 0 && (
                 <div className="flex gap-3">
-                  <button onClick={function() { var csv = ['Member,ID,Amount,Method,Check Number,Date,Notes', ...periodPayments.map(function(p) { var mem = members.find(function(m) { return m.id === p.memberId; }); return '"' + (mem ? mem.firstName + ' ' + mem.lastName : p.memberId) + '","' + p.memberId + '","$' + (parseFloat(p.amount) || 0).toFixed(2) + '","' + p.method + '","' + p.checkNumber + '","' + p.date + '","' + (p.notes || '').replace(/"/g, "'") + '"'; })].join('\n'); var b = new Blob([csv], {type: 'text/csv'}); var u = window.URL.createObjectURL(b); var a = document.createElement('a'); a.href = u; a.download = 'Payments_' + reportMonth + '.csv'; a.click(); window.URL.revokeObjectURL(u); }} className="bg-[#1080ad] text-white px-6 py-3 rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-blue-700 transition-colors"><Download size={16}/> Export CSV</button>
+                  <button onClick={function() { var csv = ['Member,ID,Amount,Method,Check Number,Date,Notes', ...periodPayments.map(function(p) { var mem = members.find(function(m) { return m.airtableId === p.memberRecId; }); return '"' + (mem ? mem.firstName + ' ' + mem.lastName : p.memberId) + '","' + p.memberId + '","$' + (parseFloat(p.amount) || 0).toFixed(2) + '","' + p.method + '","' + p.checkNumber + '","' + p.date + '","' + (p.notes || '').replace(/"/g, "'") + '"'; })].join('\n'); var b = new Blob([csv], {type: 'text/csv'}); var u = window.URL.createObjectURL(b); var a = document.createElement('a'); a.href = u; a.download = 'Payments_' + reportMonth + '.csv'; a.click(); window.URL.revokeObjectURL(u); }} className="bg-[#1080ad] text-white px-6 py-3 rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-blue-700 transition-colors"><Download size={16}/> Export CSV</button>
                 </div>
               )}
             </div>
