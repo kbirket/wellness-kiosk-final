@@ -48,10 +48,25 @@ export async function POST(request) {
       method: 'PATCH',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        fields: {
+       fields: {
           "Next Payment Due": nextPaymentDue,
-          "Membership Status": "Active"
+          "Membership Status": "Active",
+          "Check Number": checkNum || ""
         }
+```
+
+That writes the check number (or clears it for non-check payments) directly on the member record every time a payment is logged.
+
+**Step 3: Read it on the frontend**
+
+In your member mapping (the big `data.records.map` block), add `checkNumber` to the mapped fields. **FIND:**
+```
+paymentMethod: Array.isArray(r.fields['Payment Method']) ? r.fields['Payment Method'][r.fields['Payment Method'].length - 1] : (r.fields['Payment Method'] || ''),
+```
+
+checkNumber: r.fields['Check Number'] || '',
+```
+
       })
     });
     const memData = await memRes.json();
