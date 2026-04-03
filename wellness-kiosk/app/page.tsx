@@ -1887,7 +1887,7 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
                                   const member = members.find(mem => mem.firstName + ' ' + mem.lastName === newMemberPin.name);
                                   if (!member) { alert('Member not found yet. Click Done first, then log the payment from their profile.'); return; }
                                   try {
-                                    const res = await fetch('/api/log-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: member.airtableId, memberName: newMemberPin.name, method: m, currentDueDate: member.nextPayment, prorated: firstPayment.prorated, proratedAmount: firstPayment.prorated ? proratedAmount : null }) });
+                                    const res = await fetch('/api/log-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: member.airtableId, memberName: newMemberPin.name, method: m, amount: displayAmount, currentDueDate: member.nextPayment, prorated: firstPayment.prorated, proratedAmount: firstPayment.prorated ? proratedAmount : null }) });
                                     const result = await res.json();
                                     if (result.success) {
                                       setMembers(prev => prev.map(mem => mem.airtableId === member.airtableId ? { ...mem, status: 'ACTIVE', nextPayment: result.nextPaymentDue } : mem));
