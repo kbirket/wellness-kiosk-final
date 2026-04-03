@@ -91,9 +91,9 @@ export default function WellnessHub() {
   const [helpSearch, setHelpSearch] = useState('');
   const [kioskStaffMenu, setKioskStaffMenu] = useState(false);
   const [editingVisitor, setEditingVisitor] = useState(null);
-  const [corpSearch, setCorpSearch] = useState('');
+ const [corpSearch, setCorpSearch] = useState('');
   const [renewMenuOpen, setRenewMenuOpen] = useState(null);
-
+  const [payments, setPayments] = useState([]);
   useEffect(() => { localStorage.setItem('wellnessUsagePrefs', JSON.stringify(usageBasedCorps)); }, [usageBasedCorps]);
 // Emergency local backup
   useEffect(() => {
@@ -197,6 +197,7 @@ const handleSelfieUpload = async (imageData, memberId) => {
       console.log('[Wellness Hub] Corporate Partners raw:', data.records?.length, 'records', data.records?.map(r => r.fields['Company Name']));
       if (data.records) { setCorporatePartners(data.records.map(r => { const rawName = r.fields['Company Name']; const name = Array.isArray(rawName) ? rawName[0] : (rawName || ''); const rawMatch = r.fields['Sponsor Match']; const sponsorMatch = Array.isArray(rawMatch) ? rawMatch[0] : (rawMatch || name); return { id: r.id, name: String(name).trim(), sponsorMatch: String(sponsorMatch).trim(), contactName: r.fields['Contact Name'] || '', contactEmail: r.fields['Contact Email'] || '', paidMonths: r.fields['Paid Months'] || '', address: r.fields['Street Address'] || '', city: r.fields['City'] || '', state: r.fields['State'] || 'KS', zip: r.fields['Zip'] || '' }; }).filter(p => p.name).sort((a,b) => a.name.localeCompare(b.name))); }
     }).catch(() => {});
+     fetch('/api/get-payments').then(res => res.json()).then(data => { if (data.records) { setPayments(data.records.map(function(r) { var memberId = r.fields['Member ID'] || r.fields['Member'] || ''; if (Array.isArray(memberId)) memberId = memberId[0] || ''; return { airtableId: r.id, memberId: String(memberId).trim(), amount: r.fields['Amount'] || 0, date: r.fields['Payment Date'] || '', method: r.fields['Payment Method'] || '', checkNumber: r.fields['Check Number'] || '', status: r.fields['Status'] || '', notes: r.fields['Notes'] || '' }; })); } }).catch(function() {});
     fetch('/api/get-class-rosters').then(res => res.json()).then(data => {       if (data.records) {         var rosterMap = {};         data.records.forEach(function(r) {           var key = r.fields['Class Name'] + '_' + r.fields['Center'] + '_' + r.fields['Date'];           var attendees = [];           try { attendees = JSON.parse(r.fields['Attendees'] || '[]'); } catch(e) {}           rosterMap[key] = { airtableId: r.id, className: r.fields['Class Name'], center: r.fields['Center'], date: r.fields['Date'], attendees: attendees };         });         setSavedClassRosters(rosterMap);       }     }).catch(function() {});     fetch('/api/get-visitors').then(res => res.json()).then(data => {
       if (data.records) {
         setVisitors(data.records.map(r => ({
@@ -891,7 +892,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
         <div className="p-8 border-b border-white/10 flex justify-center"><img src={LOGO_URL} alt="Logo" className="h-10 opacity-90 drop-shadow-md" /></div>
         <div className="p-6"><div className="flex items-center gap-3 mb-4"><div className="w-10 h-10 rounded-lg bg-[#f59e0b] flex items-center justify-center font-bold text-lg text-[#001f3f]">{user?.name.charAt(0)}</div><div><p className="text-sm font-bold leading-none">{user?.name}</p><p className="text-[11px] text-white/50">{user?.role === 'business' ? 'Business Office' : `@${user?.username}`}</p></div></div><button onClick={handleLogout} className="flex items-center gap-2 text-xs text-white/40 hover:text-white transition-colors"><LogOut size={14} /> Sign Out</button></div>
         <div className="px-4 mb-8"><p className="px-2 text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3">Viewing</p><div className="space-y-1">{[{k:'both',c:'#ffffff'},{k:'harper',c:'#f59e0b'},{k:'anthony',c:'#1080ad'}].map(item => (<button key={item.k} onClick={() => { setViewingCenter(item.k); localStorage.setItem('wellnessCenter', item.k); }} className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all ${viewingCenter === item.k ? 'bg-white/20 font-bold' : 'text-white/60 hover:bg-white/5'}`}><span className="w-1.5 h-6 rounded-full" style={{ backgroundColor: item.c }} />{item.k === 'both' ? 'Both Centers' : `${item.k.charAt(0).toUpperCase() + item.k.slice(1)}`}</button>))}</div></div>
-        <nav className="flex-1 px-4 space-y-1">{[{id:'dashboard',label:'Dashboard',icon:<LayoutDashboard size={18}/>},{id:'members',label:'Members',icon:<Users size={18}/>},{id:'classes',label:'Classes',icon:<Calendar size={18}/>},{id:'badge',label:'Staff Check-In',icon:<QrCode size={18}/>},{id:'notif',label:'Notifications',icon:<Bell size={18}/>},{id:'visitors',label:'Visitors',icon:<Eye size={18}/>},{id:'corporate',label:'Corporate',icon:<Briefcase size={18}/>},{id:'reports',label:'Reports',icon:<FileText size={18}/>},{id:'help',label:'Help & Training',icon:<HelpCircle size={18}/>}].filter(item => { if (user?.role === 'business') return ['reports', 'corporate'].includes(item.id); return true; }).map(item => (<button key={item.id} onClick={() => { setActiveTab(item.id); setKioskInput(''); setHelpSearch(''); }} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all ${activeTab === item.id ? 'bg-[#1080ad] text-white font-bold' : 'text-white/60 hover:bg-white/5'}`}>{item.icon} {item.label}{item.id === 'notif' && stats.overdue > 0 && <span className="ml-auto w-5 h-5 rounded-full bg-red-500 text-[10px] flex items-center justify-center font-bold tracking-tight">{stats.overdue}</span>}</button>))}</nav>
+        <nav className="flex-1 px-4 space-y-1">{[{id:'dashboard',label:'Dashboard',icon:<LayoutDashboard size={18}/>},{id:'members',label:'Members',icon:<Users size={18}/>},{id:'classes',label:'Classes',icon:<Calendar size={18}/>},{id:'badge',label:'Staff Check-In',icon:<QrCode size={18}/>},{id:'notif',label:'Notifications',icon:<Bell size={18}/>},{id:'visitors',label:'Visitors',icon:<Eye size={18}/>},{id:'corporate',label:'Corporate',icon:<Briefcase size={18}/>},{id:'payments',label:'Payments',icon:<CreditCard size={18}/>},{id:'reports',label:'Reports',icon:<FileText size={18}/>},{id:'help',label:'Help & Training',icon:<HelpCircle size={18}/>}].filter(item => { if (user?.role === 'business') return ['reports', 'corporate'].includes(item.id); return true; }).map(item => (<button key={item.id} onClick={() => { setActiveTab(item.id); setKioskInput(''); setHelpSearch(''); }} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all ${activeTab === item.id ? 'bg-[#1080ad] text-white font-bold' : 'text-white/60 hover:bg-white/5'}`}>{item.icon} {item.label}{item.id === 'notif' && stats.overdue > 0 && <span className="ml-auto w-5 h-5 rounded-full bg-red-500 text-[10px] flex items-center justify-center font-bold tracking-tight">{stats.overdue}</span>}</button>))}</nav>
       </aside>
 
       <main className="flex-1 p-10 h-screen overflow-y-auto relative print:m-0 print:p-0 print:h-auto print:overflow-visible">
@@ -1194,7 +1195,98 @@ var showToast = function(message, type, duration) { setToast({ message: message,
             </div>
           </div>
         )})()}
-
+        
+{activeTab === 'payments' && (() => {
+          var periodParts = reportMonth.split('-');
+          var yr = parseInt(periodParts[1]);
+          var mo = parseInt(periodParts[0]) - 1;
+          var monthName = new Date(yr, mo).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+          var periodPayments = payments.filter(function(p) { if (!p.date) return false; var d = new Date(p.date); return d.getFullYear() === yr && d.getMonth() === mo; });
+          if (viewingCenter !== 'both') {
+            periodPayments = periodPayments.filter(function(p) {
+              var mem = members.find(function(m) { return m.id === p.memberId; });
+              return mem && mem.center && mem.center.toLowerCase().includes(viewingCenter);
+            });
+          }
+          var totalCollected = periodPayments.reduce(function(s, p) { return s + (parseFloat(p.amount) || 0); }, 0);
+          var byMethod = {};
+          periodPayments.forEach(function(p) { var m = p.method || 'Unknown'; byMethod[m] = (byMethod[m] || 0) + (parseFloat(p.amount) || 0); });
+          return (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <h2 className="text-3xl font-bold text-[#001f3f] tracking-tight">Payments</h2>
+                  <p className="text-slate-400 font-medium">All logged payments for the selected period.</p>
+                </div>
+                <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-200">
+                  <PeriodSelector value={reportMonth} onChange={function(e) { setReportMonth(e.target.value); }} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-[#16a34a]">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Collected</p>
+                  <p className="text-3xl font-black text-[#16a34a]">${totalCollected.toFixed(2)}</p>
+                </div>
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-[#1080ad]">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Payments Logged</p>
+                  <p className="text-3xl font-black text-[#1080ad]">{periodPayments.length}</p>
+                </div>
+                {Object.entries(byMethod).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 2).map(function(entry) {
+                  var colors = { Cash: '#16a34a', Check: '#f59e0b', Card: '#8b5cf6', ACH: '#1080ad' };
+                  return (
+                    <div key={entry[0]} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4" style={{borderTopColor: colors[entry[0]] || '#64748b'}}>
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{entry[0]}</p>
+                      <p className="text-3xl font-black" style={{color: colors[entry[0]] || '#64748b'}}>${entry[1].toFixed(2)}</p>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <table className="w-full text-left border-collapse">
+                  <thead className="bg-slate-50 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b">
+                    <tr>
+                      <th className="px-6 py-4">Member</th>
+                      <th className="px-4 py-4">ID</th>
+                      <th className="px-4 py-4 w-28">Amount</th>
+                      <th className="px-4 py-4 w-28">Method</th>
+                      <th className="px-4 py-4 w-24">Date</th>
+                      <th className="px-4 py-4 w-28">Info</th>
+                      <th className="px-4 py-4 w-16"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-sm">
+                    {periodPayments.length === 0 ? (
+                      <tr><td colSpan="7" className="text-center py-12 text-slate-400 font-medium italic">No payments logged for {monthName}.</td></tr>
+                    ) : periodPayments.map(function(p) {
+                      var mem = members.find(function(m) { return m.id === p.memberId; });
+                      var displayMethod = p.method === 'Check' && p.checkNumber ? 'Check #' + p.checkNumber : p.method;
+                      return (
+                        <tr key={p.airtableId} className="border-b hover:bg-slate-50/80">
+                          <td className="px-6 py-4 font-bold text-slate-800">{mem ? mem.firstName + ' ' + mem.lastName : p.memberId || 'Unknown'}</td>
+                          <td className="px-4 py-4 font-mono text-slate-400 text-xs">{p.memberId || '—'}</td>
+                          <td className="px-4 py-4 font-black text-[#16a34a]">${(parseFloat(p.amount) || 0).toFixed(2)}</td>
+                          <td className="px-4 py-4"><span className={"px-3 py-1 rounded-full text-[10px] font-black " + (p.method === 'Cash' ? 'bg-green-100 text-green-700' : p.method === 'Check' ? 'bg-amber-100 text-amber-700' : p.method === 'Card' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700')}>{displayMethod}</span></td>
+                          <td className="px-4 py-4 text-xs text-slate-600">{p.date ? new Date(p.date + 'T00:00:00').toLocaleDateString('en-US', {month: 'short', day: 'numeric'}) : '—'}</td>
+                          <td className="px-4 py-4 text-xs text-slate-400 truncate max-w-[120px]" title={p.notes}>{p.notes ? p.notes.replace('Logged by staff via Wellness Hub', '').replace(' - ', '').trim() || '—' : '—'}</td>
+                          <td className="px-4 py-4">
+                            {user && user.role !== 'business' && (
+                              <button onClick={function() { if (!window.confirm('Delete this $' + (parseFloat(p.amount) || 0).toFixed(2) + ' ' + displayMethod + ' payment for ' + (mem ? mem.firstName + ' ' + mem.lastName : p.memberId) + '?')) return; fetch('/api/delete-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paymentId: p.airtableId }) }).then(function(r) { return r.json(); }).then(function(result) { if (result.success) { setPayments(function(prev) { return prev.filter(function(pay) { return pay.airtableId !== p.airtableId; }); }); showToast('Payment deleted.', 'success', 3000); } else { alert('Error: ' + (result.error || 'Could not delete.')); } }).catch(function() { alert('Network error.'); }); }} className="text-slate-300 hover:text-red-500 transition-colors p-1" title="Delete this payment"><Trash2 size={14}/></button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {periodPayments.length > 0 && (
+                <div className="flex gap-3">
+                  <button onClick={function() { var csv = ['Member,ID,Amount,Method,Check Number,Date,Notes', ...periodPayments.map(function(p) { var mem = members.find(function(m) { return m.id === p.memberId; }); return '"' + (mem ? mem.firstName + ' ' + mem.lastName : p.memberId) + '","' + p.memberId + '","$' + (parseFloat(p.amount) || 0).toFixed(2) + '","' + p.method + '","' + p.checkNumber + '","' + p.date + '","' + (p.notes || '').replace(/"/g, "'") + '"'; })].join('\n'); var b = new Blob([csv], {type: 'text/csv'}); var u = window.URL.createObjectURL(b); var a = document.createElement('a'); a.href = u; a.download = 'Payments_' + reportMonth + '.csv'; a.click(); window.URL.revokeObjectURL(u); }} className="bg-[#1080ad] text-white px-6 py-3 rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-blue-700 transition-colors"><Download size={16}/> Export CSV</button>
+                </div>
+              )}
+            </div>
+          );
+        })()}
         {/* ======================== ENHANCED REPORTS TAB ======================== */}
         {activeTab === 'reports' && (() => {
           const [periodStr, yearStr] = reportMonth.split('-');
