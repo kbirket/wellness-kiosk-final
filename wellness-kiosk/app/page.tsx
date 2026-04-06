@@ -154,21 +154,20 @@ if (['MILITARY', 'MILITARY FAMILY', 'HD6', 'HD6 FAMILY', 'FIRST DAY FREE', 'LIFE
     const newValue = !selectedMember[field];
 
     try {
-const otherField = center === 'anthony' ? 'orientationHarper' : 'orientationAnthony';
-      const bothDone = newValue && selectedMember[otherField];
+    const otherField = center === 'anthony' ? 'orientationHarper' : 'orientationAnthony';
+      const eitherDone = newValue || selectedMember[otherField];
       const res = await fetch('/api/update-orientation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           airtableId: selectedMember.airtableId, 
           center: center,
-          status: newValue,
-          clearNeedsOrientation: bothDone
+          status: newValue
         })
       });
       
       if (res.ok) {
-        const updated = { ...selectedMember, [field]: newValue, needsOrientation: bothDone ? false : (newValue ? selectedMember.needsOrientation : true) };
+        const updated = { ...selectedMember, [field]: newValue, needsOrientation: !eitherDone };
         setSelectedMember(updated);
         setMembers(prev => prev.map(m => m.airtableId === updated.airtableId ? updated : m));
       }
@@ -905,7 +904,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
           const today = new Date(); const todayStr = today.toDateString(); const weekFromNow = new Date(today.getTime() + 7*24*60*60*1000);
           const dueTodayMembers = scopedMembers.filter(m => m.nextPayment && new Date(m.nextPayment).toDateString() === todayStr);
           const overdueMembers = scopedMembers.filter(m => m.status === 'OVERDUE');
-          const orientationMembers = scopedMembers.filter(m => m.needsOrientation);
+          const orientationMembers = scopedMembers.filter(function(m) { if (!m.needsOrientation) return false; if (viewingCenter === 'anthony') return !m.orientationAnthony; if (viewingCenter === 'harper') return !m.orientationHarper; return !m.orientationAnthony && !m.orientationHarper; });
           const expiringThisWeek = scopedMembers.filter(m => { if (!m.nextPayment || m.status === 'OVERDUE') return false; const d = new Date(m.nextPayment); return d > today && d <= weekFromNow; });
           const briefingItems = [...overdueMembers.map(m => ({name:`${m.firstName} ${m.lastName}`,detail:`Overdue since ${m.nextPayment}`,type:'overdue',id:m.id})),...dueTodayMembers.map(m => ({name:`${m.firstName} ${m.lastName}`,detail:'Payment due today',type:'due',id:m.id})),...orientationMembers.map(m => ({name:`${m.firstName} ${m.lastName}`,detail:'Needs facility orientation',type:'orientation',id:m.id})),...expiringThisWeek.map(m => ({name:`${m.firstName} ${m.lastName}`,detail:`Expires ${m.nextPayment}`,type:'expiring',id:m.id}))];
           const quickResults = quickSearch.length >= 2 ? scopedMembers.filter(m => `${m.firstName} ${m.lastName} ${m.id} ${m.email}`.toLowerCase().includes(quickSearch.toLowerCase())).slice(0,5) : [];
