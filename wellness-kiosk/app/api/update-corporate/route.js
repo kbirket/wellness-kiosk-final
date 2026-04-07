@@ -17,7 +17,7 @@ export async function POST(request) {
     const res = await fetch(`https://api.airtable.com/v0/${process.env.AIRTABLE_BASE_ID}/Corporate%20Partners/${recordId}`, {
       method: 'PATCH',
       headers: {
-        'Authorization': `Bearer ${process.env.AIRTABLE_API_KEY}`,
+        'Authorization': `Bearer ${process.env.AIRTABLE_PAT}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ fields })
