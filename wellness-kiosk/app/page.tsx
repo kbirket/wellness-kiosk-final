@@ -374,7 +374,7 @@ const filteredMembers = scopedMembers.filter(m => { if (!(m.firstName + ' ' + m.
       const scanCenter = currentLoc === 'both' ? m.center : currentLoc.charAt(0).toUpperCase() + currentLoc.slice(1);
       const currentTime = new Date().toISOString();
 
-      var recentDupe = visits.some(function(v) { return v.name === (m.firstName + ' ' + m.lastName) && (new Date(currentTime) - new Date(v.time)) < 5 * 60 * 1000; });
+      var recentDupe = visits.some(function(v) { return v.name === (m.firstName + ' ' + m.lastName) && (new Date(currentTime) - new Date(v.time)) < 30 * 60 * 1000; });
       if (recentDupe) {
         setKioskMessage({ text: 'Already checked in!', type: 'warning', subtext: m.firstName + ' was checked in less than 5 minutes ago.' });
         setTimeout(function() { setKioskMessage({ text: '', type: '', subtext: '' }); }, 4500);
