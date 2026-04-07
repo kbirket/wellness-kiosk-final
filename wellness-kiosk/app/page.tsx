@@ -121,18 +121,23 @@ useEffect(() => {
   }, [visits.length]);
   
   // --- CENTRAL PRICING ENGINE ---
-  const getBaseRate = (p, b) => {
+const getBaseRate = (p, b) => {
     const r = {
       'SINGLE': { 'Month-to-Month': 35, 'Auto-Draft': 32, '6-Month Prepay': 200, '12-Month Prepay': 378 },
       'FAMILY': { 'Month-to-Month': 55, 'Auto-Draft': 50, '6-Month Prepay': 313, '12-Month Prepay': 594 },
       'SENIOR': { 'Month-to-Month': 22, 'Auto-Draft': 20, '6-Month Prepay': 125, '12-Month Prepay': 238 },
-      'SENIOR CITIZEN': { 'Month-to-Month': 22, 'Auto-Draft': 20, '6-Month Prepay': 125, '12-Month Prepay': 238 }, 
+      'SENIOR CITIZEN': { 'Month-to-Month': 22, 'Auto-Draft': 20, '6-Month Prepay': 125, '12-Month Prepay': 238 },
       'SENIOR FAMILY': { 'Month-to-Month': 40, 'Auto-Draft': 36, '6-Month Prepay': 228, '12-Month Prepay': 432 },
       'STUDENT': { 'Month-to-Month': 20, 'Auto-Draft': 18, '6-Month Prepay': 114, '12-Month Prepay': 216 }
     };
     if (p === 'CORPORATE') return 25;
     if (p === 'CORPORATE FAMILY') return 45;
-if (['MILITARY', 'MILITARY FAMILY', 'HD6', 'HD6 FAMILY', 'FIRST DAY FREE', 'LIFETIME', 'LIFETIME FAMILY', 'HERITAGE ESTATES'].includes(p)) return 0;    return r[p] ? (r[p][b] || r[p]['Month-to-Month']) : 0;
+    if (['MILITARY', 'MILITARY FAMILY', 'HD6', 'HD6 FAMILY', 'FIRST DAY FREE', 'LIFETIME', 'LIFETIME FAMILY', 'HERITAGE ESTATES'].includes(p)) return 0;
+    if (!r[p]) return 0;
+    var lumpSum = r[p][b] || r[p]['Month-to-Month'];
+    if (b === '6-Month Prepay') return Math.round((lumpSum / 6) * 100) / 100;
+    if (b === '12-Month Prepay') return Math.round((lumpSum / 12) * 100) / 100;
+    return lumpSum;
   };
 
   const membersRef = useRef(members);
