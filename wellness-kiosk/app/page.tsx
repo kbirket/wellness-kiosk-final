@@ -108,7 +108,18 @@ export default function WellnessHub() {
   useEffect(() => {
     setShowAllMemberVisits(false);
   }, [selectedMember]);
-
+useEffect(() => {
+  setShowAllMemberVisits(false);
+}, [selectedMember]);
+  useEffect(function() {
+    setVisits(function(prev) {
+      var sorted = prev.slice().sort(function(a, b) { return new Date(b.time) - new Date(a.time); });
+      var changed = false;
+      for (var i = 0; i < sorted.length; i++) { if (sorted[i] !== prev[i]) { changed = true; break; } }
+      return changed ? sorted : prev;
+    });
+  }, [visits.length]);
+  
   // --- CENTRAL PRICING ENGINE ---
   const getBaseRate = (p, b) => {
     const r = {
