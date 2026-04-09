@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request) {
   const baseId = process.env.AIRTABLE_BASE_ID;
   const token = process.env.AIRTABLE_PAT;
+
+  // 1. Grab the date from the URL (e.g., /api/classes?date=2024-04-08)
+  const { searchParams } = new URL(request.url);
+  const targetDate = searchParams.get('date');
 
   try {
     let allRecords = [];
@@ -14,6 +18,13 @@ export async function GET() {
       params.set('pageSize', '100');
       params.set('sort[0][field]', 'Date');
       params.set('sort[0][direction]', 'desc');
+      
+      // 2. If a date is provided, filter Airtable records before downloading
+      if (targetDate) {
+         // This assumes your Airtable column is exactly named "Date"
+         params.set('filterByFormula', `IS_SAME({Date}, '${targetDate}', 'day')`);
+      }
+
       if (offset) params.set('offset', offset);
 
       const response = await fetch(
