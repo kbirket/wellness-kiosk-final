@@ -216,10 +216,10 @@ const handleSelfieUpload = async (imageData, memberId) => {
       if (data.records) { setCorporatePartners(data.records.map(r => { const rawName = r.fields['Company Name']; const name = Array.isArray(rawName) ? rawName[0] : (rawName || ''); const rawMatch = r.fields['Sponsor Match']; const sponsorMatch = Array.isArray(rawMatch) ? rawMatch[0] : (rawMatch || name); return { id: r.id, name: String(name).trim(), sponsorMatch: String(sponsorMatch).trim(), contactName: r.fields['Contact Name'] || '', contactEmail: r.fields['Contact Email'] || '', paidMonths: r.fields['Paid Months'] || '', address: r.fields['Street Address'] || '', city: r.fields['City'] || '', state: r.fields['State'] || 'KS', zip: r.fields['Zip'] || '' }; }).filter(p => p.name).sort((a,b) => a.name.localeCompare(b.name))); }
     }).catch(() => {});
      fetch('/api/get-payments').then(res => res.json()).then(data => { if (data.records) { setPayments(data.records.map(function(r) { var memberLink = r.fields['Member'] || []; var memberRecId = Array.isArray(memberLink) ? memberLink[0] || '' : memberLink; return { airtableId: r.id, memberRecId: String(memberRecId).trim(), amount: r.fields['Amount'] || 0, date: r.fields['Payment Date'] || '', method: r.fields['Payment Method'] || '', checkNumber: r.fields['Check Number'] || '', status: r.fields['Status'] || '', notes: r.fields['Notes'] || '' }; })); } }).catch(function() {});
-    fetch('/api/get-class-rosters').then(res => res.json()).then(data => {        if (data.records) {          var rosterMap = {};          data.records.forEach(function(r) {            var key = r.fields['Class Name'] + '_' + r.fields['Center'] + '_' + r.fields['Date'];            var attendees = [];            try { attendees = JSON.parse(r.fields['Attendees'] || '[]'); } catch(e) {}            rosterMap[key] = { airtableId: r.id, className: r.fields['Class Name'], center: r.fields['Center'], date: r.fields['Date'], attendees: attendees };          });          setSavedClassRosters(rosterMap);        }      }).catch(function() {});      fetch('/api/get-visitors').then(res => res.json()).then(data => {
+    fetch('/api/get-class-rosters').then(res => res.json()).then(data => {        if (data.records) {          var rosterMap = {};          data.records.forEach(function(r) {            var key = r.fields['Class Name'] + '_' + r.fields['Center'] + '_' + r.fields['Date'];            var attendees = [];            try { attendees = JSON.parse(r.fields['Attendees'] || '[]'); } catch(e) {}            rosterMap[key] = { airtableId: r.id, className: r.fields['Class Name'], center: r.fields['Center'], date: r.fields['Date'], attendees: attendees };          });          setSavedClassRosters(rosterMap);        }      }).catch(function() {});     fetch('/api/get-visitors').then(res => res.json()).then(data => {
       if (data.records) {
         setVisitors(data.records.map(r => ({
-          airtableId: r.id, firstName: r.fields['First Name'] || '', lastName: r.fields['Last Name'] || '', email: r.fields['Email'] || '', phone: r.fields['Phone'] || '', passType: r.fields['Pass Type'] || '', amountPaid: r.fields['Amount Paid'] || 0, referringProvider: r.fields['Referring Provider'] || '', purchaseDate: r.fields['Purchase Date'] || '', expirationDate: r.fields['Expiration Date'] || '', center: r.fields['Center'] || '', pin: r.fields['PIN'] || '', orientationComplete: !!r.fields['Orientation Complete'], totalVisits: r.fields['Total Visits'] || 0, address: r.fields['Street Address'] || '', city: r.fields['City'] || '', state: r.fields['State'] || '', zip: r.fields['Zip'] || '', notes: r.fields['Notes'] || '', passesRemaining: r.fields['Passes Remaining'] !== undefined ? Number(r.fields['Passes Remaining']) : null,
+          airtableId: r.id, firstName: r.fields['First Name'] || '', lastName: r.fields['Last Name'] || '', email: r.fields['Email'] || '', phone: r.fields['Phone'] || '', passType: r.fields['Pass Type'] || '', amountPaid: r.fields['Amount Paid'] || 0, paymentMethod: r.fields['Payment Method'] || 'Card', referringProvider: r.fields['Referring Provider'] || '', purchaseDate: r.fields['Purchase Date'] || '', expirationDate: r.fields['Expiration Date'] || '', center: r.fields['Center'] || '', pin: r.fields['PIN'] || '', orientationComplete: !!r.fields['Orientation Complete'], totalVisits: r.fields['Total Visits'] || 0, address: r.fields['Street Address'] || '', city: r.fields['City'] || '', state: r.fields['State'] || '', zip: r.fields['Zip'] || '', notes: r.fields['Notes'] || '', passActivated: r.fields['Pass Activated'] !== false && r.fields['Pass Activated'] !== 'false', passesRemaining: r.fields['Passes Remaining'] !== undefined ? Number(r.fields['Passes Remaining']) : null,
         })));
       }
     }).catch(() => {});
@@ -1417,16 +1417,46 @@ var showToast = function(message, type, duration) { setToast({ message: message,
           var yr = parseInt(periodParts[1]);
           var mo = parseInt(periodParts[0]) - 1;
           var monthName = new Date(yr, mo).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-          var periodPayments = payments.filter(function(p) { if (!p.date) return false; var d = new Date(p.date); return d.getFullYear() === yr && d.getMonth() === mo; });
+          
+          // 1. Get standard member payments
+          var standardPayments = payments.filter(function(p) { if (!p.date) return false; var d = new Date(p.date); return d.getFullYear() === yr && d.getMonth() === mo; });
+          
+          // 2. Extract visitor payments and format them for the ledger
+          var visitorPayments = visitors.filter(function(v) { 
+            if (!v.purchaseDate || !v.amountPaid || v.amountPaid <= 0) return false; 
+            var d = new Date(v.purchaseDate); 
+            return d.getFullYear() === yr && d.getMonth() === mo; 
+          }).map(function(v) {
+            return {
+              airtableId: 'vis_' + v.airtableId,
+              memberRecId: v.airtableId,
+              memberId: 'VISITOR',
+              amount: v.amountPaid,
+              date: v.purchaseDate,
+              method: v.paymentMethod || 'Card',
+              notes: 'Visitor Pass: ' + v.passType
+            };
+          });
+
+          // 3. Combine them
+          var periodPayments = [...standardPayments, ...visitorPayments];
+
           if (viewingCenter !== 'both') {
             periodPayments = periodPayments.filter(function(p) {
-              var mem = members.find(function(m) { return m.airtableId === p.memberRecId; });
-              return mem && mem.center && mem.center.toLowerCase().includes(viewingCenter);
+              if (p.memberId === 'VISITOR') {
+                var vis = visitors.find(v => v.airtableId === p.memberRecId);
+                return vis && vis.center && vis.center.toLowerCase().includes(viewingCenter);
+              } else {
+                var mem = members.find(function(m) { return m.airtableId === p.memberRecId; });
+                return mem && mem.center && mem.center.toLowerCase().includes(viewingCenter);
+              }
             });
           }
+          
           var totalCollected = periodPayments.reduce(function(s, p) { return s + (parseFloat(p.amount) || 0); }, 0);
           var byMethod = {};
           periodPayments.forEach(function(p) { var m = p.method || 'Unknown'; byMethod[m] = (byMethod[m] || 0) + (parseFloat(p.amount) || 0); });
+          
           return (
             <div className="space-y-6">
               <div className="flex justify-between items-center mb-4">
@@ -1434,23 +1464,10 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                   <h2 className="text-3xl font-bold text-[#001f3f] tracking-tight">Payments</h2>
                   <p className="text-slate-400 font-medium">All logged payments for the selected period.</p>
                 </div>
-               <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3">
                   <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-200">
                     <PeriodSelector value={reportMonth} onChange={function(e) { setReportMonth(e.target.value); }} />
                   </div>
-                  <button onClick={function() {
-                    var activePaidMembers = scopedMembers.filter(function(m) { if (m.status !== 'ACTIVE') return false; if (m.type.includes('HD6') || m.type.includes('HCHF') || m.type.includes('MILITARY') || m.type === 'FIRST DAY FREE') return false; if (m.type.includes('CORPORATE') || m.sponsorName) { var sponsor = corporatePartners.find(function(cp) { return cp.sponsorMatch === m.sponsorName; }); return sponsor && sponsor.paidMonths && sponsor.paidMonths.includes(reportMonth); } return !!m.paymentMethod; });
-                    if (activePaidMembers.length === 0) { alert('No completed payments found to report.'); return; }
-                    var centerName = viewingCenter === 'both' ? 'All Centers' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1) + ' Wellness Center';
-                    var standardMembers = activePaidMembers.filter(function(m) { return !m.type.includes('CORPORATE') && !m.sponsorName; });
-                    var corporateMembers = activePaidMembers.filter(function(m) { return m.type.includes('CORPORATE') || m.sponsorName; });
-                    var calcTotal = function(mems) { return mems.reduce(function(sum, m) { return sum + (parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0); }, 0); };
-                    var standardTotal = calcTotal(standardMembers); var corpTotal = calcTotal(corporateMembers); var grandTotal = standardTotal + corpTotal;
-                    var getPayMethod = function(m) { if (m.type.includes('CORPORATE') || m.sponsorName) { var sponsor = corporatePartners.find(function(cp) { return cp.sponsorMatch === m.sponsorName; }); if (sponsor && sponsor.paidMonths) { var match = sponsor.paidMonths.split(',').find(function(str) { return str.startsWith(reportMonth); }); return match && match.includes(':') ? match.split(':')[1] : 'Corp Payment'; } } var pm = m.paymentMethod || 'None Logged'; if (pm === 'Check' && m.checkNumber) pm = 'Check #' + m.checkNumber; return pm; };
-                    var buildTable = function(mems, title, total) { if (mems.length === 0) return ''; var rows = mems.map(function(m) { var finalRate = parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0; var payMethod = getPayMethod(m); return '<tr><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">' + m.firstName + ' ' + m.lastName + '</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">' + m.type + (m.sponsorName ? ' (' + m.sponsorName + ')' : '') + '</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">' + payMethod + '</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; font-weight:bold; color: #16a34a;">$' + finalRate.toFixed(2) + '</td></tr>'; }).join(''); return '<h3 style="color:#003d6b; margin-top:30px; margin-bottom:10px; font-size:16px; text-transform:uppercase; letter-spacing:1px;">' + title + '</h3><table><thead><tr><th>Member Name</th><th>Plan Type</th><th>Payment Method</th><th>Final Rate</th></tr></thead><tbody>' + rows + '</tbody><tfoot><tr class="total-row"><td colspan="3" class="total-lbl">' + title + ' Revenue:</td><td class="total-val">$' + total.toFixed(2) + '</td></tr></tfoot></table>'; };
-                    var html = '<!DOCTYPE html><html><head><title>Financial Report - ' + centerName + '</title><style>@media print { body { margin: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } } body { font-family: Arial, sans-serif; color: #1e293b; margin: 0; padding: 40px; } .hdr { background: #003d6b; padding: 20px; display: flex; align-items: center; gap: 15px; border-radius: 8px 8px 0 0; } .hdr img { height: 40px; } .hdr-text { color: white; } .hdr-title { font-size: 24px; font-weight: 900; margin: 0; } .hdr-sub { font-size: 12px; color: #8bb8d9; text-transform: uppercase; letter-spacing: 1px; } .accent { height: 4px; background: linear-gradient(to right, #dba51f, #dd6d22); margin-bottom: 30px; } .summary { display: flex; gap: 40px; margin-bottom: 20px; background: #f8fafc; padding: 15px 20px; border-radius: 8px; border: 1px solid #e2e8f0; } .sum-box { text-align: left; } .sum-lbl { font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 1px; } .sum-val { font-size: 20px; font-weight: 900; color: #003d6b; margin-top: 5px; } table { width: 100%; border-collapse: collapse; font-size: 12px; } th { background: #003d6b; color: white; text-align: left; padding: 12px 10px; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; } td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; } tr:nth-child(even) { background-color: #f8fafc; } .total-row td { background: #fff; border-top: 2px solid #003d6b; border-bottom: none; padding-top: 20px; font-size: 14px; } .total-lbl { text-align: right; font-weight: 900; color: #1e293b; text-transform: uppercase; letter-spacing: 1px; } .total-val { font-size: 16px; font-weight: 900; color: #16a34a; text-align: left; padding-left: 12px;} .grand-total { margin-top: 30px; padding: 20px; background: #003d6b; color: white; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: 900; }</style></head><body><div class="hdr"><img src="' + LOGO_URL + '" /><div class="hdr-text"><h1 class="hdr-title">Financial Report</h1><div class="hdr-sub">' + centerName + ' &bull; ' + new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) + '</div></div></div><div class="accent"></div><div class="summary"><div class="sum-box"><div class="sum-lbl">Total Paying Accounts</div><div class="sum-val">' + activePaidMembers.length + '</div></div><div class="sum-box"><div class="sum-lbl">Standard Members</div><div class="sum-val" style="color: #1080ad;">' + standardMembers.length + '</div></div><div class="sum-box"><div class="sum-lbl">Corporate Members</div><div class="sum-val" style="color: #8b5cf6;">' + corporateMembers.length + '</div></div></div>' + buildTable(standardMembers, 'Standard Memberships', standardTotal) + buildTable(corporateMembers, 'Corporate Memberships', corpTotal) + '<div class="grand-total"><span>TOTAL COLLECTED REVENUE:</span><span>$' + grandTotal.toFixed(2) + '</span></div></body></html>';
-                    var w = window.open('', '_blank'); w.document.write(html); w.document.close(); setTimeout(function() { w.print(); }, 500);
-                  }} className="px-4 py-2 bg-[#16a34a] text-white rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-green-700 transition-colors"><Printer size={16}/> Print Financials</button>
                 </div>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -1476,7 +1493,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                 <table className="w-full text-left border-collapse">
                   <thead className="bg-slate-50 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b">
                     <tr>
-                      <th className="px-6 py-4">Member</th>
+                      <th className="px-6 py-4">Member / Visitor</th>
                       <th className="px-4 py-4">ID</th>
                       <th className="px-4 py-4 w-28">Amount</th>
                       <th className="px-4 py-4 w-28">Method</th>
@@ -1488,20 +1505,22 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                   <tbody className="text-sm">
                     {periodPayments.length === 0 ? (
                       <tr><td colSpan="7" className="text-center py-12 text-slate-400 font-medium italic">No payments logged for {monthName}.</td></tr>
-                    ) : periodPayments.map(function(p) {
-                      var mem = members.find(function(m) { return m.airtableId === p.memberRecId; });
+                    ) : periodPayments.sort((a,b) => new Date(b.date) - new Date(a.date)).map(function(p) {
+                      var mem = p.memberId === 'VISITOR' ? visitors.find(v => v.airtableId === p.memberRecId) : members.find(m => m.airtableId === p.memberRecId);
+                      var displayName = mem ? `${mem.firstName} ${mem.lastName}` : (p.memberId === 'VISITOR' ? 'Visitor' : 'Unknown');
+                      var displayId = p.memberId === 'VISITOR' ? 'VISITOR' : (mem ? mem.id : '—');
                       var displayMethod = p.method === 'Check' && p.checkNumber ? 'Check #' + p.checkNumber : p.method;
                       return (
                         <tr key={p.airtableId} className="border-b hover:bg-slate-50/80">
-                          <td className="px-6 py-4 font-bold text-slate-800">{mem ? mem.firstName + ' ' + mem.lastName : 'Unknown'}</td>
-                          <td className="px-4 py-4 font-mono text-slate-400 text-xs">{mem ? mem.id : '—'}</td>
+                          <td className="px-6 py-4 font-bold text-slate-800">{displayName}</td>
+                          <td className="px-4 py-4 font-mono text-slate-400 text-xs">{displayId}</td>
                           <td className="px-4 py-4 font-black text-[#16a34a]">${(parseFloat(p.amount) || 0).toFixed(2)}</td>
-                          <td className="px-4 py-4"><span className={"px-3 py-1 rounded-full text-[10px] font-black " + (p.method === 'Cash' ? 'bg-green-100 text-green-700' : p.method === 'Check' ? 'bg-amber-100 text-amber-700' : p.method === 'Card' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700')}>{displayMethod}</span></td>
+                          <td className="px-4 py-4"><span className={"px-3 py-1 rounded-full text-[10px] font-black " + (p.method === 'Cash' ? 'bg-green-100 text-green-700' : p.method.includes('Check') ? 'bg-amber-100 text-amber-700' : p.method === 'Card' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700')}>{displayMethod}</span></td>
                           <td className="px-4 py-4 text-xs text-slate-600">{p.date ? new Date(p.date + 'T00:00:00').toLocaleDateString('en-US', {month: 'short', day: 'numeric'}) : '—'}</td>
                           <td className="px-4 py-4 text-xs text-slate-400 truncate max-w-[120px]" title={p.notes}>{p.notes ? p.notes.replace('Logged by staff via Wellness Hub', '').replace(' - ', '').trim() || '—' : '—'}</td>
                           <td className="px-4 py-4">
-                            {user && user.role !== 'business' && (
-                              <button onClick={function() { if (!window.confirm('Delete this $' + (parseFloat(p.amount) || 0).toFixed(2) + ' ' + displayMethod + ' payment for ' + (mem ? mem.firstName + ' ' + mem.lastName : p.memberId) + '?')) return; fetch('/api/delete-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paymentId: p.airtableId }) }).then(function(r) { return r.json(); }).then(function(result) { if (result.success) { setPayments(function(prev) { return prev.filter(function(pay) { return pay.airtableId !== p.airtableId; }); }); showToast('Payment deleted.', 'success', 3000); } else { alert('Error: ' + (result.error || 'Could not delete.')); } }).catch(function() { alert('Network error.'); }); }} className="text-slate-300 hover:text-red-500 transition-colors p-1" title="Delete this payment"><Trash2 size={14}/></button>
+                            {user && user.role !== 'business' && p.memberId !== 'VISITOR' && (
+                              <button onClick={function() { if (!window.confirm('Delete this $' + (parseFloat(p.amount) || 0).toFixed(2) + ' ' + displayMethod + ' payment for ' + displayName + '?')) return; fetch('/api/delete-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paymentId: p.airtableId }) }).then(function(r) { return r.json(); }).then(function(result) { if (result.success) { setPayments(function(prev) { return prev.filter(function(pay) { return pay.airtableId !== p.airtableId; }); }); showToast('Payment deleted.', 'success', 3000); } else { alert('Error: ' + (result.error || 'Could not delete.')); } }).catch(function() { alert('Network error.'); }); }} className="text-slate-300 hover:text-red-500 transition-colors p-1" title="Delete this payment"><Trash2 size={14}/></button>
                             )}
                           </td>
                         </tr>
@@ -1512,13 +1531,13 @@ var showToast = function(message, type, duration) { setToast({ message: message,
               </div>
               {periodPayments.length > 0 && (
                 <div className="flex gap-3">
-                  <button onClick={function() { var csv = ['Member,ID,Amount,Method,Check Number,Date,Notes', ...periodPayments.map(function(p) { var mem = members.find(function(m) { return m.airtableId === p.memberRecId; }); return '"' + (mem ? mem.firstName + ' ' + mem.lastName : p.memberId) + '","' + p.memberId + '","$' + (parseFloat(p.amount) || 0).toFixed(2) + '","' + p.method + '","' + p.checkNumber + '","' + p.date + '","' + (p.notes || '').replace(/"/g, "'") + '"'; })].join('\n'); var b = new Blob([csv], {type: 'text/csv'}); var u = window.URL.createObjectURL(b); var a = document.createElement('a'); a.href = u; a.download = 'Payments_' + reportMonth + '.csv'; a.click(); window.URL.revokeObjectURL(u); }} className="bg-[#1080ad] text-white px-6 py-3 rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-blue-700 transition-colors"><Download size={16}/> Export CSV</button>
+                  <button onClick={function() { var csv = ['Member,ID,Amount,Method,Date,Notes', ...periodPayments.map(function(p) { var mem = p.memberId === 'VISITOR' ? visitors.find(v => v.airtableId === p.memberRecId) : members.find(m => m.airtableId === p.memberRecId); var name = mem ? `${mem.firstName} ${mem.lastName}` : (p.memberId === 'VISITOR' ? 'Visitor' : p.memberId); var id = p.memberId === 'VISITOR' ? 'VISITOR' : (mem ? mem.id : p.memberId); return '"' + name + '","' + id + '","$' + (parseFloat(p.amount) || 0).toFixed(2) + '","' + p.method + '","' + p.date + '","' + (p.notes || '').replace(/"/g, "'") + '"'; })].join('\n'); var b = new Blob([csv], {type: 'text/csv'}); var u = window.URL.createObjectURL(b); var a = document.createElement('a'); a.href = u; a.download = 'Payments_' + reportMonth + '.csv'; a.click(); window.URL.revokeObjectURL(u); }} className="bg-[#1080ad] text-white px-6 py-3 rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-blue-700 transition-colors"><Download size={16}/> Export CSV</button>
                 </div>
               )}
             </div>
           );
         })()}
-        {/* ======================== ENHANCED REPORTS TAB ======================== */}
+       {/* ======================== ENHANCED REPORTS TAB ======================== */}
         {activeTab === 'reports' && (() => {
           const [periodStr, yearStr] = reportMonth.split('-');
           const y = parseInt(yearStr);
@@ -1556,13 +1575,12 @@ var showToast = function(message, type, duration) { setToast({ message: message,
 
           // --- REVENUE CALCULATIONS ---
           const paidMembers = scopedMembers.filter(m => m.status === 'ACTIVE' && !m.type.includes('HD6') && !m.type.includes('HCHF') && !m.type.includes('MILITARY') && m.type !== 'FIRST DAY FREE');
-          const revenueByPlan = {};
           const collectedRevenueByPlan = {};
+          
           paidMembers.forEach(m => {
             const rate = parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0;
             const planLabel = m.type.includes('CORPORATE') ? 'Corporate' : m.type === 'SINGLE' ? 'Single' : m.type.includes('FAMILY') ? 'Family' : m.type.includes('SENIOR') ? 'Senior' : m.type.includes('STUDENT') ? 'Student' : 'Other';
-            revenueByPlan[planLabel] = (revenueByPlan[planLabel] || 0) + rate;
-            // Only count as collected if individual has payment logged OR is corporate with corp payment logged
+            
             const isCorp = m.type.includes('CORPORATE') || m.sponsorName;
             let isCollected = false;
             if (isCorp) {
@@ -1573,10 +1591,23 @@ var showToast = function(message, type, duration) { setToast({ message: message,
             }
             if (isCollected) { collectedRevenueByPlan[planLabel] = (collectedRevenueByPlan[planLabel] || 0) + rate; }
           });
+
+          // ADD VISITOR REVENUE
+          const visitorRevenue = visitors.filter(v => {
+            if (!v.purchaseDate || !v.amountPaid || v.amountPaid <= 0) return false;
+            const d = new Date(v.purchaseDate);
+            return d.getFullYear() === y && targetMonths.includes(d.getMonth()) && (viewingCenter === 'both' || (v.center && v.center.toLowerCase().includes(viewingCenter)));
+          }).reduce((sum, v) => sum + Number(v.amountPaid), 0);
+
+          if (visitorRevenue > 0) {
+            collectedRevenueByPlan['Visitor Passes'] = visitorRevenue;
+          }
+
           const revChartData = Object.entries(collectedRevenueByPlan).filter(([_, v]) => v > 0).sort((a, b) => b[1] - a[1]).map(([label, value]) => {
-            const colorMap = { Single: '#1080ad', Family: '#f59e0b', Senior: '#16a34a', Student: '#8b5cf6', Corporate: '#ef4444', Other: '#64748b' };
+            const colorMap = { Single: '#1080ad', Family: '#f59e0b', Senior: '#16a34a', Student: '#8b5cf6', Corporate: '#ef4444', 'Visitor Passes': '#14b8a6', Other: '#64748b' };
             return { label, value: Math.round(value), color: colorMap[label] || '#64748b' };
           });
+
           const actualRevenue = paidMembers.filter(m => m.paymentMethod).reduce((sum, m) => sum + (parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0), 0);
           const corpCollected = corporatePartners.reduce((sum, cp) => {
             const isPaid = cp.paidMonths && cp.paidMonths.split(',').some(str => str.startsWith(reportMonth));
@@ -1584,7 +1615,8 @@ var showToast = function(message, type, duration) { setToast({ message: message,
             const corpMems = paidMembers.filter(m => m.sponsorName === cp.sponsorMatch);
             return sum + corpMems.reduce((s, m) => s + (parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0), 0);
           }, 0);
-          const totalCollected = actualRevenue + corpCollected;
+          
+          const totalCollected = actualRevenue + corpCollected + visitorRevenue;
           const expectedRevenue = paidMembers.reduce((sum, m) => sum + (parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0), 0);
           const collectionRate = expectedRevenue > 0 ? Math.round((totalCollected / expectedRevenue) * 100) : 0;
 
@@ -1745,7 +1777,7 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
 <div class="footer"><span>Prepared by Patterson Health Center · Wellness Hub</span><span>${new Date().toLocaleDateString('en-US', {month:'long',day:'numeric',year:'numeric'})}</span></div>
 </body></html>`;
                     const w = window.open('', '_blank'); w.document.write(html); w.document.close(); setTimeout(() => w.print(), 500);
-                  }} className="px-4 py-2 bg-[#dd6d22]text-white rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-orange-700 transition-colors"><Download size={16}/> Monthly Summary</button>
+                  }} className="px-4 py-2 bg-[#dd6d22] text-white rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-orange-700 transition-colors"><Download size={16}/> Monthly Summary</button>
 
                   <button onClick={() => {
                     const activePaidMembers = scopedMembers.filter(m => { if (m.status !== 'ACTIVE') return false; if (m.type.includes('HD6') || m.type.includes('HCHF') || m.type.includes('MILITARY') || m.type === 'FIRST DAY FREE') return false; if (m.type.includes('CORPORATE') || m.sponsorName) { const sponsor = corporatePartners.find(cp => cp.sponsorMatch === m.sponsorName); return sponsor && sponsor.paidMonths && sponsor.paidMonths.includes(reportMonth); } return !!m.paymentMethod; });
@@ -1792,40 +1824,7 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
                   </div>
                 </div>
               </div>
-                {/* REVENUE GOAL TRACKER */}
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                <h3 className="text-md font-black text-[#001f3f] mb-6 flex items-center gap-2"><TrendingUp size={18} className="text-[#dba51f]"/> Revenue Goals</h3>
-                {viewingCenter === 'both' ? (
-                  <div className="space-y-6">
-                    <div>
-                      <div className="flex justify-between items-end mb-2">
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Combined Goal</p>
-                        <p className="text-sm font-black text-[#001f3f]">${Math.round(totalCollected).toLocaleString()} / $5,000</p>
-                      </div>
-                      <div className="w-full h-5 bg-slate-100 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(100, (totalCollected / 5000) * 100)}%`, background: 'linear-gradient(to right, #dba51f, #dd6d22)' }}></div>
-                      </div>
-                      <p className="text-right text-xs font-bold mt-1" style={{ color: totalCollected >= 5000 ? '#16a34a' : '#f59e0b' }}>{Math.round((totalCollected / 5000) * 100)}%</p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                        <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-2">Anthony — $4,000 Goal</p>
-                        {(() => { const anthonyRev = members.filter(m => m.center && m.center.toLowerCase().includes('anthony') && m.status === 'ACTIVE' && !['HD6','HD6 FAMILY','HCHF','MILITARY','MILITARY FAMILY','FIRST DAY FREE'].includes(m.type) && m.paymentMethod).reduce((s, m) => s + (parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0), 0) + corporatePartners.reduce((sum, cp) => { const isPaid = cp.paidMonths && cp.paidMonths.split(',').some(str => str.startsWith(reportMonth)); if (!isPaid) return sum; return sum + members.filter(m => m.sponsorName === cp.sponsorMatch && m.center && m.center.toLowerCase().includes('anthony')).reduce((s, m) => s + (parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0), 0); }, 0); return (<><p className="text-2xl font-black text-[#1080ad]">${Math.round(anthonyRev).toLocaleString()}</p><div className="w-full h-3 bg-blue-100 rounded-full overflow-hidden mt-2"><div className="h-full rounded-full bg-[#1080ad]" style={{ width: `${Math.min(100, (anthonyRev / 4000) * 100)}%` }}></div></div><p className="text-right text-[10px] font-bold text-blue-500 mt-1">{Math.round((anthonyRev / 4000) * 100)}%</p></>); })()}
-                      </div>
-                      <div className="bg-orange-50 p-4 rounded-xl border border-orange-100">
-                        <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-2">Harper — $1,000 Goal</p>
-                        {(() => { const harperRev = members.filter(m => m.center && m.center.toLowerCase().includes('harper') && m.status === 'ACTIVE' && !['HD6','HD6 FAMILY','HCHF','MILITARY','MILITARY FAMILY','FIRST DAY FREE'].includes(m.type) && m.paymentMethod).reduce((s, m) => s + (parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0), 0) + corporatePartners.reduce((sum, cp) => { const isPaid = cp.paidMonths && cp.paidMonths.split(',').some(str => str.startsWith(reportMonth)); if (!isPaid) return sum; return sum + members.filter(m => m.sponsorName === cp.sponsorMatch && m.center && m.center.toLowerCase().includes('harper')).reduce((s, m) => s + (parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0), 0); }, 0); return (<><p className="text-2xl font-black text-[#dd6d22]">${Math.round(harperRev).toLocaleString()}</p><div className="w-full h-3 bg-orange-100 rounded-full overflow-hidden mt-2"><div className="h-full rounded-full bg-[#dd6d22]" style={{ width: `${Math.min(100, (harperRev / 1000) * 100)}%` }}></div></div><p className="text-right text-[10px] font-bold text-orange-500 mt-1">{Math.round((harperRev / 1000) * 100)}%</p></>); })()}
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    {(() => { const goal = viewingCenter === 'harper' ? 1000 : 4000; const pct = Math.min(100, Math.round((totalCollected / goal) * 100)); return (<><div className="flex justify-between items-end mb-2"><p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{viewingCenter === 'harper' ? 'Harper' : 'Anthony'} Goal</p><p className="text-sm font-black text-[#001f3f]">${Math.round(totalCollected).toLocaleString()} / ${goal.toLocaleString()}</p></div><div className="w-full h-5 bg-slate-100 rounded-full overflow-hidden"><div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: viewingCenter === 'harper' ? 'linear-gradient(to right, #f59e0b, #dd6d22)' : 'linear-gradient(to right, #1080ad, #003d6b)' }}></div></div><p className="text-right text-xs font-bold mt-1" style={{ color: pct >= 100 ? '#16a34a' : '#f59e0b' }}>{pct}%</p></>); })()}
-                  </div>
-                )}
-              </div>
-
-              {/* NEW: REVENUE VISUALS */}
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
                   <h3 className="text-md font-black text-[#001f3f] mb-6 flex items-center gap-2"><TrendingUp size={18} className="text-[#16a34a]"/> Collected Revenue by Plan Type</h3>
@@ -1846,23 +1845,24 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
                       </div>
                     </div>
                     <ProgressBar value={Math.round(totalCollected)} max={viewingCenter === 'harper' ? 1000 : viewingCenter === 'anthony' ? 4000 : 5000} color="#16a34a" label="Collected vs Goal" />
-                    <div className="grid grid-cols-3 gap-4 mt-4">
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
                       <div className="bg-green-50 p-4 rounded-xl border border-green-100">
-                        <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-1">Member Payments</p>
+                        <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-1">Members</p>
                         <p className="text-2xl font-black text-[#16a34a]">${Math.round(actualRevenue).toLocaleString()}</p>
                       </div>
                       <div className="bg-purple-50 p-4 rounded-xl border border-purple-100">
-                        <p className="text-[10px] font-black text-purple-600 uppercase tracking-widest mb-1">Corporate Payments</p>
+                        <p className="text-[10px] font-black text-purple-600 uppercase tracking-widest mb-1">Corporate</p>
                         <p className="text-2xl font-black text-[#8b5cf6]">${Math.round(corpCollected).toLocaleString()}</p>
                       </div>
-                     <div className="bg-red-50 p-4 rounded-xl border border-red-100">
+                      <div className="bg-teal-50 p-4 rounded-xl border border-teal-100">
+                        <p className="text-[10px] font-black text-teal-600 uppercase tracking-widest mb-1">Visitors</p>
+                        <p className="text-2xl font-black text-[#14b8a6]">${Math.round(visitorRevenue).toLocaleString()}</p>
+                      </div>
+                      <div className="bg-red-50 p-4 rounded-xl border border-red-100">
                         <p className="text-[10px] font-black text-red-600 uppercase tracking-widest mb-1">Outstanding</p>
                         <p className="text-2xl font-black text-red-500">${Math.round(Math.max(0, (viewingCenter === 'harper' ? 1000 : viewingCenter === 'anthony' ? 4000 : 5000) - totalCollected)).toLocaleString()}</p>
                       </div>
-                    </div>
-                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Collection Rate</p>
-                      <p className="text-3xl font-black" style={{ color: (function() { var goal = viewingCenter === 'harper' ? 1000 : viewingCenter === 'anthony' ? 4000 : 5000; var pct = goal > 0 ? Math.round((totalCollected / goal) * 100) : 0; return pct >= 80 ? '#16a34a' : pct >= 50 ? '#f59e0b' : '#ef4444'; })() }}>{(function() { var goal = viewingCenter === 'harper' ? 1000 : viewingCenter === 'anthony' ? 4000 : 5000; return goal > 0 ? Math.round((totalCollected / goal) * 100) : 0; })()}%</p>
                     </div>
                   </div>
                 </div>
@@ -2134,19 +2134,125 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
         </div>
       )}
 
-      {/* ADD VISITOR MODAL */}
+     {/* ADD VISITOR MODAL */}
       {showAddVisitorModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#001f3f]/90 backdrop-blur-md">
           <div className="bg-white rounded-3xl w-full max-w-xl p-10 relative shadow-2xl max-h-[90vh] overflow-y-auto">
             <button onClick={() => setShowAddVisitorModal(false)} className="absolute top-6 right-6 text-slate-300 hover:text-red-500 transition-all z-10"><X size={24}/></button>
             <h3 className="text-3xl font-black text-[#001f3f] mb-2 tracking-tight">Add Visitor</h3>
             <p className="text-slate-500 font-medium mb-8">Register a day pass or courtesy pass visitor.</p>
-            <form onSubmit={async (e) => { e.preventDefault(); var passType = e.target.vpass.value; var passesRemaining = passType === 'Prepaid Passes' ? parseInt(document.getElementById('vpasses').value) || 8 : null; var paidAmt = passType === 'Prepaid Passes' ? parseFloat(document.getElementById('vpaidamt').value) || 0 : null; var payMethod = passType === 'Prepaid Passes' ? document.getElementById('vpaymethod').value : null; const formData = { firstName: e.target.vfname.value, lastName: e.target.vlname.value, email: e.target.vemail.value, phone: e.target.vphone.value, address: e.target.vaddress.value, city: e.target.vcity.value, state: e.target.vstate.value, zip: e.target.vzip.value, passType: passType, center: e.target.vcenter.value, referringProvider: e.target.vprovider.value, notes: e.target.vnotes.value, passesRemaining: passesRemaining, amountPaid: paidAmt, paymentMethod: payMethod }; try { const res = await fetch('/api/add-visitor', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData) }); const result = await res.json(); if (result.success) { showToast('Visitor added! PIN: ' + result.pin + ' — Expires: ' + new Date(result.expirationDate + 'T00:00:00').toLocaleDateString('en-US', {month:'long',day:'numeric',year:'numeric'}), 'success', 10000); setShowAddVisitorModal(false); fetch('/api/get-visitors').then(r => r.json()).then(data => { if (data.records) { setVisitors(data.records.map(r => ({ airtableId: r.id, firstName: r.fields['First Name'] || '', lastName: r.fields['Last Name'] || '', email: r.fields['Email'] || '', phone: r.fields['Phone'] || '', passType: r.fields['Pass Type'] || '', amountPaid: r.fields['Amount Paid'] || 0, referringProvider: r.fields['Referring Provider'] || '', purchaseDate: r.fields['Purchase Date'] || '', expirationDate: r.fields['Expiration Date'] || '', center: r.fields['Center'] || '', pin: r.fields['PIN'] || '', orientationComplete: !!r.fields['Orientation Complete'], totalVisits: r.fields['Total Visits'] || 0, address: r.fields['Street Address'] || '', city: r.fields['City'] || '', state: r.fields['State'] || '', zip: r.fields['Zip'] || '', notes: r.fields['Notes'] || '', passActivated: r.fields['Pass Activated'] !== false && r.fields['Pass Activated'] !== 'false', passesRemaining: r.fields['Passes Remaining'] !== undefined ? Number(r.fields['Passes Remaining']) : null }))); } }); } else { alert('Error: ' + result.error); } } catch (err) { alert('Network error. Please try again.'); } }} className="space-y-5">
+            <form onSubmit={async (e) => { 
+              e.preventDefault(); 
+              var passType = e.target.vpass.value; 
+              var isPaidPass = passType === 'Prepaid Passes' || passType === 'Day Pass';
+              var passesRemaining = isPaidPass ? (parseInt(document.getElementById('vpasses').value) || 1) : null; 
+              var paidAmt = isPaidPass ? (parseFloat(document.getElementById('vpaidamt').value) || 0) : null; 
+              var payMethod = isPaidPass ? document.getElementById('vpaymethod').value : null; 
+              
+              const formData = { 
+                firstName: e.target.vfname.value, 
+                lastName: e.target.vlname.value, 
+                email: e.target.vemail.value, 
+                phone: e.target.vphone.value, 
+                address: e.target.vaddress.value, 
+                city: e.target.vcity.value, 
+                state: e.target.vstate.value, 
+                zip: e.target.vzip.value, 
+                passType: passType, 
+                center: e.target.vcenter.value, 
+                referringProvider: e.target.vprovider.value, 
+                notes: e.target.vnotes.value, 
+                passesRemaining: passesRemaining, 
+                amountPaid: paidAmt, 
+                paymentMethod: payMethod 
+              }; 
+              
+              try { 
+                const res = await fetch('/api/add-visitor', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData) }); 
+                const result = await res.json(); 
+                if (result.success) { 
+                  showToast('Visitor added! PIN: ' + result.pin + ' — Expires: ' + new Date(result.expirationDate + 'T00:00:00').toLocaleDateString('en-US', {month:'long',day:'numeric',year:'numeric'}), 'success', 10000); 
+                  setShowAddVisitorModal(false); 
+                  fetch('/api/get-visitors').then(r => r.json()).then(data => { 
+                    if (data.records) { 
+                      setVisitors(data.records.map(r => ({ airtableId: r.id, firstName: r.fields['First Name'] || '', lastName: r.fields['Last Name'] || '', email: r.fields['Email'] || '', phone: r.fields['Phone'] || '', passType: r.fields['Pass Type'] || '', amountPaid: r.fields['Amount Paid'] || 0, referringProvider: r.fields['Referring Provider'] || '', purchaseDate: r.fields['Purchase Date'] || '', expirationDate: r.fields['Expiration Date'] || '', center: r.fields['Center'] || '', pin: r.fields['PIN'] || '', orientationComplete: !!r.fields['Orientation Complete'], totalVisits: r.fields['Total Visits'] || 0, address: r.fields['Street Address'] || '', city: r.fields['City'] || '', state: r.fields['State'] || '', zip: r.fields['Zip'] || '', notes: r.fields['Notes'] || '', passActivated: r.fields['Pass Activated'] !== false && r.fields['Pass Activated'] !== 'false', passesRemaining: r.fields['Passes Remaining'] !== undefined ? Number(r.fields['Passes Remaining']) : null }))); 
+                    } 
+                  }); 
+                } else { 
+                  alert('Error: ' + result.error); 
+                } 
+              } catch (err) { 
+                alert('Network error. Please try again.'); 
+              } 
+            }} className="space-y-5">
               <div className="grid grid-cols-2 gap-5"><div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">First Name</label><input id="vfname" required className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div><div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Last Name</label><input id="vlname" required className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div></div>
               <div className="grid grid-cols-2 gap-5"><div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Email</label><input type="email" id="vemail" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div><div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Phone</label><input id="vphone" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div></div>
               <div className="grid grid-cols-2 gap-5"><div className="col-span-2"><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Street Address</label><input id="vaddress" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div><div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">City</label><input id="vcity" placeholder="Harper" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div><div className="grid grid-cols-2 gap-3"><div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">State</label><input id="vstate" defaultValue="KS" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div><div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Zip</label><input id="vzip" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div></div></div>
-              <div className="grid grid-cols-2 gap-5"><div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Pass Type</label><select id="vpass" onChange={function(e) { var sec = document.getElementById('prepaidSection'); if (sec) sec.style.display = e.target.value === 'Prepaid Passes' ? 'block' : 'none'; }} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors font-bold text-slate-700"><option value="Day Pass">Day Pass ($5)</option><option value="Prepaid Passes">Prepaid Passes</option><option value="2-Week Courtesy">2-Week Courtesy (Free)</option><option value="Month Courtesy">Month Courtesy (Free)</option></select></div><div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Home Center</label><select id="vcenter" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors font-bold text-slate-700"><option value="Anthony Wellness Center">Anthony</option><option value="Harper Wellness Center">Harper</option></select></div></div>
-              <div id="prepaidSection" style={{display: 'none'}}><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Number of Prepaid Passes</label><input type="number" id="vpasses" min="1" defaultValue="8" className="w-full p-4 bg-amber-50 border border-amber-200 rounded-xl outline-none focus:border-amber-500 transition-colors font-bold text-amber-800 text-lg" /><div className="grid grid-cols-2 gap-4 mt-3"><div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Amount Paid</label><div className="flex items-center gap-2"><span className="text-lg font-black text-slate-400">$</span><input type="number" step="0.01" min="0" id="vpaidamt" defaultValue="40" className="flex-1 p-4 bg-amber-50 border border-amber-200 rounded-xl outline-none focus:border-amber-500 transition-colors font-bold text-amber-800" /></div></div><div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Payment Method</label><select id="vpaymethod" className="w-full p-4 bg-amber-50 border border-amber-200 rounded-xl outline-none focus:border-amber-500 transition-colors font-bold text-amber-800"><option value="Cash">Cash</option><option value="Check">Check</option><option value="Card">Card</option><option value="ACH">ACH</option></select></div></div></div>
+              
+              <div className="grid grid-cols-2 gap-5">
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Pass Type</label>
+                  <select id="vpass" onChange={function(e) { 
+                    var passesSec = document.getElementById('vpasses_container'); 
+                    var paySec = document.getElementById('vpay_container');
+                    var amtInput = document.getElementById('vpaidamt');
+                    var passInput = document.getElementById('vpasses');
+                    
+                    if (e.target.value === 'Prepaid Passes') {
+                      if (passesSec) passesSec.style.display = 'block';
+                      if (paySec) paySec.style.display = 'flex';
+                      if (amtInput) amtInput.value = '';
+                      if (passInput) passInput.value = '';
+                    } else if (e.target.value === 'Day Pass') {
+                      if (passesSec) passesSec.style.display = 'block';
+                      if (paySec) paySec.style.display = 'flex';
+                      if (amtInput) amtInput.value = '5';
+                      if (passInput) passInput.value = '1';
+                    } else {
+                      if (passesSec) passesSec.style.display = 'none';
+                      if (paySec) paySec.style.display = 'none';
+                      if (amtInput) amtInput.value = '0';
+                    }
+                  }} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors font-bold text-slate-700">
+                    <option value="Day Pass">Day Pass ($5)</option>
+                    <option value="Prepaid Passes">Prepaid Passes</option>
+                    <option value="2-Week Courtesy">2-Week Courtesy (Free)</option>
+                    <option value="Month Courtesy">Month Courtesy (Free)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Home Center</label>
+                  <select id="vcenter" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors font-bold text-slate-700">
+                    <option value="Anthony Wellness Center">Anthony</option>
+                    <option value="Harper Wellness Center">Harper</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div id="vpasses_container" style={{display: 'block'}}>
+                <label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Number of Passes</label>
+                <input type="number" id="vpasses" min="1" defaultValue="1" className="w-full p-4 bg-amber-50 border border-amber-200 rounded-xl outline-none focus:border-amber-500 transition-colors font-bold text-amber-800 text-lg" />
+              </div>
+
+              <div id="vpay_container" className="grid grid-cols-2 gap-4 mt-3" style={{display: 'flex'}}>
+                <div className="flex-1">
+                  <label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Amount Paid</label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg font-black text-slate-400">$</span>
+                    <input type="number" step="0.01" min="0" id="vpaidamt" defaultValue="5" className="flex-1 p-4 bg-amber-50 border border-amber-200 rounded-xl outline-none focus:border-amber-500 transition-colors font-bold text-amber-800" />
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Payment Method</label>
+                  <select id="vpaymethod" className="w-full p-4 bg-amber-50 border border-amber-200 rounded-xl outline-none focus:border-amber-500 transition-colors font-bold text-amber-800">
+                    <option value="Cash">Cash</option>
+                    <option value="Check">Check</option>
+                    <option value="Card">Card</option>
+                    <option value="ACH">ACH</option>
+                  </select>
+                </div>
+              </div>
+              
               <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Referring Provider / Department</label><input id="vprovider" placeholder="e.g. Dr. Smith, PT Department, Patterson Clinic" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div>
               <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Notes</label><input id="vnotes" placeholder="Optional notes" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div>
               <button type="submit" className="w-full bg-[#8b5cf6] text-white p-5 rounded-xl font-bold mt-4 shadow-lg hover:bg-purple-700 transition-colors text-lg flex items-center justify-center gap-2"><Plus size={18}/> Add Visitor</button>
