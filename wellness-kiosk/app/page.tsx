@@ -1094,30 +1094,38 @@ var showToast = function(message, type, duration) { setToast({ message: message,
 >
   🔥 TEMP: BULK PRINT LETTERS
 </button>
-        <button onClick={() => {
+       <button onClick={() => {
   const membersToPrint = filteredMembers.filter(m => !m.inactive);
   if (membersToPrint.length === 0) return alert("No active members found to print.");
   
   const totalCards = Math.ceil(membersToPrint.length / 3);
-  if (!window.confirm(`Generate 3-Up key tags for ${membersToPrint.length} members?\n\nThis will use ${totalCards} blank cards.\n\n(Please wait about 5-8 seconds after clicking OK for the ${membersToPrint.length} QR codes to generate before the print menu appears).`)) return;
+  if (!window.confirm(`Generate Premium 3-Up key tags with logos for ${membersToPrint.length} members?\n\nThis will use ${totalCards} blank cards.\n\n(Please wait about 5-8 seconds after clicking OK for the ${membersToPrint.length} QR codes to generate before the print menu appears).`)) return;
 
-  let html = `<!DOCTYPE html><html><head><title>Bulk Print 3-Up Key Tags</title><style>
+  let html = `<!DOCTYPE html><html><head><title>Premium Bulk Print 3-Up Tags</title><style>
     @page { size: 3.375in 2.125in; margin: 0; }
     @media print { 
       * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } 
       .card-page { page-break-after: always; }
     }
-    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #fff; }
+    body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; background: #fff; }
     .card-page { width: 3.375in; height: 2.125in; display: flex; flex-direction: row; overflow: hidden; box-sizing: border-box; }
     
-    /* Each tag is exactly 1/3 of the card (1.125 inches). 
-       Top padding is 0.35in to avoid printing over the keychain hole! */
-    .tag { width: 1.125in; height: 2.125in; box-sizing: border-box; padding: 0.35in 0.1in 0.1in 0.1in; display: flex; flex-direction: column; align-items: center; justify-content: space-between; }
+    .tag { width: 1.125in; height: 2.125in; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; position: relative; border-right: 1px dashed #f1f5f9; }
+    .tag:last-child { border-right: none; }
     
-    .center-name { font-size: 7px; font-weight: 900; color: #003d6b; text-transform: uppercase; text-align: center; letter-spacing: 0.5px; line-height: 1.2; }
-    .member-name { font-size: 10px; font-weight: 900; color: #1e293b; text-align: center; line-height: 1; margin-top: 4px; }
-    .member-id { font-size: 8px; font-weight: 700; color: #64748b; margin-top: 2px; }
-    .qr-code { width: 0.85in; height: 0.85in; margin-top: auto; }
+    .hole-space { height: 0.38in; width: 100%; flex-shrink: 0; background: #fff; }
+    
+    /* Updated Header with Logo */
+    .header { width: 100%; padding: 6px 0; display: flex; justify-content: center; align-items: center; flex-shrink: 0; border-top: 1.5px solid rgba(255,255,255,0.4); border-bottom: 1.5px solid rgba(0,0,0,0.1); }
+    .header img { height: 11px; max-width: 90%; object-fit: contain; filter: drop-shadow(0px 1px 1px rgba(0,0,0,0.2)); }
+    
+    .body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; padding: 0 4px; }
+    .name { font-size: 10px; font-weight: 900; color: #001f3f; text-transform: uppercase; text-align: center; line-height: 1.05; margin-bottom: 5px; letter-spacing: -0.2px; }
+    .id-pill { font-size: 6px; font-weight: 800; color: #fff; background: #64748b; padding: 2.5px 6px; border-radius: 8px; letter-spacing: 0.5px; }
+    
+    .qr-wrapper { margin-bottom: 6px; display: flex; flex-direction: column; align-items: center; }
+    .qr-code { width: 0.78in; height: 0.78in; display: block; padding: 2px; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 5px; }
+    .scan-text { font-size: 5px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-top: 3px; }
   </style></head><body>`;
 
   // Loop through members in chunks of 3
@@ -1127,25 +1135,35 @@ var showToast = function(message, type, duration) { setToast({ message: message,
     
     chunk.forEach(m => {
       const isHarper = m.center && m.center.toLowerCase().includes('harper');
-      const centerName = isHarper ? 'Harper Wellness' : 'Anthony Wellness';
-      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(m.id)}&color=003d6b&bgcolor=ffffff`;
+      const bgGradient = isHarper ? 'linear-gradient(135deg, #f59e0b, #dd6d22)' : 'linear-gradient(135deg, #1080ad, #003d6b)';
+      const qrColor = isHarper ? 'dd6d22' : '003d6b';
+      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(m.id)}&color=${qrColor}&bgcolor=ffffff`;
+      const logoUrl = 'https://pattersonhc.org/sites/default/files/wellness_white.png';
       
       html += `
         <div class="tag">
-          <div class="center-name">${centerName}</div>
-          <div class="member-name">${m.firstName}<br/>${m.lastName}</div>
-          <div class="member-id">ID: ${m.id}</div>
-          <img class="qr-code" src="${qrUrl}" />
+          <div class="hole-space"></div>
+          <div class="header" style="background: ${bgGradient};">
+            <img src="${logoUrl}" />
+          </div>
+          <div class="body">
+            <div class="name">${m.firstName}<br/>${m.lastName}</div>
+            <div class="id-pill">ID: ${m.id}</div>
+          </div>
+          <div class="qr-wrapper">
+            <img class="qr-code" src="${qrUrl}" />
+            <div class="scan-text">Scan To Enter</div>
+          </div>
         </div>
       `;
     });
 
-    // If the last page has 1 or 2 members, fill the rest with blank empty tags so the flex layout doesn't stretch them
+    // Fill remaining spots if the last page has 1 or 2 members
     for (let j = chunk.length; j < 3; j++) {
       html += `<div class="tag"></div>`;
     }
 
-    html += `</div>`; // End of card-page
+    html += `</div>`; 
   }
 
   html += `</body></html>`;
@@ -1154,11 +1172,10 @@ var showToast = function(message, type, duration) { setToast({ message: message,
   w.document.write(html);
   w.document.close();
   
-  // Set a longer timeout (4 seconds) because generating 500+ QR codes from the API will take a moment!
   setTimeout(() => w.print(), 4000); 
 }} className="bg-red-500 text-white px-6 py-2 rounded-xl font-bold shadow-xl shadow-red-500/20"
 >
-  🔥 TEMP: BULK PRINT 3-UP TAGS
+  🔥 TEMP: BULK PRINT PREMIUM TAGS
 </button>
 
         {activeTab === 'classes' && (() => {
