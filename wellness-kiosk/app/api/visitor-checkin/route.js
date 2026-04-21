@@ -61,6 +61,15 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'Failed to update visit count' });
     }
 
+    if (decrementPass) {
+  // Fetch current passes remaining
+  const visitorRes = await fetch(`https://api.airtable.com/v0/${baseId}/Visitors/${visitorAirtableId}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  const visitorData = await visitorRes.json();
+  const currentPasses = Number(visitorData.fields['Passes Remaining'] || 0);
+  fields['Passes Remaining'] = Math.max(0, currentPasses - 1);
+}
     // 5. Also log to the Visits table (same as member check-ins) so it shows in the dashboard
     try {
       await fetch(
