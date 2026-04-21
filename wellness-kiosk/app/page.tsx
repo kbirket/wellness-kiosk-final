@@ -453,12 +453,15 @@ const filteredMembers = scopedMembers.filter(m => { if (!(m.firstName + ' ' + m.
     const currentCenter = centerRef.current;
     const scanCenter = currentCenter === 'both' ? (visitor.center || 'Anthony') : currentCenter.charAt(0).toUpperCase() + currentCenter.slice(1);
     try {
-      const res = await fetch('/api/visitor-checkin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visitorAirtableId: visitor.airtableId, center: scanCenter }) });
+      if (visitor.passesRemaining !== null && visitor.passesRemaining !== undefined && visitor.passesRemaining <= 0) { setKioskMessage({ text: 'No passes remaining', type: 'error', subtext: 'Please see the front desk to purchase more.' }); setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 5000); return; }       const res = await fetch('/api/visitor-checkin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visitorAirtableId: visitor.airtableId, center: scanCenter, decrementPass: visitor.passesRemaining !== null }) });
       const result = await res.json();
-      if (result.success) {
-        setVisitors(prev => prev.map(v => v.airtableId === visitor.airtableId ? { ...v, totalVisits: (v.totalVisits || 0) + 1 } : v));
+     if (result.success) {
+        var newRemaining = visitor.passesRemaining !== null ? visitor.passesRemaining - 1 : null;
+        setVisitors(prev => prev.map(v => v.airtableId === visitor.airtableId ? { ...v, totalVisits: (v.totalVisits || 0) + 1, passesRemaining: newRemaining } : v));
         setVisits(prev => [{ name: visitor.firstName + ' ' + visitor.lastName, center: scanCenter, time: new Date().toISOString(), type: 'VISITOR - ' + (visitor.passType || 'Pass'), method: 'Kiosk Search' }, ...prev]);
-        setKioskMessage({ text: `Welcome, ${visitor.firstName}!`, type: 'success', subtext: '' });
+        var passMsg = newRemaining !== null ? ' (' + newRemaining + ' pass' + (newRemaining !== 1 ? 'es' : '') + ' remaining)' : '';
+        var passWarn = newRemaining !== null && newRemaining <= 1;
+        setKioskMessage({ text: `Welcome, ${visitor.firstName}!`, type: passWarn ? 'warning' : 'success', subtext: newRemaining !== null ? passMsg + (newRemaining <= 1 ? ' — Please see front desk to purchase more.' : '') : '' });
         setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 5000);
       } else {
         setKioskMessage({ text: 'Check-in Error', type: 'error', subtext: result.error || 'Please see the front desk.' });
