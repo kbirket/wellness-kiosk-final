@@ -71,6 +71,7 @@ export async function POST(request) {
             "PIN": newPIN,
             "Orientation Complete": false,
             "Notes": body.notes || '',
+            if (passesRemaining !== null && passesRemaining !== undefined) fields["Passes Remaining"] = Number(passesRemaining);
           }
         }],
         typecast: true
