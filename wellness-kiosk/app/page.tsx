@@ -2229,6 +2229,10 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
               <h3 className="text-xl font-black text-[#001f3f]">Log Payment</h3>
               <p className="text-sm text-slate-400 mt-1">{paymentModal.firstName} {paymentModal.lastName}</p>
             </div>
+            <div className="mb-4">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Payment Date</p>
+              <input type="date" id="paymentDate" defaultValue={new Date().toISOString().split('T')[0]} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#16a34a] text-sm font-bold text-[#001f3f]" />
+            </div>
          <div className="mb-5">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Payment Amount</p>
               <div className="grid grid-cols-3 gap-2 mb-3">
@@ -2262,7 +2266,7 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
                   const amtLabel = fullRate > 0 ? ` ($${displayAmount.toFixed(2)}${proratePayment ? ' prorated' : ''})` : '';
                   if (!window.confirm(`Log ${m} payment${amtLabel} for ${paymentModal.firstName} ${paymentModal.lastName}?`)) return;
                   try {
-                    const res = await fetch('/api/log-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: paymentModal.airtableId, memberName: `${paymentModal.firstName} ${paymentModal.lastName}`, method: payMethod, amount: displayAmount, currentDueDate: paymentModal.nextPayment, prorated: proratePayment, proratedAmount: proratePayment ? proratedAmount : null }) });
+                    const res = await fetch('/api/log-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: paymentModal.airtableId, memberName: `${paymentModal.firstName} ${paymentModal.lastName}`, method: payMethod, amount: displayAmount, currentDueDate: paymentModal.nextPayment, prorated: proratePayment, proratedAmount: proratePayment ? proratedAmount : null, paymentDate: document.getElementById('paymentDate') ? document.getElementById('paymentDate').value : null }) });
                     const result = await res.json();
                     if (result.success) {
                       setMembers(prev => prev.map(mem => mem.airtableId === paymentModal.airtableId ? { ...mem, status: 'ACTIVE', nextPayment: result.nextPaymentDue } : mem));
