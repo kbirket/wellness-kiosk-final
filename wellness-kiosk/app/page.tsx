@@ -1094,6 +1094,72 @@ var showToast = function(message, type, duration) { setToast({ message: message,
 >
   🔥 TEMP: BULK PRINT LETTERS
 </button>
+        <button onClick={() => {
+  const membersToPrint = filteredMembers.filter(m => !m.inactive);
+  if (membersToPrint.length === 0) return alert("No active members found to print.");
+  
+  const totalCards = Math.ceil(membersToPrint.length / 3);
+  if (!window.confirm(`Generate 3-Up key tags for ${membersToPrint.length} members?\n\nThis will use ${totalCards} blank cards.\n\n(Please wait about 5-8 seconds after clicking OK for the ${membersToPrint.length} QR codes to generate before the print menu appears).`)) return;
+
+  let html = `<!DOCTYPE html><html><head><title>Bulk Print 3-Up Key Tags</title><style>
+    @page { size: 3.375in 2.125in; margin: 0; }
+    @media print { 
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } 
+      .card-page { page-break-after: always; }
+    }
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #fff; }
+    .card-page { width: 3.375in; height: 2.125in; display: flex; flex-direction: row; overflow: hidden; box-sizing: border-box; }
+    
+    /* Each tag is exactly 1/3 of the card (1.125 inches). 
+       Top padding is 0.35in to avoid printing over the keychain hole! */
+    .tag { width: 1.125in; height: 2.125in; box-sizing: border-box; padding: 0.35in 0.1in 0.1in 0.1in; display: flex; flex-direction: column; align-items: center; justify-content: space-between; }
+    
+    .center-name { font-size: 7px; font-weight: 900; color: #003d6b; text-transform: uppercase; text-align: center; letter-spacing: 0.5px; line-height: 1.2; }
+    .member-name { font-size: 10px; font-weight: 900; color: #1e293b; text-align: center; line-height: 1; margin-top: 4px; }
+    .member-id { font-size: 8px; font-weight: 700; color: #64748b; margin-top: 2px; }
+    .qr-code { width: 0.85in; height: 0.85in; margin-top: auto; }
+  </style></head><body>`;
+
+  // Loop through members in chunks of 3
+  for (let i = 0; i < membersToPrint.length; i += 3) {
+    const chunk = membersToPrint.slice(i, i + 3);
+    html += `<div class="card-page">`;
+    
+    chunk.forEach(m => {
+      const isHarper = m.center && m.center.toLowerCase().includes('harper');
+      const centerName = isHarper ? 'Harper Wellness' : 'Anthony Wellness';
+      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(m.id)}&color=003d6b&bgcolor=ffffff`;
+      
+      html += `
+        <div class="tag">
+          <div class="center-name">${centerName}</div>
+          <div class="member-name">${m.firstName}<br/>${m.lastName}</div>
+          <div class="member-id">ID: ${m.id}</div>
+          <img class="qr-code" src="${qrUrl}" />
+        </div>
+      `;
+    });
+
+    // If the last page has 1 or 2 members, fill the rest with blank empty tags so the flex layout doesn't stretch them
+    for (let j = chunk.length; j < 3; j++) {
+      html += `<div class="tag"></div>`;
+    }
+
+    html += `</div>`; // End of card-page
+  }
+
+  html += `</body></html>`;
+  
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+  
+  // Set a longer timeout (4 seconds) because generating 500+ QR codes from the API will take a moment!
+  setTimeout(() => w.print(), 4000); 
+}} className="bg-red-500 text-white px-6 py-2 rounded-xl font-bold shadow-xl shadow-red-500/20"
+>
+  🔥 TEMP: BULK PRINT 3-UP TAGS
+</button>
 
         {activeTab === 'classes' && (() => {
           const allClasses = [
@@ -1135,6 +1201,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                   {Object.keys(savedClassRosters).length > 14 && <p className="text-xs text-slate-400 text-center mt-3 font-bold">Showing last 14 rosters</p>}
                 </div>
               )}
+              
               {activeClass && (() => {
                 var activeRosterKey = activeClass.name + '_' + activeClass.center + '_' + checkinDate; var activeRoster = savedClassRosters[activeRosterKey]; var classVisitsFromRoster = activeRoster ? activeRoster.attendees.map(function(a) { return { name: a.name, time: a.time, type: a.type, center: activeClass.center === 'anthony' ? 'Anthony' : 'Harper', method: 'Class: ' + activeClass.name }; }) : []; var classVisitsFromVisits = filteredVisits.filter(function(v) { return new Date(v.time).toDateString() === new Date(checkinDate + 'T00:00:00').toDateString() && v.method === 'Class: ' + activeClass.name; }); var classVisits = classVisitsFromRoster.length >= classVisitsFromVisits.length ? classVisitsFromRoster : classVisitsFromVisits;
                 return (
