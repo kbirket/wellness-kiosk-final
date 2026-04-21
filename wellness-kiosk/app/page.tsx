@@ -1099,7 +1099,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
   if (membersToPrint.length === 0) return alert("No active members found to print.");
   
   const totalCards = Math.ceil(membersToPrint.length / 3);
-  if (!window.confirm(`Generate Double-Sided Premium 3-Up key tags for ${membersToPrint.length} members?\n\nThis will use ${totalCards} blank cards.\n\n(Please wait about 5-8 seconds after clicking OK for the ${membersToPrint.length} QR codes to generate before the print menu appears).`)) return;
+  if (!window.confirm(`Generate Double-Sided Premium 3-Up key tags (Logo Focus) for ${membersToPrint.length} members?\n\nThis will use ${totalCards} blank cards.\n\n(Please wait about 5-8 seconds after clicking OK for the ${membersToPrint.length} QR codes to generate before the print menu appears).`)) return;
 
   let html = `<!DOCTYPE html><html><head><title>Premium Bulk Print 3-Up Tags (Double-Sided)</title><style>
     @page { size: 3.375in 2.125in; margin: 0; }
@@ -1113,17 +1113,24 @@ var showToast = function(message, type, duration) { setToast({ message: message,
     /* Front Tag Styles */
     .tag { width: 1.125in; height: 2.125in; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; position: relative; border-right: 1px dashed #f1f5f9; }
     .tag:last-child { border-right: none; }
+    
+    /* Top space for hole punch */
     .hole-space { height: 0.35in; width: 100%; flex-shrink: 0; background: #fff; }
+    
+    /* Logo on White - LARGER SIZE */
     .logo-sec { width: 100%; padding: 4px 0; display: flex; justify-content: center; align-items: center; flex-shrink: 0; background: #fff; }
-    .logo-sec img { height: 12px; max-width: 90%; object-fit: contain; filter: invert(1); opacity: 0.85; }
-    .name-sec { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; padding: 4px; box-sizing: border-box; border-top: 1.5px solid rgba(0,0,0,0.1); border-bottom: 1.5px solid rgba(0,0,0,0.1); }
-    .name { font-size: 10px; font-weight: 900; color: #fff; text-transform: uppercase; text-align: center; line-height: 1.05; margin-bottom: 5px; letter-spacing: -0.2px; text-shadow: 0px 1px 2px rgba(0,0,0,0.3); }
-    .id-pill { font-size: 6px; font-weight: 900; color: #001f3f; background: rgba(255,255,255,0.95); padding: 2.5px 6px; border-radius: 8px; letter-spacing: 0.5px; box-shadow: 0px 1px 2px rgba(0,0,0,0.2); }
+    .logo-sec img { height: 18px; max-width: 95%; object-fit: contain; filter: invert(1); opacity: 0.85; }
+    
+    /* ID on Colored Background - NO NAME */
+    .id-sec { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; padding: 4px; box-sizing: border-box; border-top: 1.5px solid rgba(0,0,0,0.1); border-bottom: 1.5px solid rgba(0,0,0,0.1); }
+    .member-id-display { font-size: 14px; font-weight: 900; color: #fff; text-transform: uppercase; text-align: center; line-height: 1.05; letter-spacing: -0.2px; text-shadow: 0px 1px 2px rgba(0,0,0,0.3); }
+    
+    /* QR on White */
     .qr-wrapper { margin-bottom: 6px; margin-top: 4px; display: flex; flex-direction: column; align-items: center; background: #fff; width: 100%; flex-shrink: 0; }
     .qr-code { width: 0.78in; height: 0.78in; display: block; padding: 2px; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 5px; }
     .scan-text { font-size: 5px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-top: 3px; }
 
-    /* Back Tag Styles - Return to Sender */
+    /* Back Tag Styles - Return to Sender (Same as before) */
     .back-tag { width: 1.125in; height: 2.125in; box-sizing: border-box; background: #fff; display: flex; flex-direction: column; align-items: center; border-right: 1px dashed #f1f5f9; position: relative; }
     .back-tag:last-child { border-right: none; }
     .back-hole-space { height: 0.35in; width: 100%; flex-shrink: 0; background: #fff; }
@@ -1161,10 +1168,11 @@ var showToast = function(message, type, duration) { setToast({ message: message,
       html += `
         <div class="tag">
           <div class="hole-space"></div>
-          <div class="logo-sec"><img src="${logoUrl}" /></div>
-          <div class="name-sec" style="background: ${bgGradient};">
-            <div class="name">${m.firstName}<br/>${m.lastName}</div>
-            <div class="id-pill">ID: ${m.id}</div>
+          <div class="logo-sec">
+            <img src="${logoUrl}" />
+          </div>
+          <div class="id-sec" style="background: ${bgGradient};">
+            <div class="member-id-display">ID: ${m.id}</div>
           </div>
           <div class="qr-wrapper">
             <img class="qr-code" src="${qrUrl}" />
