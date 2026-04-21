@@ -1094,7 +1094,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
 >
   🔥 TEMP: BULK PRINT LETTERS
 </button>
-     <button onClick={() => {
+   <button onClick={() => {
   const membersToPrint = filteredMembers.filter(m => !m.inactive);
   if (membersToPrint.length === 0) return alert("No active members found to print.");
   
@@ -1123,13 +1123,14 @@ var showToast = function(message, type, duration) { setToast({ message: message,
     .qr-code { width: 0.78in; height: 0.78in; display: block; padding: 2px; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 5px; }
     .scan-text { font-size: 5px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-top: 3px; }
 
-    /* Back Tag Styles */
-    .back-tag { width: 1.125in; height: 2.125in; box-sizing: border-box; background: #001f3f; display: flex; flex-direction: column; align-items: center; border-right: 1px dashed rgba(255,255,255,0.2); position: relative; }
+    /* Back Tag Styles - Return to Sender */
+    .back-tag { width: 1.125in; height: 2.125in; box-sizing: border-box; background: #fff; display: flex; flex-direction: column; align-items: center; border-right: 1px dashed #f1f5f9; position: relative; }
     .back-tag:last-child { border-right: none; }
-    .back-hole-space { height: 0.35in; width: 100%; flex-shrink: 0; background: #001f3f; }
-    .back-content { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; padding: 0 6px; text-align: center; }
-    .back-title { font-size: 7px; font-weight: 900; color: #fff; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
-    .back-text { font-size: 5.5px; font-weight: 700; color: #8bb8d9; line-height: 1.5; margin-bottom: 6px; }
+    .back-hole-space { height: 0.35in; width: 100%; flex-shrink: 0; background: #fff; }
+    .back-content { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; padding: 0 4px; text-align: center; }
+    .back-title { font-size: 6px; font-weight: 900; color: #dd6d22; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; line-height: 1.3; }
+    .back-text { font-size: 5px; font-weight: 700; color: #475569; line-height: 1.4; margin-bottom: 8px; }
+    .back-text strong { color: #001f3f; font-size: 6px; display: block; margin-bottom: 1px; }
     .back-accent { height: 3px; width: 100%; background: linear-gradient(to right, #dba51f, #dd6d22); position: absolute; bottom: 0; }
   </style></head><body>`;
 
@@ -1138,15 +1139,14 @@ var showToast = function(message, type, duration) { setToast({ message: message,
     <div class="back-tag">
       <div class="back-hole-space"></div>
       <div class="back-content">
-        <div class="back-title">Patterson<br/>Wellness</div>
-        <div class="back-text">Anthony<br/>(620) 842-5190<br/><br/>Harper<br/>(620) 896-1202</div>
-        <div class="back-text" style="color: #fff;">pattersonhc.org</div>
+        <div class="back-title">If found, please<br/>contact us:</div>
+        <div class="back-text"><strong>Anthony Wellness</strong>309 W Main St<br/>(620) 842-5190</div>
+        <div class="back-text" style="margin-bottom:0;"><strong>Harper Wellness</strong>615 W 12th St<br/>(620) 896-1202</div>
       </div>
       <div class="back-accent"></div>
     </div>
   `;
 
-  // Loop through members in chunks of 3
   for (let i = 0; i < membersToPrint.length; i += 3) {
     const chunk = membersToPrint.slice(i, i + 3);
     
