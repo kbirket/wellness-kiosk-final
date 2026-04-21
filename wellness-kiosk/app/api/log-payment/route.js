@@ -2,8 +2,7 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request) {
   try {
-    const { airtableId, method, currentDueDate, amount } = await request.json();
-    const baseId = process.env.AIRTABLE_BASE_ID;
+const { airtableId, method, currentDueDate, amount, paymentDate } = await request.json();    const baseId = process.env.AIRTABLE_BASE_ID;
     const token = process.env.AIRTABLE_PAT;
     
     // 1. Calculate the NEW due date
@@ -25,8 +24,7 @@ export async function POST(request) {
     const payFields = {
       "Member": [airtableId],
       "Amount": payAmount,
-      "Payment Date": new Date().toISOString().split('T')[0],
-      "Payment Method": payMethod,
+"Payment Date": paymentDate || new Date().toISOString().split('T')[0],      "Payment Method": payMethod,
       "Status": "Completed",
       "Notes": noteText
     };
