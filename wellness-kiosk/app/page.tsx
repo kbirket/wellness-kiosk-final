@@ -1094,14 +1094,14 @@ var showToast = function(message, type, duration) { setToast({ message: message,
 >
   🔥 TEMP: BULK PRINT LETTERS
 </button>
-      <button onClick={() => {
+     <button onClick={() => {
   const membersToPrint = filteredMembers.filter(m => !m.inactive);
   if (membersToPrint.length === 0) return alert("No active members found to print.");
   
   const totalCards = Math.ceil(membersToPrint.length / 3);
-  if (!window.confirm(`Generate Premium 3-Up key tags with logos for ${membersToPrint.length} members?\n\nThis will use ${totalCards} blank cards.\n\n(Please wait about 5-8 seconds after clicking OK for the ${membersToPrint.length} QR codes to generate before the print menu appears).`)) return;
+  if (!window.confirm(`Generate Double-Sided Premium 3-Up key tags for ${membersToPrint.length} members?\n\nThis will use ${totalCards} blank cards.\n\n(Please wait about 5-8 seconds after clicking OK for the ${membersToPrint.length} QR codes to generate before the print menu appears).`)) return;
 
-  let html = `<!DOCTYPE html><html><head><title>Premium Bulk Print 3-Up Tags</title><style>
+  let html = `<!DOCTYPE html><html><head><title>Premium Bulk Print 3-Up Tags (Double-Sided)</title><style>
     @page { size: 3.375in 2.125in; margin: 0; }
     @media print { 
       * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } 
@@ -1110,44 +1110,58 @@ var showToast = function(message, type, duration) { setToast({ message: message,
     body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; background: #fff; }
     .card-page { width: 3.375in; height: 2.125in; display: flex; flex-direction: row; overflow: hidden; box-sizing: border-box; }
     
+    /* Front Tag Styles */
     .tag { width: 1.125in; height: 2.125in; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; position: relative; border-right: 1px dashed #f1f5f9; }
     .tag:last-child { border-right: none; }
-    
-    /* Top space for hole punch */
     .hole-space { height: 0.35in; width: 100%; flex-shrink: 0; background: #fff; }
-    
-    /* Logo on White */
     .logo-sec { width: 100%; padding: 4px 0; display: flex; justify-content: center; align-items: center; flex-shrink: 0; background: #fff; }
     .logo-sec img { height: 12px; max-width: 90%; object-fit: contain; filter: invert(1); opacity: 0.85; }
-    
-    /* Name on Colored Background */
     .name-sec { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; padding: 4px; box-sizing: border-box; border-top: 1.5px solid rgba(0,0,0,0.1); border-bottom: 1.5px solid rgba(0,0,0,0.1); }
     .name { font-size: 10px; font-weight: 900; color: #fff; text-transform: uppercase; text-align: center; line-height: 1.05; margin-bottom: 5px; letter-spacing: -0.2px; text-shadow: 0px 1px 2px rgba(0,0,0,0.3); }
     .id-pill { font-size: 6px; font-weight: 900; color: #001f3f; background: rgba(255,255,255,0.95); padding: 2.5px 6px; border-radius: 8px; letter-spacing: 0.5px; box-shadow: 0px 1px 2px rgba(0,0,0,0.2); }
-    
-    /* QR on White */
     .qr-wrapper { margin-bottom: 6px; margin-top: 4px; display: flex; flex-direction: column; align-items: center; background: #fff; width: 100%; flex-shrink: 0; }
     .qr-code { width: 0.78in; height: 0.78in; display: block; padding: 2px; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 5px; }
     .scan-text { font-size: 5px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-top: 3px; }
+
+    /* Back Tag Styles */
+    .back-tag { width: 1.125in; height: 2.125in; box-sizing: border-box; background: #001f3f; display: flex; flex-direction: column; align-items: center; border-right: 1px dashed rgba(255,255,255,0.2); position: relative; }
+    .back-tag:last-child { border-right: none; }
+    .back-hole-space { height: 0.35in; width: 100%; flex-shrink: 0; background: #001f3f; }
+    .back-content { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; padding: 0 6px; text-align: center; }
+    .back-title { font-size: 7px; font-weight: 900; color: #fff; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+    .back-text { font-size: 5.5px; font-weight: 700; color: #8bb8d9; line-height: 1.5; margin-bottom: 6px; }
+    .back-accent { height: 3px; width: 100%; background: linear-gradient(to right, #dba51f, #dd6d22); position: absolute; bottom: 0; }
   </style></head><body>`;
 
+  const logoUrl = 'https://pattersonhc.org/sites/default/files/wellness_white.png';
+  const genericBackHTML = `
+    <div class="back-tag">
+      <div class="back-hole-space"></div>
+      <div class="back-content">
+        <div class="back-title">Patterson<br/>Wellness</div>
+        <div class="back-text">Anthony<br/>(620) 842-5190<br/><br/>Harper<br/>(620) 896-1202</div>
+        <div class="back-text" style="color: #fff;">pattersonhc.org</div>
+      </div>
+      <div class="back-accent"></div>
+    </div>
+  `;
+
+  // Loop through members in chunks of 3
   for (let i = 0; i < membersToPrint.length; i += 3) {
     const chunk = membersToPrint.slice(i, i + 3);
-    html += `<div class="card-page">`;
     
+    // --- PRINT THE FRONT OF THE CARD ---
+    html += `<div class="card-page">`;
     chunk.forEach(m => {
       const isHarper = m.center && m.center.toLowerCase().includes('harper');
       const bgGradient = isHarper ? 'linear-gradient(135deg, #f59e0b, #dd6d22)' : 'linear-gradient(135deg, #1080ad, #003d6b)';
       const qrColor = isHarper ? 'dd6d22' : '003d6b';
       const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(m.id)}&color=${qrColor}&bgcolor=ffffff`;
-      const logoUrl = 'https://pattersonhc.org/sites/default/files/wellness_white.png';
       
       html += `
         <div class="tag">
           <div class="hole-space"></div>
-          <div class="logo-sec">
-            <img src="${logoUrl}" />
-          </div>
+          <div class="logo-sec"><img src="${logoUrl}" /></div>
           <div class="name-sec" style="background: ${bgGradient};">
             <div class="name">${m.firstName}<br/>${m.lastName}</div>
             <div class="id-pill">ID: ${m.id}</div>
@@ -1159,11 +1173,12 @@ var showToast = function(message, type, duration) { setToast({ message: message,
         </div>
       `;
     });
+    for (let j = chunk.length; j < 3; j++) { html += `<div class="tag"></div>`; }
+    html += `</div>`; 
 
-    for (let j = chunk.length; j < 3; j++) {
-      html += `<div class="tag"></div>`;
-    }
-
+    // --- PRINT THE BACK OF THE CARD ---
+    html += `<div class="card-page">`;
+    html += genericBackHTML + genericBackHTML + genericBackHTML;
     html += `</div>`; 
   }
 
@@ -1176,7 +1191,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
   setTimeout(() => w.print(), 4000); 
 }} className="bg-red-500 text-white px-6 py-2 rounded-xl font-bold shadow-xl shadow-red-500/20"
 >
-  🔥 TEMP: BULK PRINT PREMIUM TAGS
+  🔥 TEMP: BULK PRINT DUAL-SIDED TAGS
 </button>
 
         {activeTab === 'classes' && (() => {
