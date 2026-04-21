@@ -1094,7 +1094,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
 >
   🔥 TEMP: BULK PRINT LETTERS
 </button>
-   <button onClick={() => {
+  <button onClick={() => {
   const membersToPrint = filteredMembers.filter(m => !m.inactive);
   if (membersToPrint.length === 0) return alert("No active members found to print.");
   
@@ -1128,9 +1128,9 @@ var showToast = function(message, type, duration) { setToast({ message: message,
     .back-tag:last-child { border-right: none; }
     .back-hole-space { height: 0.35in; width: 100%; flex-shrink: 0; background: #fff; }
     .back-content { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; padding: 0 4px; text-align: center; }
-    .back-title { font-size: 6px; font-weight: 900; color: #dd6d22; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; line-height: 1.3; }
-    .back-text { font-size: 5px; font-weight: 700; color: #475569; line-height: 1.4; margin-bottom: 8px; }
-    .back-text strong { color: #001f3f; font-size: 6px; display: block; margin-bottom: 1px; }
+    .back-title { font-size: 6px; font-weight: 900; color: #dd6d22; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; line-height: 1.3; }
+    .back-text { font-size: 5px; font-weight: 700; color: #475569; line-height: 1.3; margin-bottom: 6px; }
+    .back-text strong { color: #001f3f; font-size: 5.5px; display: block; margin-bottom: 1px; }
     .back-accent { height: 3px; width: 100%; background: linear-gradient(to right, #dba51f, #dd6d22); position: absolute; bottom: 0; }
   </style></head><body>`;
 
@@ -1140,8 +1140,8 @@ var showToast = function(message, type, duration) { setToast({ message: message,
       <div class="back-hole-space"></div>
       <div class="back-content">
         <div class="back-title">If found, please<br/>contact us:</div>
-        <div class="back-text"><strong>Anthony Wellness</strong>309 W Main St<br/>(620) 842-5190</div>
-        <div class="back-text" style="margin-bottom:0;"><strong>Harper Wellness</strong>615 W 12th St<br/>(620) 896-1202</div>
+        <div class="back-text"><strong>Anthony Wellness Center</strong>309 W Main St<br/>Anthony, KS 67003<br/>(620) 842-5190</div>
+        <div class="back-text" style="margin-bottom:0;"><strong>Harper Wellness Center</strong>615 W 12th St<br/>Harper, KS 67058<br/>(620) 896-1202</div>
       </div>
       <div class="back-accent"></div>
     </div>
@@ -1193,7 +1193,6 @@ var showToast = function(message, type, duration) { setToast({ message: message,
 >
   🔥 TEMP: BULK PRINT DUAL-SIDED TAGS
 </button>
-
         {activeTab === 'classes' && (() => {
           const allClasses = [
             { name: 'Low-Impact Aerobics', center: 'anthony', days: 'Mon - Fri', time: '9:30 AM', capacity: 25, color: 'border-[#1080ad]' },
