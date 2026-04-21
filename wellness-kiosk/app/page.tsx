@@ -33,7 +33,7 @@ export default function WellnessHub() {
   const [currentDateString, setCurrentDateString] = useState('');
   const [paymentModal, setPaymentModal] = useState(null);   const [checkNumber, setCheckNumber] = useState(''); const [proratePayment, setProratePayment] = useState(false); const [customPayAmount, setCustomPayAmount] = useState('');
     const [firstPayment, setFirstPayment] = useState({ open: false, prorated: false, method: null, memberData: null });
-  const [view, setView] = useState('landing');
+  const [view, setView] = useState(() => {   if (typeof window !== 'undefined') {     const params = new URLSearchParams(window.location.search);     return params.get('view') || 'landing';   }   return 'landing'; });
   const [user, setUser] = useState(null);
   const [activeMember, setActiveMember] = useState(null);
   const [activeCorp, setActiveCorp] = useState(null);
