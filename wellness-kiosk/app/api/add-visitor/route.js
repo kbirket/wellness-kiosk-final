@@ -22,6 +22,9 @@ function getExpirationDate(passType) {
     case 'Prepaid Passes':
       now.setFullYear(now.getFullYear() + 1);
       return now.toISOString().slice(0, 10);
+    case 'Converted Member':
+      now.setFullYear(now.getFullYear() + 5);
+      return now.toISOString().slice(0, 10);
     default:
       return now.toISOString().slice(0, 10);
   }
@@ -32,6 +35,7 @@ function getAmountPaid(passType) {
     case '2-Week Courtesy': return 0;
     case 'Month Courtesy': return 0;
     case 'Prepaid Passes': return 0;
+    case 'Converted Member': return 0;
     default: return 0;
   }
 }
@@ -40,10 +44,9 @@ export async function POST(request) {
   const token = process.env.AIRTABLE_PAT;
   try {
     const body = await request.json();
-    const newPIN = generatePIN();
+    const newPIN = body.pin || generatePIN();
     const expirationDate = getExpirationDate(body.passType);
     const amountPaid = body.passType === 'Prepaid Passes' ? (body.amountPaid || 0) : getAmountPaid(body.passType);
-
     const fields = {
       "First Name": body.firstName,
       "Last Name": body.lastName,
@@ -60,14 +63,18 @@ export async function POST(request) {
       "Expiration Date": expirationDate,
       "Center": body.center,
       "PIN": newPIN,
-      "Orientation Complete": false,
+      "Orientation Complete": body.passType === 'Converted Member' ? true : false,
       "Notes": body.notes || ''
     };
-
     if (body.passesRemaining !== null && body.passesRemaining !== undefined) {
       fields["Passes Remaining"] = Number(body.passesRemaining);
     }
-
+    if (body.legacyMemberId) {
+      fields["Legacy Member ID"] = body.legacyMemberId;
+    }
+    if (body.passActivated === false) {
+      fields["Pass Activated"] = false;
+    }
     const res = await fetch(`https://api.airtable.com/v0/${baseId}/Visitors`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
