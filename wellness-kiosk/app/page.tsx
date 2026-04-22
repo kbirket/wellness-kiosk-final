@@ -323,11 +323,14 @@ const handleAddMemberSubmit = async (e) => {
     setIsAdding(false);
   };
 
-  const handleRenewVisitor = async (visitor, newPassType) => {
-    const confirmRenew = window.confirm(`Renew ${visitor.firstName} ${visitor.lastName} for a new ${newPassType}?`);
+ const handleRenewVisitor = async (visitor, newPassType, passCount) => {
+    const confirmMsg = newPassType === 'Prepaid Passes' && passCount
+      ? `Renew ${visitor.firstName} ${visitor.lastName} with ${passCount} prepaid passes?`
+      : `Renew ${visitor.firstName} ${visitor.lastName} for a new ${newPassType}?`;
+    const confirmRenew = window.confirm(confirmMsg);
     if (!confirmRenew) return;
     try {
-      const res = await fetch('/api/add-visitor', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName: visitor.firstName, lastName: visitor.lastName, email: visitor.email, phone: visitor.phone, address: visitor.address, city: visitor.city, state: visitor.state, zip: visitor.zip, passType: newPassType, center: viewingCenter === 'both' ? 'Anthony Wellness Center' : viewingCenter === 'harper' ? 'Harper Wellness Center' : 'Anthony Wellness Center', referringProvider: visitor.referringProvider, notes: `Renewed on ${new Date().toLocaleDateString()}` }) });
+      const res = await fetch('/api/add-visitor', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName: visitor.firstName, lastName: visitor.lastName, email: visitor.email, phone: visitor.phone, address: visitor.address, city: visitor.city, state: visitor.state, zip: visitor.zip, passType: newPassType, passesRemaining: newPassType === 'Prepaid Passes' ? passCount : (newPassType === 'Day Pass' ? 1 : null), center: viewingCenter === 'both' ? 'Anthony Wellness Center' : viewingCenter === 'harper' ? 'Harper Wellness Center' : 'Anthony Wellness Center', referringProvider: visitor.referringProvider, notes: `Renewed on ${new Date().toLocaleDateString()}` }) });
       const result = await res.json();
       if (result.success) {
         alert(`Pass Renewed!\n\nNew PIN: ${result.pin}\nExpires: ${result.expirationDate}`);
@@ -1298,7 +1301,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                   {renewMenuOpen === v.airtableId && (<>
                     <div className="fixed inset-0 z-40" onClick={() => setRenewMenuOpen(null)}></div>
                     <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 shadow-xl rounded-xl z-50 overflow-hidden w-40">
-                      <button onClick={() => { handleRenewVisitor(v, 'Day Pass'); setRenewMenuOpen(null); }} className="w-full text-left px-4 py-2 text-[10px] font-bold text-slate-600 hover:bg-slate-50 border-b border-slate-100">Day Pass ($5)</button>                       <button onClick={() => { var numPasses = prompt('How many prepaid passes?', '8'); if (!numPasses) return; handleRenewVisitor(v, 'Prepaid Passes'); setRenewMenuOpen(null); }} className="w-full text-left px-4 py-2 text-[10px] font-bold text-slate-600 hover:bg-slate-50 border-b border-slate-100">Prepaid Passes</button>
+                      <button onClick={() => { handleRenewVisitor(v, 'Day Pass'); setRenewMenuOpen(null); }} className="w-full text-left px-4 py-2 text-[10px] font-bold text-slate-600 hover:bg-slate-50 border-b border-slate-100">Day Pass ($5)</button>                       <button onClick={() => { var numPasses = prompt('How many prepaid passes?', '8'); if (!numPasses) return; var count = parseInt(numPasses); if (isNaN(count) || count < 1) { alert('Please enter a valid number.'); return; } handleRenewVisitor(v, 'Prepaid Passes', count); setRenewMenuOpen(null); }} className="w-full text-left px-4 py-2 text-[10px] font-bold text-slate-600 hover:bg-slate-50 border-b border-slate-100">Prepaid Passes</button>
                       <button onClick={() => { handleRenewVisitor(v, '2-Week Courtesy'); setRenewMenuOpen(null); }} className="w-full text-left px-4 py-2 text-[10px] font-bold text-slate-600 hover:bg-slate-50 border-b border-slate-100">2-Week Courtesy</button>
                       <button onClick={() => { handleRenewVisitor(v, 'Month Courtesy'); setRenewMenuOpen(null); }} className="w-full text-left px-4 py-2 text-[10px] font-bold text-slate-600 hover:bg-slate-50">Month Courtesy</button>
                     </div>
@@ -1422,7 +1425,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
           var standardPayments = payments.filter(function(p) { if (!p.date) return false; var d = new Date(p.date); return d.getFullYear() === yr && d.getMonth() === mo; });
           
           // 2. Extract visitor payments and format them for the ledger
-          var visitorPayments = visitors.filter(function(v) { 
+         var visitorPayments = visitors.filter(function(v) { 
             if (!v.purchaseDate || !v.amountPaid || v.amountPaid <= 0) return false; 
             var d = new Date(v.purchaseDate); 
             return d.getFullYear() === yr && d.getMonth() === mo; 
@@ -1433,7 +1436,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
               memberId: 'VISITOR',
               amount: v.amountPaid,
               date: v.purchaseDate,
-              method: v.paymentMethod || 'Card',
+              method: v.paymentMethod || 'Unknown',
               notes: 'Visitor Pass: ' + v.passType
             };
           });
@@ -1515,7 +1518,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                           <td className="px-6 py-4 font-bold text-slate-800">{displayName}</td>
                           <td className="px-4 py-4 font-mono text-slate-400 text-xs">{displayId}</td>
                           <td className="px-4 py-4 font-black text-[#16a34a]">${(parseFloat(p.amount) || 0).toFixed(2)}</td>
-                          <td className="px-4 py-4"><span className={"px-3 py-1 rounded-full text-[10px] font-black " + (p.method === 'Cash' ? 'bg-green-100 text-green-700' : p.method.includes('Check') ? 'bg-amber-100 text-amber-700' : p.method === 'Card' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700')}>{displayMethod}</span></td>
+                          <td className="px-4 py-4"><span title={p.method === 'Unknown' ? 'Payment method not recorded — this is likely a historical visitor record created before payment tracking was added.' : ''} className={"px-3 py-1 rounded-full text-[10px] font-black " + (p.method === 'Cash' ? 'bg-green-100 text-green-700' : p.method.includes('Check') ? 'bg-amber-100 text-amber-700' : p.method === 'Card' ? 'bg-purple-100 text-purple-700' : p.method === 'Unknown' ? 'bg-slate-100 text-slate-500 cursor-help' : 'bg-blue-100 text-blue-700')}>{displayMethod}</span></td>
                           <td className="px-4 py-4 text-xs text-slate-600">{p.date ? new Date(p.date + 'T00:00:00').toLocaleDateString('en-US', {month: 'short', day: 'numeric'}) : '—'}</td>
                           <td className="px-4 py-4 text-xs text-slate-400 truncate max-w-[120px]" title={p.notes}>{p.notes ? p.notes.replace('Logged by staff via Wellness Hub', '').replace(' - ', '').trim() || '—' : '—'}</td>
                           <td className="px-4 py-4">
