@@ -220,6 +220,7 @@ const handleSelfieUpload = async (imageData, memberId) => {
       if (data.records) {
         setVisitors(data.records.map(r => ({
           airtableId: r.id, firstName: r.fields['First Name'] || '', lastName: r.fields['Last Name'] || '', email: r.fields['Email'] || '', phone: r.fields['Phone'] || '', passType: r.fields['Pass Type'] || '', amountPaid: r.fields['Amount Paid'] || 0, paymentMethod: r.fields['Payment Method'] || 'Card', referringProvider: r.fields['Referring Provider'] || '', purchaseDate: r.fields['Purchase Date'] || '', expirationDate: r.fields['Expiration Date'] || '', center: r.fields['Center'] || '', pin: r.fields['PIN'] || '', orientationComplete: !!r.fields['Orientation Complete'], totalVisits: r.fields['Total Visits'] || 0, address: r.fields['Street Address'] || '', city: r.fields['City'] || '', state: r.fields['State'] || '', zip: r.fields['Zip'] || '', notes: r.fields['Notes'] || '', passActivated: r.fields['Pass Activated'] !== false && r.fields['Pass Activated'] !== 'false', passesRemaining: r.fields['Passes Remaining'] !== undefined ? Number(r.fields['Passes Remaining']) : null,
+          legacyMemberId: r.fields['Legacy Member ID'] || '',
         })));
       }
     }).catch(() => {});
@@ -334,7 +335,7 @@ const handleAddMemberSubmit = async (e) => {
       const result = await res.json();
       if (result.success) {
         alert(`Pass Renewed!\n\nNew PIN: ${result.pin}\nExpires: ${result.expirationDate}`);
-        fetch('/api/get-visitors').then(r => r.json()).then(data => { if (data.records) setVisitors(data.records.map(r => ({ airtableId: r.id, firstName: r.fields['First Name'] || '', lastName: r.fields['Last Name'] || '', email: r.fields['Email'] || '', phone: r.fields['Phone'] || '', passType: r.fields['Pass Type'] || '', amountPaid: r.fields['Amount Paid'] || 0, referringProvider: r.fields['Referring Provider'] || '', purchaseDate: r.fields['Purchase Date'] || '', expirationDate: r.fields['Expiration Date'] || '', center: r.fields['Center'] || '', pin: r.fields['PIN'] || '', orientationComplete: !!r.fields['Orientation Complete'], totalVisits: r.fields['Total Visits'] || 0, address: r.fields['Street Address'] || '', city: r.fields['City'] || '', state: r.fields['State'] || '', zip: r.fields['Zip'] || '', notes: r.fields['Notes'] || '', passActivated: r.fields['Pass Activated'] !== false && r.fields['Pass Activated'] !== 'false', passesRemaining: r.fields['Passes Remaining'] !== undefined ? Number(r.fields['Passes Remaining']) : null }))); });
+        fetch('/api/get-visitors').then(r => r.json()).then(data => { if (data.records) setVisitors(data.records.map(r => ({ airtableId: r.id, firstName: r.fields['First Name'] || '', lastName: r.fields['Last Name'] || '', email: r.fields['Email'] || '', phone: r.fields['Phone'] || '', passType: r.fields['Pass Type'] || '', amountPaid: r.fields['Amount Paid'] || 0, referringProvider: r.fields['Referring Provider'] || '', purchaseDate: r.fields['Purchase Date'] || '', expirationDate: r.fields['Expiration Date'] || '', center: r.fields['Center'] || '', pin: r.fields['PIN'] || '', orientationComplete: !!r.fields['Orientation Complete'], totalVisits: r.fields['Total Visits'] || 0, address: r.fields['Street Address'] || '', city: r.fields['City'] || '', state: r.fields['State'] || '', zip: r.fields['Zip'] || '', notes: r.fields['Notes'] || '', passActivated: r.fields['Pass Activated'] !== false && r.fields['Pass Activated'] !== 'false', passesRemaining: r.fields['Passes Remaining'] !== undefined ? Number(r.fields['Passes Remaining']) : null, legacyMemberId: r.fields['Legacy Member ID'] || '' }))); });
       }
     } catch (err) { alert('Renewal failed.'); }
   };
@@ -353,12 +354,100 @@ const handleAddMemberSubmit = async (e) => {
     w.document.close();
     setTimeout(() => w.print(), 500);
   };
+  const handleConvertToVisitor = async (member) => {
+    const confirmMsg = `Convert ${member.firstName} ${member.lastName} from Member to Visitor?\n\n` +
+      `• Their existing PIN and QR badge will continue to work\n` +
+      `• They will appear in the Visitors tab with no active pass\n` +
+      `• You can add a Day Pass, Prepaid Passes, or Courtesy Pass afterward\n` +
+      `• The member record will be marked INACTIVE with a conversion note\n\n` +
+      `Continue?`;
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      // Step 1: Create the visitor record with "Converted" as pass type (no active pass yet)
+      const res = await fetch('/api/add-visitor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: member.firstName,
+          lastName: member.lastName,
+          email: member.email,
+          phone: member.phone,
+          address: member.address,
+          city: member.city,
+          state: member.state,
+          zip: member.zip,
+          passType: 'Converted Member',
+          center: member.center,
+          referringProvider: 'Former Member',
+          notes: `Converted from Member on ${new Date().toLocaleDateString('en-US', {month:'long',day:'numeric',year:'numeric'})}. Original Member ID: ${member.id}`,
+          pin: member.password,
+          legacyMemberId: member.id,
+          passActivated: false,
+        })
+      });
+      const result = await res.json();
+
+      if (!result.success) {
+        alert('Conversion failed: ' + (result.error || 'Unknown error'));
+        return;
+      }
+
+      // Step 2: Mark the old member record as inactive with a conversion note
+      const existingNotes = member.notes || '';
+      const conversionNote = `[${new Date().toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'})}] Converted to Visitor status.`;
+      const newNotes = existingNotes.trim() === '' ? conversionNote : `${existingNotes}\n${conversionNote}`;
+
+      await fetch('/api/update-member', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          airtableId: member.airtableId,
+          inactive: true,
+          notes: newNotes,
+        })
+      });
+
+      // Step 3: Update local state
+      setMembers(prev => prev.map(m => m.airtableId === member.airtableId ? { ...m, inactive: true, notes: newNotes } : m));
+
+      // Step 4: Refresh visitors list to show the new record
+      fetch('/api/get-visitors').then(r => r.json()).then(data => {
+        if (data.records) {
+          setVisitors(data.records.map(r => ({
+            airtableId: r.id, firstName: r.fields['First Name'] || '', lastName: r.fields['Last Name'] || '', email: r.fields['Email'] || '', phone: r.fields['Phone'] || '', passType: r.fields['Pass Type'] || '', amountPaid: r.fields['Amount Paid'] || 0, paymentMethod: r.fields['Payment Method'] || 'Card', referringProvider: r.fields['Referring Provider'] || '', purchaseDate: r.fields['Purchase Date'] || '', expirationDate: r.fields['Expiration Date'] || '', center: r.fields['Center'] || '', pin: r.fields['PIN'] || '', orientationComplete: !!r.fields['Orientation Complete'], totalVisits: r.fields['Total Visits'] || 0, address: r.fields['Street Address'] || '', city: r.fields['City'] || '', state: r.fields['State'] || '', zip: r.fields['Zip'] || '', notes: r.fields['Notes'] || '', passActivated: r.fields['Pass Activated'] !== false && r.fields['Pass Activated'] !== 'false', passesRemaining: r.fields['Passes Remaining'] !== undefined ? Number(r.fields['Passes Remaining']) : null,
+            legacyMemberId: r.fields['Legacy Member ID'] || '',
+          })));
+        }
+      });
+
+      setSelectedMember(null);
+      showToast(`${member.firstName} converted to Visitor. Their PIN and badge still work. Add a pass type from the Visitors tab when ready.`, 'success', 7000);
+    } catch (err) {
+      alert('Network error during conversion.');
+    }
+  };
     const handleResetPin = async (member) => { if (!window.confirm(`Reset PIN for ${member.firstName} ${member.lastName}?`)) return; try { const newPin = String(Math.floor(1000 + Math.random() * 9000)); await fetch('/api/update-pin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ recordId: member.airtableId, newPin }) }); setMembers(prev => prev.map(m => m.airtableId === member.airtableId ? { ...m, password: newPin } : m)); showToast('New PIN for ' + member.firstName + ': ' + newPin + ' — Please give this to the member.', 'success', 8000); } catch (err) { alert('Could not reset PIN.'); } };
  const getStoplight = (member) => { if (!member || !member.nextPayment) return 'green'; const comped = ['HD6', 'HD6 FAMILY', 'HCHF', 'MILITARY', 'MILITARY FAMILY', 'FIRST DAY FREE', 'LIFETIME', 'LIFETIME FAMILY']; if (comped.includes(member.type)) return 'green'; if (member.inactive) return 'red'; const due = new Date(member.nextPayment + 'T00:00:00'); const today = new Date(); const diffMs = today - due; const daysPastDue = Math.ceil(diffMs / (1000*60*60*24)); const daysUntilDue = Math.ceil((due - today) / (1000*60*60*24)); if (daysPastDue > 2) return 'red'; if (daysUntilDue <= 5) return 'yellow'; return 'green'; };
 const filteredMembers = scopedMembers.filter(m => { if (!(m.firstName + ' ' + m.lastName + ' ' + m.id).toLowerCase().includes(searchQuery.toLowerCase())) return false; const today = new Date(); const firstOfNextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1); const paidThisPeriod = m.nextPayment && new Date(m.nextPayment + 'T00:00:00') >= firstOfNextMonth; const isComped = ['HD6', 'HD6 FAMILY', 'HCHF', 'MILITARY', 'MILITARY FAMILY', 'FIRST DAY FREE', 'LIFETIME', 'LIFETIME FAMILY', 'HERITAGE ESTATES'].includes(m.type); if (memberFilter === 'paid') return paidThisPeriod || isComped; if (memberFilter === 'unpaid') return !paidThisPeriod && !isComped; if (memberFilter === 'overdue') return getStoplight(m) === 'red'; if (memberFilter === '247') return m.access247; if (memberFilter === 'orientation') return m.needsOrientation; if (memberFilter === 'inactive') return m.inactive; if (memberFilter === 'corporate') return m.type.includes('CORPORATE') || m.sponsorName; if (memberFilter === 'family') return m.type.includes('FAMILY') || m.familyName; if (memberFilter === 'notes') return m.notes && m.notes.trim() !== ''; return true; }).sort((a, b) => a.lastName.localeCompare(b.lastName));
-  const processCheckIn = async (memberId, method = "Manual Entry") => {
+ const processCheckIn = async (memberId, method = "Manual Entry") => {
     const id = memberId.toUpperCase().trim();
     const m = membersRef.current.find(m => m.id === id);
+
+    // If no active member matches, check if this is a converted visitor using their legacy badge
+    if (!m) {
+      const legacyVisitor = visitors.find(v => {
+        if (!v.legacyMemberId) return false;
+        if (v.legacyMemberId.toUpperCase() !== id) return false;
+        const today = new Date();
+        const exp = new Date(v.expirationDate + 'T23:59:59');
+        return exp >= today && v.orientationComplete && v.passActivated;
+      });
+      if (legacyVisitor) {
+        await processVisitorCheckIn(legacyVisitor);
+        return true;
+      }
+    }
 
     if (m) {
       if (m.inactive) {
@@ -2083,6 +2172,7 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
               <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Visits</p><p className="text-lg font-bold text-[#1080ad]">{selectedVisitor.totalVisits}</p></div>               {selectedVisitor.passesRemaining !== null && selectedVisitor.passesRemaining !== undefined && (<div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Passes Remaining</p><p className={"text-lg font-bold " + (selectedVisitor.passesRemaining <= 1 ? "text-red-500" : selectedVisitor.passesRemaining <= 3 ? "text-amber-500" : "text-[#16a34a]")}>{selectedVisitor.passesRemaining} of {selectedVisitor.totalVisits + selectedVisitor.passesRemaining}</p></div>)}
               <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Orientation</p><p className="text-lg font-bold text-slate-800">{selectedVisitor.orientationComplete ? 'Complete' : 'Pending'}</p></div>
               <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">PIN</p><p className="text-lg font-bold font-mono text-slate-800">{selectedVisitor.pin}</p></div>
+              {selectedVisitor.legacyMemberId && (<div className="col-span-2"><p className="text-[10px] font-black text-purple-500 uppercase tracking-widest mb-1">Legacy Member ID</p><p className="text-lg font-bold font-mono text-purple-700">{selectedVisitor.legacyMemberId} <span className="text-xs font-medium text-slate-400">— Their old QR badge still works</span></p></div>)}
             </div>
             {selectedVisitor.notes && (<div className="mt-8"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Notes</p><p className="text-sm text-slate-600 bg-slate-50 p-4 rounded-xl border border-slate-100">{selectedVisitor.notes}</p></div>)}
             <div className="mt-10 flex gap-4">
@@ -2176,11 +2266,11 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
                 if (result.success) { 
                   showToast('Visitor added! PIN: ' + result.pin + ' — Expires: ' + new Date(result.expirationDate + 'T00:00:00').toLocaleDateString('en-US', {month:'long',day:'numeric',year:'numeric'}), 'success', 10000); 
                   setShowAddVisitorModal(false); 
-                  fetch('/api/get-visitors').then(r => r.json()).then(data => { 
+                 fetch('/api/get-visitors').then(r => r.json()).then(data => { 
                     if (data.records) { 
-                      setVisitors(data.records.map(r => ({ airtableId: r.id, firstName: r.fields['First Name'] || '', lastName: r.fields['Last Name'] || '', email: r.fields['Email'] || '', phone: r.fields['Phone'] || '', passType: r.fields['Pass Type'] || '', amountPaid: r.fields['Amount Paid'] || 0, referringProvider: r.fields['Referring Provider'] || '', purchaseDate: r.fields['Purchase Date'] || '', expirationDate: r.fields['Expiration Date'] || '', center: r.fields['Center'] || '', pin: r.fields['PIN'] || '', orientationComplete: !!r.fields['Orientation Complete'], totalVisits: r.fields['Total Visits'] || 0, address: r.fields['Street Address'] || '', city: r.fields['City'] || '', state: r.fields['State'] || '', zip: r.fields['Zip'] || '', notes: r.fields['Notes'] || '', passActivated: r.fields['Pass Activated'] !== false && r.fields['Pass Activated'] !== 'false', passesRemaining: r.fields['Passes Remaining'] !== undefined ? Number(r.fields['Passes Remaining']) : null }))); 
+                      setVisitors(data.records.map(r => ({ airtableId: r.id, firstName: r.fields['First Name'] || '', lastName: r.fields['Last Name'] || '', email: r.fields['Email'] || '', phone: r.fields['Phone'] || '', passType: r.fields['Pass Type'] || '', amountPaid: r.fields['Amount Paid'] || 0, referringProvider: r.fields['Referring Provider'] || '', purchaseDate: r.fields['Purchase Date'] || '', expirationDate: r.fields['Expiration Date'] || '', center: r.fields['Center'] || '', pin: r.fields['PIN'] || '', orientationComplete: !!r.fields['Orientation Complete'], totalVisits: r.fields['Total Visits'] || 0, address: r.fields['Street Address'] || '', city: r.fields['City'] || '', state: r.fields['State'] || '', zip: r.fields['Zip'] || '', notes: r.fields['Notes'] || '', passActivated: r.fields['Pass Activated'] !== false && r.fields['Pass Activated'] !== 'false', passesRemaining: r.fields['Passes Remaining'] !== undefined ? Number(r.fields['Passes Remaining']) : null, legacyMemberId: r.fields['Legacy Member ID'] || '' }))); 
                     } 
-                  }); 
+                  });
                 } else { 
                   alert('Error: ' + result.error); 
                 } 
@@ -2474,6 +2564,7 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
                    <button onClick={() => { const isHarper = selectedMember.center && selectedMember.center.toLowerCase().includes('harper'); const centerName = isHarper ? 'Harper Wellness Center' : 'Anthony Wellness Center'; const centerAddr = isHarper ? '615 W 12th St, Harper, KS 67058' : '309 W Main St, Anthony, KS 67003'; const centerPhone = isHarper ? '(620) 896-1202' : '(620) 842-5190'; const centerHours = isHarper ? 'M-F 8am-12pm &amp; 5pm-8pm, Sat 9am-noon' : 'M-F 7am-8pm, Sat 8am-1pm'; const directorName = isHarper ? 'Patrick Johnson' : 'Deanna Smithhisler'; const addressBlock = selectedMember.address ? `${selectedMember.address}<br/>${selectedMember.city}, ${selectedMember.state} ${selectedMember.zip}` : 'Address not on file'; const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(selectedMember.id)}&color=003d6b&bgcolor=ffffff`; const w = window.open('', '_blank'); w.document.write(`<!DOCTYPE html><html><head><title>Welcome - ${selectedMember.firstName} ${selectedMember.lastName}</title><style>@page{margin:0.4in 0.5in}@media print{body{margin:0}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}body{font-family:Arial,sans-serif;color:#1e293b;margin:0}.page{max-width:680px;margin:0 auto}.hdr{background:#003d6b;padding:14px 32px;display:flex;justify-content:space-between;align-items:center}.hdr-left{display:flex;align-items:center;gap:14px}.hdr-logo{height:30px;opacity:.95}.hdr-name{font-size:16px;font-weight:700;color:#fff}.hdr-sub{font-size:9px;color:#8bb8d9;letter-spacing:1px;margin-top:2px}.accent{height:3px;background:linear-gradient(to right,#dba51f,#dd6d22)}.body{padding:20px 32px}.top-row{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px}.addr{font-size:13px;line-height:1.5}.date{font-size:11px;color:#94a3b8}.greeting{font-size:14px;margin-bottom:8px;font-weight:700;color:#003d6b}.intro{font-size:12px;color:#475569;line-height:1.7;margin-bottom:14px}.box{border:1.5px solid #003d6b;border-radius:6px;overflow:hidden;margin-bottom:14px}.box-hdr{background:#003d6b;padding:6px 14px;font-size:9px;font-weight:700;color:#fff;letter-spacing:1.5px}.box-body{padding:0 14px}.row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #e2e8f0}.row:last-child{border-bottom:none}.lbl{font-size:11px;color:#64748b}.val{font-size:11px;font-weight:700;color:#003d6b}.qr-section{text-align:center;margin:14px 0;padding:14px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;display:flex;align-items:center;gap:24px;justify-content:center}.qr-left{text-align:center}.qr-right{text-align:center;padding-left:24px;border-left:1px solid #e2e8f0}.pin-display{font-size:32px;font-weight:900;letter-spacing:0.3em;color:#003d6b;margin:6px 0}.pin-label{font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:2px}.how-to{font-size:11px;color:#475569;line-height:1.7;margin:12px 0;padding:10px 14px;background:#eff6ff;border-radius:6px;border:1px solid #bfdbfe}.how-to strong{color:#003d6b}.sign{font-size:12px;margin-bottom:2px;margin-top:14px}.sign-name{font-size:12px;font-weight:700;color:#003d6b}.sign-title{font-size:10px;color:#94a3b8}.ftr{border-top:2px solid #003d6b;padding:8px 32px;display:flex;justify-content:space-between;align-items:center;margin-top:14px}.ftr-l{font-size:9px;color:#94a3b8}.ftr-r{font-size:9px;color:#1080ad}</style></head><body><div class="page"><div class="hdr"><div class="hdr-left"><img src="https://pattersonhc.org/sites/default/files/wellness_white.png" class="hdr-logo" /><div><div class="hdr-name">${centerName}</div><div class="hdr-sub">${centerAddr} | ${centerPhone}</div></div></div></div><div class="accent"></div><div class="body"><div class="top-row"><div class="addr"><strong>${selectedMember.firstName} ${selectedMember.lastName}</strong><br/>${addressBlock}</div><div class="date">${new Date().toLocaleDateString('en-US', {month:'long',day:'numeric',year:'numeric'})}</div></div><div class="greeting">Welcome to ${centerName}!</div><div class="intro">We are excited to have you as a member! This letter contains your personal check-in credentials. Please keep this information for your records.</div><div class="box"><div class="box-hdr">YOUR MEMBERSHIP DETAILS</div><div class="box-body"><div class="row"><span class="lbl">Member ID</span><span class="val">${selectedMember.id}</span></div><div class="row"><span class="lbl">Membership Type</span><span class="val">${selectedMember.type}</span></div><div class="row"><span class="lbl">Home Center</span><span class="val">${selectedMember.center}</span></div><div class="row"><span class="lbl">Hours</span><span class="val">${centerHours.replace(/&amp;/g, '&')}</span></div></div></div><div class="qr-section"><div class="qr-left"><p style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px">Your QR Badge</p><img src="${qrUrl}" width="130" height="130" /><p style="font-size:10px;color:#64748b;margin-top:6px">Scan at the kiosk</p></div><div class="qr-right"><p class="pin-label">Your 4-Digit PIN</p><p class="pin-display">${selectedMember.password}</p><p style="font-size:10px;color:#94a3b8">Enter at the kiosk when<br/>checking in by name</p></div></div><div class="how-to"><strong>How to Check In at the Front Desk Kiosk:</strong><br/>1. <strong>Option A:</strong> Hold this QR code up to the kiosk camera<br/>2. <strong>Option B:</strong> Type your name, select yourself, and enter your 4-digit PIN<br/>3. A green "Welcome" message confirms you're checked in!</div><div class="sign">Welcome aboard!</div><div class="sign-name">${directorName}</div><div class="sign-title">Director, ${centerName}</div></div><div class="ftr"><span class="ftr-l">${centerName} | Harper County, KS</span><span class="ftr-r">pattersonhc.org/wellness-centers</span></div></div></body></html>`); w.document.close(); setTimeout(() => w.print(), 500); }} className="bg-[#16a34a]/10 text-[#16a34a] hover:bg-[#16a34a] hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs"><Mail size={20} /> Welcome Letter</button>
                     
                     <button onClick={() => handleResetPin(selectedMember)} className="bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs"><KeyRound size={20}/> Reset PIN</button>
+                   {!selectedMember.inactive && (<button onClick={() => handleConvertToVisitor(selectedMember)} className="bg-purple-50 text-purple-600 hover:bg-purple-600 hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs"><Eye size={20}/> Convert to Visitor</button>)}
                      <button onClick={async () => { if (!window.confirm(`Mark ${selectedMember.firstName} ${selectedMember.lastName} as ${selectedMember.inactive ? 'ACTIVE' : 'INACTIVE'}?`)) return; try { await fetch('/api/update-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: selectedMember.airtableId, inactive: !selectedMember.inactive }) }); const updated = { ...selectedMember, inactive: !selectedMember.inactive }; setSelectedMember(updated); setMembers(prev => prev.map(m => m.airtableId === selectedMember.airtableId ? updated : m)); } catch (err) { alert('Could not update.'); } }} className={`${selectedMember.inactive ? 'bg-green-50 text-green-600 hover:bg-green-600' : 'bg-red-50 text-red-600 hover:bg-red-600'} hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs`}><AlertCircle size={20}/> {selectedMember.inactive ? 'Reactivate' : 'Mark Inactive'}</button>
                     {user?.role === 'admin' && (<button onClick={handleDeleteMember} disabled={isDeleting} className="bg-red-50 text-red-600 hover:bg-red-600 hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs">{isDeleting ? '...' : <Trash2 size={20}/>} Delete</button>)}
                  </div>)}
