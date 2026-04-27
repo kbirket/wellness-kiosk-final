@@ -2488,6 +2488,45 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
 {(() => { var showAnthony = (viewingCenter === 'anthony' || viewingCenter === 'both') && !selectedMember.orientationAnthony; var showHarper = (viewingCenter === 'harper' || viewingCenter === 'both') && !selectedMember.orientationHarper; if (!showAnthony && !showHarper) return null; return (<div className="mb-6 bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg"><p className="text-blue-800 font-bold text-sm mb-3">Orientation Needed</p><div className="flex gap-3">{showAnthony && (<button onClick={() => handleMarkOrientation('anthony')} className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-bold text-sm hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"><CheckCircle size={16}/> Complete Anthony Orientation</button>)}{showHarper && (<button onClick={() => handleMarkOrientation('harper')} className="flex-1 bg-orange-600 text-white py-3 rounded-lg font-bold text-sm hover:bg-orange-700 transition-colors flex items-center justify-center gap-2"><CheckCircle size={16}/> Complete Harper Orientation</button>)}</div></div>); })()}
                  {!editMode ? (<>
                  <div className="grid grid-cols-2 gap-8 gap-x-12">
+                    {(() => {
+                   const compedPlans = ['HD6', 'HD6 FAMILY', 'HCHF', 'MILITARY', 'MILITARY FAMILY', 'FIRST DAY FREE', 'LIFETIME', 'LIFETIME FAMILY', 'HERITAGE ESTATES'];
+                   const isCorporate = selectedMember.type.includes('CORPORATE') || selectedMember.sponsorName;
+                   const isComped = compedPlans.includes(selectedMember.type);
+                   if (isCorporate || isComped) return null;
+                   
+                   const rate = parseFloat(String(selectedMember.monthlyRate).replace(/[^0-9.]/g, '')) || 0;
+                   if (rate === 0) return null;
+                   
+                   const today = new Date();
+                   const currentMonthName = today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                   const firstOfNextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+                   const paidThisPeriod = selectedMember.nextPayment && new Date(selectedMember.nextPayment + 'T00:00:00') >= firstOfNextMonth;
+                   
+                   if (paidThisPeriod) {
+                     return (
+                       <div className="mb-6 bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg flex items-center justify-between">
+                         <div>
+                           <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-1">Account Balance</p>
+                           <p className="text-2xl font-black text-green-700">Paid in Full for {currentMonthName}</p>
+                           <p className="text-xs text-green-600 font-medium mt-1">Monthly rate: ${rate.toFixed(2)} • {selectedMember.billingMethod || 'Month-to-Month'}</p>
+                         </div>
+                         <CheckCircle size={36} className="text-green-500" />
+                       </div>
+                     );
+                   }
+                   
+                   return (
+                     <div className="mb-6 bg-orange-50 border-l-4 border-orange-500 p-4 rounded-r-lg flex items-center justify-between">
+                       <div>
+                         <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-1">Account Balance</p>
+                         <p className="text-2xl font-black text-orange-700">Owes ${rate.toFixed(2)} for {currentMonthName}</p>
+                         <p className="text-xs text-orange-600 font-medium mt-1">Monthly rate • {selectedMember.billingMethod || 'Month-to-Month'}</p>
+                       </div>
+                       <AlertCircle size={36} className="text-orange-500" />
+                     </div>
+                   );
+                 })()}
+                 <div className="grid grid-cols-2 gap-8 gap-x-12">
                     <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Membership Type</p><p className="text-lg font-bold text-slate-800">{selectedMember.type}</p></div>
                     <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Contact Info</p><p className="text-sm font-bold text-slate-800 truncate">{selectedMember.email || 'No Email'}<br/>{selectedMember.phone || 'No Phone'}</p></div>
                     <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Renewal Date</p><p className={`text-lg font-bold ${getStoplight(selectedMember)!=='green'?'text-red-500':'text-slate-800'}`}>{selectedMember.nextPayment ? new Date(selectedMember.nextPayment + 'T00:00:00').toLocaleDateString('en-US', {month:'long',day:'numeric',year:'numeric'}) : 'N/A'}</p></div>
