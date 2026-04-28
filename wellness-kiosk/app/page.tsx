@@ -625,7 +625,31 @@ const filteredMembers = scopedMembers.filter(m => { if (!(m.firstName + ' ' + m.
 
 var showToast = function(message, type, duration) { setToast({ message: message, type: type || 'success' }); setTimeout(function() { setToast(null); }, duration || 4000); };
 
-  if (!isMounted) return <div className="min-h-screen bg-[#001f3f]" />;    // Global accessibility styles — injected once, applies everywhere   const a11yStyles = (     <style>{`       *:focus-visible {         outline: 3px solid #dba51f !important;         outline-offset: 2px !important;         border-radius: 4px;       }       *:focus:not(:focus-visible) {         outline: none;       }       .sr-only {         position: absolute;         width: 1px;         height: 1px;         padding: 0;         margin: -1px;         overflow: hidden;         clip: rect(0, 0, 0, 0);         white-space: nowrap;         border: 0;       }     `}</style>   );
+ if (!isMounted) return <div className="min-h-screen bg-[#001f3f]" />;
+
+  const a11yStyles = (
+    <style>{`
+      *:focus-visible {
+        outline: 3px solid #dba51f !important;
+        outline-offset: 2px !important;
+        border-radius: 4px;
+      }
+      *:focus:not(:focus-visible) {
+        outline: none;
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+    `}</style>
+  );
   if (view === 'landing') { return (<div className="min-h-screen bg-[#001f3f] flex items-center justify-center font-sans p-6 relative">{a11yStyles}<div className="text-center max-w-6xl w-full relative z-10"><img src={LOGO_URL} alt="Logo" className="h-40 mx-auto mb-16 opacity-100 drop-shadow-2xl" /><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"><button onClick={() => { setView('kiosk'); setViewingCenter(viewingCenter === 'both' ? 'anthony' : viewingCenter); setKioskInput(''); }} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group"><Smartphone size={56} className="text-[#1080ad] group-hover:scale-110 transition-transform" /><span className="text-xl font-bold">Public Kiosk</span></button><button onClick={() => setView('member_login')} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group"><UserCircle size={56} className="text-[#16a34a] group-hover:scale-110 transition-transform" /><span className="text-xl font-bold">Member Portal</span></button><button onClick={() => setView('corp_login')} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group"><Briefcase size={56} className="text-[#8b5cf6] group-hover:scale-110 transition-transform" /><span className="text-xl font-bold">Corporate Portal</span></button><button onClick={() => setView('login')} className="bg-white/10 border border-white/20 p-10 rounded-3xl text-white hover:bg-white/20 transition-all flex flex-col items-center gap-4 group border-b-4 border-b-[#f59e0b]"><ShieldCheck size={56} className="text-[#f59e0b] group-hover:scale-110 transition-transform" /><span className="text-xl font-bold">Director Portal</span></button></div></div><button onClick={() => {setView('secret_scanner'); setViewingCenter('both');}} className="absolute bottom-6 right-6 opacity-10 hover:opacity-50 transition-opacity p-4"><Lock size={20} className="text-white"/></button></div>); }
 
   if (view === 'login') { 
