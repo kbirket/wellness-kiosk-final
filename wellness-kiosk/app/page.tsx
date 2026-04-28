@@ -1117,6 +1117,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                                 </div>
                                 <div className="flex items-center gap-3 text-slate-400 text-xs font-medium">
                                   <Clock size={14}/> {new Date(v.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                  <button onClick={function(e) { e.stopPropagation(); setEditVisitModal(v); }} className="text-slate-300 hover:text-[#1080ad] transition-colors p-1 rounded-lg hover:bg-blue-50" title="Edit check-in time"><Clock size={14}/></button>
                                   <button onClick={function(e) { e.stopPropagation(); if (!window.confirm('Remove check-in for ' + v.name + ' at ' + new Date(v.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + '?')) return; var matchMem = members.find(function(m) { return (m.firstName + ' ' + m.lastName) === v.name; }); if (matchMem) { fetch('/api/delete-visit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ memberAirtableId: matchMem.airtableId, visitTime: v.time, visitCenter: v.center }) }).catch(function(err) { console.error('Delete visit error:', err); }); setMembers(function(prev) { return prev.map(function(m) { return m.id === matchMem.id ? Object.assign({}, m, { visits: Math.max(0, m.visits - 1) }) : m; }); }); } setVisits(function(prev) { return prev.filter(function(visit) { return !(visit.name === v.name && visit.time === v.time && visit.center === v.center); }); }); }} className="text-slate-300 hover:text-red-500 transition-colors p-1 rounded-lg hover:bg-red-50" title="Remove this check-in"><X size={14}/></button>
                                 </div>
                               </div>
@@ -2590,7 +2591,7 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
                  {selectedMember.notes && (<div className="col-span-2 mt-6"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Director Notes</p><p className="text-sm text-slate-600 bg-slate-50 p-4 rounded-xl border border-slate-100 whitespace-pre-wrap">{selectedMember.notes}</p></div>)}
                  <div className="col-span-2 mt-6">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Check-in History</p>
-                    {(() => { const memberVisits = visits.filter(v => v.name.toLowerCase() === `${selectedMember.firstName} ${selectedMember.lastName}`.toLowerCase()).sort(function(a, b) { return new Date(b.time) - new Date(a.time); }); const displayVisits = showAllMemberVisits ? memberVisits : memberVisits.slice(0, 5); if (memberVisits.length === 0) return <p className="text-sm text-slate-500 bg-slate-50 p-4 rounded-xl border border-slate-100 italic">No recent visits on file.</p>; return (<div><div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">{displayVisits.map((v, i) => (<div key={i} className="flex justify-between items-center bg-blue-50 p-3 rounded-xl border border-blue-100"><span className="font-bold text-slate-800 text-sm flex items-center gap-2"><CheckCircle size={14} className="text-[#1080ad]"/> {v.center} <span className="text-xs font-medium text-slate-500 hidden md:inline ml-1">({v.method || 'General Workout'})</span></span><div className="flex items-center gap-2"><span className="font-bold text-[#1080ad] text-xs">{new Date(v.time).toLocaleDateString()} @ {new Date(v.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span><button onClick={async function(e) { e.stopPropagation(); if (!window.confirm('Delete this check-in from ' + new Date(v.time).toLocaleDateString() + ' at ' + new Date(v.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + '?')) return; try { await fetch('/api/delete-visit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ memberAirtableId: selectedMember.airtableId, visitTime: v.time, visitCenter: v.center }) }); } catch (err) { console.error('Could not delete from Airtable:', err); } setVisits(function(prev) { return prev.filter(function(visit) { return !(visit.name === v.name && visit.time === v.time && visit.center === v.center); }); }); setMembers(function(prev) { return prev.map(function(m) { return m.id === selectedMember.id ? Object.assign({}, m, { visits: Math.max(0, m.visits - 1) }) : m; }); }); setSelectedMember(Object.assign({}, selectedMember, { visits: Math.max(0, selectedMember.visits - 1) })); }} className="text-slate-300 hover:text-red-500 transition-colors p-1 shrink-0" title="Delete this check-in"><X size={12}/></button></div></div>))}</div>{memberVisits.length > 5 && (<button onClick={() => setShowAllMemberVisits(!showAllMemberVisits)} className="w-full py-2 mt-3 text-sm font-bold text-[#1080ad] hover:text-[#001f3f] transition-colors bg-blue-50/50 rounded-lg border border-blue-100 hover:bg-blue-50">{showAllMemberVisits ? 'Show Less ↑' : `See All ${memberVisits.length} Visits →`}</button>)}</div>); })()}
+                    {(() => { const memberVisits = visits.filter(v => v.name.toLowerCase() === `${selectedMember.firstName} ${selectedMember.lastName}`.toLowerCase()).sort(function(a, b) { return new Date(b.time) - new Date(a.time); }); const displayVisits = showAllMemberVisits ? memberVisits : memberVisits.slice(0, 5); if (memberVisits.length === 0) return <p className="text-sm text-slate-500 bg-slate-50 p-4 rounded-xl border border-slate-100 italic">No recent visits on file.</p>; return (<div><div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">{displayVisits.map((v, i) => (<div key={i} className="flex justify-between items-center bg-blue-50 p-3 rounded-xl border border-blue-100"><span className="font-bold text-slate-800 text-sm flex items-center gap-2"><CheckCircle size={14} className="text-[#1080ad]"/> {v.center} <span className="text-xs font-medium text-slate-500 hidden md:inline ml-1">({v.method || 'General Workout'})</span></span><div className="flex items-center gap-2"><span className="font-bold text-[#1080ad] text-xs">{new Date(v.time).toLocaleDateString()} @ {new Date(v.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span><button onClick={function(e) { e.stopPropagation(); setEditVisitModal(v); }} className="text-slate-300 hover:text-[#1080ad] transition-colors p-1 shrink-0" title="Edit check-in time"><Clock size={12}/></button><button onClick={async function(e) { e.stopPropagation(); if (!window.confirm('Delete this check-in from ' + new Date(v.time).toLocaleDateString() + ' at ' + new Date(v.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + '?')) return; try { await fetch('/api/delete-visit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ memberAirtableId: selectedMember.airtableId, visitTime: v.time, visitCenter: v.center }) }); } catch (err) { console.error('Could not delete from Airtable:', err); } setVisits(function(prev) { return prev.filter(function(visit) { return !(visit.name === v.name && visit.time === v.time && visit.center === v.center); }); }); setMembers(function(prev) { return prev.map(function(m) { return m.id === selectedMember.id ? Object.assign({}, m, { visits: Math.max(0, m.visits - 1) }) : m; }); }); setSelectedMember(Object.assign({}, selectedMember, { visits: Math.max(0, selectedMember.visits - 1) })); }} className="text-slate-300 hover:text-red-500 transition-colors p-1 shrink-0" title="Delete this check-in"><X size={12}/></button></div></div>))}</div>{memberVisits.length > 5 && (<button onClick={() => setShowAllMemberVisits(!showAllMemberVisits)} className="w-full py-2 mt-3 text-sm font-bold text-[#1080ad] hover:text-[#001f3f] transition-colors bg-blue-50/50 rounded-lg border border-blue-100 hover:bg-blue-50">{showAllMemberVisits ? 'Show Less ↑' : `See All ${memberVisits.length} Visits →`}</button>)}</div>); })()}
                  </div>
                  <div className="col-span-2 mt-6">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Payment History</p>
@@ -2727,7 +2728,48 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
         </div>
         );
       })()}
-{/* BRANDED TOAST NOTIFICATION */}
+{/* EDIT VISIT TIME MODAL */}
+      {editVisitModal && (() => {
+        var origDate = new Date(editVisitModal.time);
+        var dateStr = origDate.getFullYear() + '-' + String(origDate.getMonth() + 1).padStart(2, '0') + '-' + String(origDate.getDate()).padStart(2, '0');
+        var timeStr = String(origDate.getHours()).padStart(2, '0') + ':' + String(origDate.getMinutes()).padStart(2, '0');
+        return (
+          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl w-full max-w-md p-8 relative shadow-2xl">
+              <button onClick={function() { setEditVisitModal(null); }} className="absolute top-4 right-4 text-slate-300 hover:text-red-500"><X size={20}/></button>
+              <div className="text-center mb-6">
+                <Clock size={40} className="text-[#1080ad] mx-auto mb-3" />
+                <h3 className="text-xl font-black text-[#001f3f]">Edit Check-in Time</h3>
+                <p className="text-sm text-slate-400 mt-1">{editVisitModal.name}</p>
+                <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mt-2">Currently: {origDate.toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric'})} at {origDate.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</p>
+              </div>
+              <div className="space-y-4 mb-6">
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 block">New Date</label>
+                  <input type="date" id="editVisitDate" defaultValue={dateStr} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] text-sm font-bold text-[#001f3f]" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 block">New Time</label>
+                  <input type="time" id="editVisitTime" defaultValue={timeStr} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] text-sm font-bold text-[#001f3f]" />
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={function() {
+                  var nd = document.getElementById('editVisitDate').value;
+                  var nt = document.getElementById('editVisitTime').value;
+                  if (!nd || !nt) { showToast('Please enter both date and time.', 'error', 3000); return; }
+                  var newISO = new Date(nd + 'T' + nt + ':00').toISOString();
+                  if (newISO === editVisitModal.time) { setEditVisitModal(null); return; }
+                  handleUpdateVisitTime(editVisitModal, newISO);
+                }} className="flex-1 bg-[#1080ad] text-white py-3 rounded-xl font-bold text-sm hover:bg-blue-700 transition-colors">Save New Time</button>
+                <button onClick={function() { setEditVisitModal(null); }} className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold text-sm hover:bg-slate-200 transition-colors">Cancel</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* BRANDED TOAST NOTIFICATION */}
       {toast && (
         <div className="fixed top-6 right-6 z-[300] animate-in fade-in slide-in-from-top-4 duration-300">
           <div className={"px-6 py-4 rounded-2xl shadow-2xl border-2 flex items-center gap-4 max-w-md " + (toast.type === 'success' ? "bg-green-50 border-green-300 text-green-800" : toast.type === 'warning' ? "bg-amber-50 border-amber-300 text-amber-800" : toast.type === 'error' ? "bg-red-50 border-red-300 text-red-800" : "bg-blue-50 border-blue-300 text-blue-800")}>
