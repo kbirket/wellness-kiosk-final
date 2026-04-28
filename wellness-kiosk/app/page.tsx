@@ -92,7 +92,8 @@ export default function WellnessHub() {
   const [kioskStaffMenu, setKioskStaffMenu] = useState(false);
   const [editingVisitor, setEditingVisitor] = useState(null);
  const [corpSearch, setCorpSearch] = useState('');
-  const [renewMenuOpen, setRenewMenuOpen] = useState(null);
+  const [renewMenuOpen, setRenewMenuOpen] = useState(null);   
+  const [editVisitModal, setEditVisitModal] = useState(null);
   const [payments, setPayments] = useState([]);
   useEffect(() => { localStorage.setItem('wellnessUsagePrefs', JSON.stringify(usageBasedCorps)); }, [usageBasedCorps]);
 // Emergency local backup
@@ -619,8 +620,28 @@ const filteredMembers = scopedMembers.filter(m => { if (!(m.firstName + ' ' + m.
         <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
           <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: color }}></div>
         </div>
-      </div>
+     </div>
     );
+  };
+
+  const handleUpdateVisitTime = async (visit, newTimeISO) => {
+    const matchMem = members.find(function(m) { return (m.firstName + ' ' + m.lastName) === visit.name; });
+    if (!matchMem) { showToast('Member not found.', 'error', 3000); return; }
+    var dupeCheck = visits.some(function(v) { return v.name === visit.name && v.time !== visit.time && Math.abs(new Date(newTimeISO) - new Date(v.time)) < 30 * 60 * 1000; });
+    if (dupeCheck) { showToast('Another check-in exists within 30 minutes of that time.', 'error', 4500); return; }
+    try {
+      const res = await fetch('/api/update-visit-time', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ memberAirtableId: matchMem.airtableId, oldTime: visit.time, oldCenter: visit.center, newTime: newTimeISO }) });
+      const result = await res.json();
+      if (result.success) {
+        setVisits(function(prev) { var updated = prev.map(function(v) { if (v.name === visit.name && v.time === visit.time && v.center === visit.center) { return Object.assign({}, v, { time: newTimeISO }); } return v; }); updated.sort(function(a, b) { return new Date(b.time) - new Date(a.time); }); return updated; });
+        setEditVisitModal(null);
+        showToast('Check-in time updated.', 'success', 3000);
+      } else {
+        showToast('Update failed: ' + (result.error || 'Unknown error'), 'error', 4500);
+      }
+    } catch (err) {
+      showToast('Network error.', 'error', 3000);
+    }
   };
 
 var showToast = function(message, type, duration) { setToast({ message: message, type: type || 'success' }); setTimeout(function() { setToast(null); }, duration || 4000); };
