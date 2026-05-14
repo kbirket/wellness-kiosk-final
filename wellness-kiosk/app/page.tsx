@@ -640,7 +640,75 @@ const filteredMembers = scopedMembers.filter(m => { if (!(m.firstName + ' ' + m.
         showToast('Update failed: ' + (result.error || 'Unknown error'), 'error', 4500);
       }
     } catch (err) {
-      showToast('Network error.', 'error', 3000);
+showToast('Network error.', 'error', 3000);
+    }
+  };
+
+  const handleClassCheckIn = async (mem, className, classCenter, classDate) => {
+    const fullName = mem.firstName + ' ' + mem.lastName;
+    const scanCenter = classCenter === 'anthony' ? 'Anthony' : 'Harper';
+    const classMethod = 'Class: ' + className;
+    const targetDateStr = new Date(classDate + 'T00:00:00').toDateString();
+    
+    // Check if member already has a visit on this date
+    const existingVisit = visits.find(function(v) {
+      return v.name === fullName && new Date(v.time).toDateString() === targetDateStr;
+    });
+    
+    if (existingVisit) {
+      // They already checked in today — just update the method
+      if (existingVisit.method === classMethod) {
+        showToast(mem.firstName + ' is already on the class roster.', 'warning', 3000);
+        return false;
+      }
+      try {
+        const res = await fetch('/api/update-visit-method', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ memberAirtableId: mem.airtableId, visitTime: existingVisit.time, visitCenter: existingVisit.center, newMethod: classMethod })
+        });
+        const result = await res.json();
+        if (result.success) {
+          setVisits(function(prev) { return prev.map(function(v) { return (v.name === fullName && v.time === existingVisit.time && v.center === existingVisit.center) ? Object.assign({}, v, { method: classMethod }) : v; }); });
+          showToast(mem.firstName + ' added to class (existing visit updated).', 'success', 3000);
+          return true;
+        } else {
+          showToast('Update failed: ' + (result.error || 'Unknown error'), 'error', 4500);
+          return false;
+        }
+      } catch (err) {
+        showToast('Network error.', 'error', 3000);
+        return false;
+      }
+    } else {
+      // No visit yet today — create a new one
+      const targetDate = new Date(classDate + 'T00:00:00');
+      const now = new Date();
+      const visitISO = (targetDate.toDateString() === now.toDateString()) ? now.toISOString() : new Date(classDate + 'T12:00:00').toISOString();
+      try {
+        const res = await fetch('/api/visits', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ airtableId: mem.airtableId, center: scanCenter, time: visitISO, method: classMethod })
+        });
+        const result = await res.json();
+        if (result.success) {
+          setVisits(function(prev) {
+            var updated = [{ name: fullName, center: scanCenter, time: visitISO, type: mem.type, method: classMethod }].concat(prev);
+            updated.sort(function(a, b) { return new Date(b.time) - new Date(a.time); });
+            return updated;
+          });
+          setMembers(function(prev) { return prev.map(function(m) { return m.id === mem.id ? Object.assign({}, m, { visits: m.visits + 1 }) : m; }); });
+          showToast(mem.firstName + ' added to class.', 'success', 3000);
+          return true;
+        } else {
+          showToast('Check-in failed: ' + (result.error || 'Unknown error'), 'error', 4500);
+          return false;
+        }
+      } catch (err) {
+        showToast('Network error.', 'error', 3000);
+        return false;
+      }
     }
   };
 
