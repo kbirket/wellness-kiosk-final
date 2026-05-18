@@ -1309,19 +1309,25 @@ var showToast = function(message, type, duration) { setToast({ message: message,
   // 1. Filter out inactive members first
   let membersToPrint = filteredMembers.filter(m => !m.inactive);
   
-  // 2. NEW: Calculate the date exactly 2 months ago
+  // 2. Calculate the date exactly 2 months ago
   const twoMonthsAgo = new Date();
   twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
   
-  // 3. Filter for members who checked in within the last 2 months
+  // 3. Filter using common variations for the check-in date property
   membersToPrint = membersToPrint.filter(m => {
-    if (!m.lastCheckIn) return false; // Skip if they have never checked in
-    const checkInDate = new Date(m.lastCheckIn);
+    const dateValue = m.lastCheckIn || m.lastVisit || m.lastActive || m.checkInDate || m.lastCheckin || m.latestCheckIn;
+    if (!dateValue) return false; 
+    
+    const checkInDate = new Date(dateValue);
     return checkInDate >= twoMonthsAgo;
   });
 
+  // 4. Smart Fallback: If it still finds 0, show the actual database properties to diagnose
   if (membersToPrint.length === 0) {
-    return alert("No active members found who have checked in within the past 2 months.");
+    const sampleMember = filteredMembers[0];
+    const availableProperties = sampleMember ? Object.keys(sampleMember).join(', ') : 'No member data available';
+    
+    return alert(`No members matched the date filter.\n\nYour member records contain these properties:\n[ ${availableProperties} ]\n\nLet me know which one looks like the check-in date or visit timestamp!`);
   }
   
   if (!window.confirm(`Found ${membersToPrint.length} active members who visited in the last 2 months.\n\nGenerate Full-Size VIP Access Cards for them?\n\n(This will use ${membersToPrint.length} blank CR80 cards).`)) return;
