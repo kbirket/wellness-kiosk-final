@@ -1305,51 +1305,66 @@ var showToast = function(message, type, duration) { setToast({ message: message,
 >
   🔥 TEMP: BULK PRINT LETTERS
 </button>
-  <button onClick={() => {
+ <button onClick={() => {
   const membersToPrint = filteredMembers.filter(m => !m.inactive);
   if (membersToPrint.length === 0) return alert("No active members found to print.");
   
   const totalCards = Math.ceil(membersToPrint.length / 3);
-  if (!window.confirm(`Generate Double-Sided Premium 3-Up key tags (Logo Focus) for ${membersToPrint.length} members?\n\nThis will use ${totalCards} blank cards.\n\n(Please wait about 5-8 seconds after clicking OK for the ${membersToPrint.length} QR codes to generate before the print menu appears).`)) return;
+  if (!window.confirm(`Generate Premium Double-Sided 3-Up key tags for ${membersToPrint.length} members?\n\nThis will use ${totalCards} blank cards.\n\n(Please wait about 5-8 seconds after clicking OK for the ${membersToPrint.length} QR codes to generate before the print menu appears).`)) return;
 
-  let html = `<!DOCTYPE html><html><head><title>Premium Bulk Print 3-Up Tags (Double-Sided)</title><style>
+  let html = `<!DOCTYPE html><html><head><title>Premium Bulk Print 3-Up Tags</title><style>
     @page { size: 3.375in 2.125in; margin: 0; }
     @media print { 
       * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } 
       .card-page { page-break-after: always; }
     }
-    body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; background: #fff; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; margin: 0; padding: 0; background: #fff; }
     .card-page { width: 3.375in; height: 2.125in; display: flex; flex-direction: row; overflow: hidden; box-sizing: border-box; }
     
-    /* Front Tag Styles */
-    .tag { width: 1.125in; height: 2.125in; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; position: relative; border-right: 1px dashed #f1f5f9; }
+    /* Premium Front Tag Styles */
+    .tag { 
+      width: 1.125in; height: 2.125in; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; 
+      position: relative; border-right: 1px dashed rgba(255,255,255,0.4); overflow: hidden;
+    }
     .tag:last-child { border-right: none; }
     
-    /* Top space for hole punch */
-    .hole-space { height: 0.35in; width: 100%; flex-shrink: 0; background: #fff; }
+    /* Subtle background texture */
+    .bg-pattern { position: absolute; inset: 0; opacity: 0.08; background-image: radial-gradient(circle at 1.5px 1.5px, white 1px, transparent 0); background-size: 8px 8px; z-index: 1; }
     
-    /* Logo on White - LARGER SIZE */
-    .logo-sec { width: 100%; padding: 4px 0; display: flex; justify-content: center; align-items: center; flex-shrink: 0; background: #fff; }
-    .logo-sec img { height: 18px; max-width: 95%; object-fit: contain; filter: invert(1); opacity: 0.85; }
+    /* Space for the physical pre-punched hole */
+    .hole-space { height: 0.45in; width: 100%; flex-shrink: 0; z-index: 2; }
     
-    /* ID on Colored Background - NO NAME */
-    .id-sec { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; padding: 4px; box-sizing: border-box; border-top: 1.5px solid rgba(0,0,0,0.1); border-bottom: 1.5px solid rgba(0,0,0,0.1); }
-    .member-id-display { font-size: 14px; font-weight: 900; color: #fff; text-transform: uppercase; text-align: center; line-height: 1.05; letter-spacing: -0.2px; text-shadow: 0px 1px 2px rgba(0,0,0,0.3); }
+    .logo-sec { width: 100%; display: flex; justify-content: center; align-items: center; margin-bottom: 6px; z-index: 10; }
+    .logo-sec img { height: 16px; max-width: 85%; object-fit: contain; filter: brightness(0) invert(1); drop-shadow: 0px 2px 3px rgba(0,0,0,0.25); }
     
-    /* QR on White */
-    .qr-wrapper { margin-bottom: 6px; margin-top: 4px; display: flex; flex-direction: column; align-items: center; background: #fff; width: 100%; flex-shrink: 0; }
-    .qr-code { width: 0.78in; height: 0.78in; display: block; padding: 2px; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 5px; }
-    .scan-text { font-size: 5px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-top: 3px; }
+    /* Elevated QR Card */
+    .qr-wrapper { 
+      background: #ffffff; padding: 5px; border-radius: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.25); 
+      display: flex; flex-direction: column; align-items: center; z-index: 10;
+    }
+    .qr-code { width: 0.72in; height: 0.72in; display: block; border-radius: 3px; }
+    
+    .bottom-text { margin-top: auto; padding-bottom: 8px; text-align: center; width: 100%; z-index: 10; }
+    .member-id { font-size: 11px; font-weight: 900; color: #fff; letter-spacing: 1.5px; margin-bottom: 2px; text-shadow: 0 1px 3px rgba(0,0,0,0.4); }
+    .scan-text { font-size: 5px; font-weight: 800; color: rgba(255,255,255,0.85); text-transform: uppercase; letter-spacing: 1px; }
 
-    /* Back Tag Styles - Return to Sender (Same as before) */
-    .back-tag { width: 1.125in; height: 2.125in; box-sizing: border-box; background: #fff; display: flex; flex-direction: column; align-items: center; border-right: 1px dashed #f1f5f9; position: relative; }
+    /* Premium Back Tag Styles */
+    .back-tag { 
+      width: 1.125in; height: 2.125in; box-sizing: border-box; background: #fff; display: flex; flex-direction: column; 
+      align-items: center; border-right: 1px dashed #e2e8f0; position: relative;
+    }
     .back-tag:last-child { border-right: none; }
-    .back-hole-space { height: 0.35in; width: 100%; flex-shrink: 0; background: #fff; }
-    .back-content { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; padding: 0 4px; text-align: center; }
-    .back-title { font-size: 6px; font-weight: 900; color: #dd6d22; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; line-height: 1.3; }
-    .back-text { font-size: 5px; font-weight: 700; color: #475569; line-height: 1.3; margin-bottom: 6px; }
-    .back-text strong { color: #001f3f; font-size: 5.5px; display: block; margin-bottom: 1px; }
-    .back-accent { height: 3px; width: 100%; background: linear-gradient(to right, #dba51f, #dd6d22); position: absolute; bottom: 0; }
+    .back-hole-space { height: 0.35in; width: 100%; flex-shrink: 0; }
+    
+    .back-content { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; padding: 0 6px; text-align: center; }
+    
+    /* Pill badge for "If Found" */
+    .if-found { background: #001f3f; color: #fff; font-size: 5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 3px 8px; border-radius: 12px; margin-bottom: 8px; }
+    
+    .back-text { font-size: 5.5px; font-weight: 600; color: #475569; line-height: 1.4; margin-bottom: 8px; }
+    .back-text strong { color: #001f3f; font-size: 6px; font-weight: 900; display: block; margin-bottom: 1px; text-transform: uppercase; letter-spacing: 0.2px; }
+    
+    .back-accent { height: 4px; width: 100%; background: linear-gradient(to right, #dba51f, #dd6d22); position: absolute; bottom: 0; }
   </style></head><body>`;
 
   const logoUrl = 'https://pattersonhc.org/sites/default/files/wellness_white.png';
@@ -1357,9 +1372,9 @@ var showToast = function(message, type, duration) { setToast({ message: message,
     <div class="back-tag">
       <div class="back-hole-space"></div>
       <div class="back-content">
-        <div class="back-title">If found, please<br/>contact us:</div>
-        <div class="back-text"><strong>Anthony Wellness Center</strong>309 W Main St<br/>Anthony, KS 67003<br/>(620) 842-5190</div>
-        <div class="back-text" style="margin-bottom:0;"><strong>Harper Wellness Center</strong>615 W 12th St<br/>Harper, KS 67058<br/>(620) 896-1202</div>
+        <div class="if-found">If found, return to:</div>
+        <div class="back-text"><strong>Anthony Wellness</strong>309 W Main St<br/>Anthony, KS 67003<br/>(620) 842-5190</div>
+        <div class="back-text" style="margin-bottom:0;"><strong>Harper Wellness</strong>615 W 12th St<br/>Harper, KS 67058<br/>(620) 896-1202</div>
       </div>
       <div class="back-accent"></div>
     </div>
@@ -1372,32 +1387,36 @@ var showToast = function(message, type, duration) { setToast({ message: message,
     html += `<div class="card-page">`;
     chunk.forEach(m => {
       const isHarper = m.center && m.center.toLowerCase().includes('harper');
-      const bgGradient = isHarper ? 'linear-gradient(135deg, #f59e0b, #dd6d22)' : 'linear-gradient(135deg, #1080ad, #003d6b)';
-      const qrColor = isHarper ? 'dd6d22' : '003d6b';
+      const bgGradient = isHarper ? 'linear-gradient(135deg, #dd6d22, #b45309)' : 'linear-gradient(135deg, #1080ad, #001f3f)';
+      // Force dark blue for all QR codes to guarantee scan contrast against the white inner card
+      const qrColor = '001f3f'; 
       const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(m.id)}&color=${qrColor}&bgcolor=ffffff`;
       
       html += `
-        <div class="tag">
+        <div class="tag" style="background: ${bgGradient};">
+          <div class="bg-pattern"></div>
           <div class="hole-space"></div>
           <div class="logo-sec">
             <img src="${logoUrl}" />
           </div>
-          <div class="id-sec" style="background: ${bgGradient};">
-            <div class="member-id-display">ID: ${m.id}</div>
-          </div>
           <div class="qr-wrapper">
             <img class="qr-code" src="${qrUrl}" />
+          </div>
+          <div class="bottom-text">
+            <div class="member-id">${m.id}</div>
             <div class="scan-text">Scan To Enter</div>
           </div>
         </div>
       `;
     });
-    for (let j = chunk.length; j < 3; j++) { html += `<div class="tag"></div>`; }
+    
+    // Fill remaining slots with blanks if chunk < 3
+    for (let j = chunk.length; j < 3; j++) { html += `<div class="tag" style="background: #f1f5f9;"></div>`; }
     html += `</div>`; 
 
     // --- PRINT THE BACK OF THE CARD ---
     html += `<div class="card-page">`;
-    html += genericBackHTML + genericBackHTML + genericBackHTML;
+    html += genericBackHTML.repeat(3);
     html += `</div>`; 
   }
 
@@ -1408,9 +1427,9 @@ var showToast = function(message, type, duration) { setToast({ message: message,
   w.document.close();
   
   setTimeout(() => w.print(), 4000); 
-}} className="bg-red-500 text-white px-6 py-2 rounded-xl font-bold shadow-xl shadow-red-500/20"
+}} className="bg-[#1080ad] text-white px-6 py-2 rounded-xl font-bold shadow-xl shadow-[#1080ad]/20 hover:bg-[#0c6b91] transition-all"
 >
-  🔥 TEMP: BULK PRINT DUAL-SIDED TAGS
+  💳 Print Premium Keychain Tags
 </button>
         {activeTab === 'classes' && (() => {
           const allClasses = [
