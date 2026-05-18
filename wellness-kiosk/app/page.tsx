@@ -1334,7 +1334,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
     
     /* Showcasing the New Logo + Montserrat Text */
     .brand-header { 
-      width: 100%; display: flex; justify-content: center; align-items: center; gap: 5px;
+      width: 100%; display: flex; justify-content: center; align-items: center; gap: 2px; /* Decreased gap here! */
       padding: 0 0.05in; z-index: 10; margin-top: 0.02in; background: #fff; box-sizing: border-box;
     }
     .brand-logo { width: 0.36in; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
