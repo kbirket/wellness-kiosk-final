@@ -1313,7 +1313,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
   if (!window.confirm(`Generate Elite Split-Level 3-Up key tags for ${membersToPrint.length} members?\n\nThis will use ${totalCards} blank cards.\n\n(Please wait a few seconds after clicking OK for the fonts and QR codes to load).`)) return;
 
   let html = `<!DOCTYPE html><html><head><title>Elite Bulk Print 3-Up Tags</title>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;900&display=swap" rel="stylesheet">
   <style>
     @page { size: 3.375in 2.125in; margin: 0; }
     @media print { 
@@ -1329,26 +1329,28 @@ var showToast = function(message, type, duration) { setToast({ message: message,
       position: relative; overflow: hidden; background: #ffffff;
     }
     
-    /* Pre-punched hole space - Reduced slightly to make room for bigger logo */
-    .hole-space { height: 0.32in; width: 100%; flex-shrink: 0; z-index: 10; background: #fff; }
+    /* Pre-punched hole space */
+    .hole-space { height: 0.35in; width: 100%; flex-shrink: 0; z-index: 10; background: #fff; }
     
-    /* Showcasing the New Logo + Montserrat Text (Scaled Up) */
+    /* Showcasing the New Logo + Montserrat Text */
     .brand-header { 
       width: 100%; display: flex; justify-content: center; align-items: center; gap: 5px;
-      padding: 0 0.05in; z-index: 10; margin-bottom: 0.08in; background: #fff; box-sizing: border-box;
+      padding: 0 0.05in; z-index: 10; margin-top: 0.02in; background: #fff; box-sizing: border-box;
     }
     .brand-logo { width: 0.36in; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
     .brand-logo img { width: 100%; height: auto; object-fit: contain; drop-shadow: 0px 1px 2px rgba(0,0,0,0.1); }
     
     .brand-text { display: flex; flex-direction: column; font-family: 'Montserrat', sans-serif; line-height: 1; text-align: left; justify-content: center; }
-    .brand-text-bold { font-size: 11px; font-weight: 800; color: #001f3f; text-transform: uppercase; letter-spacing: -0.2px; margin-bottom: 1.5px; }
-    .brand-text-light { font-size: 4.8px; font-weight: 500; color: #475569; text-transform: uppercase; }
+    
+    /* FORCE NO-WRAP SO IT NEVER STACKS */
+    .brand-text-bold { font-size: 11px; font-weight: 900; color: #001f3f; text-transform: uppercase; letter-spacing: -0.2px; margin-bottom: 2px; white-space: nowrap; }
+    .brand-text-light { font-size: 4.8px; font-weight: 600; color: #475569; text-transform: uppercase; white-space: nowrap; }
 
-    /* Dynamic Angled Bottom Polygon - Lowered to fit larger logo */
+    /* Dynamic Angled Bottom Polygon - Raised to close the gap */
     .bottom-poly {
-      position: absolute; bottom: 0; left: 0; right: 0; height: 1.25in;
+      position: absolute; bottom: 0; left: 0; right: 0; height: 1.45in;
       clip-path: polygon(0 15%, 100% 0, 100% 100%, 0 100%);
-      display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 0.06in;
+      display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 0.08in;
       z-index: 5;
     }
     .poly-anthony { background: linear-gradient(150deg, #001f3f 0%, #1080ad 100%); }
@@ -1359,7 +1361,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
       background: #ffffff; padding: 0.04in; border-radius: 0.06in; 
       box-shadow: 0 4px 10px rgba(0,0,0,0.3); 
       display: flex; flex-direction: column; align-items: center; z-index: 10;
-      margin-top: auto; margin-bottom: 0.02in;
+      margin-top: auto; margin-bottom: 0.03in;
     }
     .qr-code { width: 0.72in; height: 0.72in; display: block; border-radius: 0.02in; }
     
@@ -1412,8 +1414,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
       const centerNameBold = isHarper ? 'HARPER' : 'ANTHONY';
       
       // Dynamically spread out the "WELLNESS CENTER" text to match the width of the word above it.
-      // "ANTHONY" is wider than "HARPER", so it needs more letter spacing.
-      const wellnessCenterSpacing = isHarper ? '0.5px' : '1.3px';
+      const wellnessCenterSpacing = isHarper ? '0.6px' : '1.4px';
       
       const polyClass = isHarper ? 'poly-harper' : 'poly-anthony';
       const qrColor = isHarper ? '5c1e08' : '001f3f'; 
@@ -1464,7 +1465,6 @@ var showToast = function(message, type, duration) { setToast({ message: message,
   w.document.write(html);
   w.document.close();
   
-  // 5 seconds gives Google Fonts and the QR API plenty of time to render before the print dialog opens
   setTimeout(() => w.print(), 5000); 
 }} className="bg-[#1080ad] text-white px-6 py-2 rounded-xl font-bold shadow-xl shadow-[#1080ad]/20 hover:bg-[#0c6b91] transition-all"
 >
