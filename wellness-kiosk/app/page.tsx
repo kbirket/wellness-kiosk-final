@@ -1306,158 +1306,155 @@ var showToast = function(message, type, duration) { setToast({ message: message,
   🔥 TEMP: BULK PRINT LETTERS
 </button>
 <button onClick={() => {
-  const membersToPrint = filteredMembers.filter(m => !m.inactive);
-  if (membersToPrint.length === 0) return alert("No active members found to print.");
+  // 1. Filter out inactive members first
+  let membersToPrint = filteredMembers.filter(m => !m.inactive);
   
-  const totalCards = Math.ceil(membersToPrint.length / 3);
-  if (!window.confirm(`Generate Elite Split-Level 3-Up key tags for ${membersToPrint.length} members?\n\nThis will use ${totalCards} blank cards.\n\n(Please wait a few seconds after clicking OK for the fonts and QR codes to load).`)) return;
+  // 2. NEW: Calculate the date exactly 2 months ago
+  const twoMonthsAgo = new Date();
+  twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+  
+  // 3. Filter for members who checked in within the last 2 months
+  membersToPrint = membersToPrint.filter(m => {
+    if (!m.lastCheckIn) return false; // Skip if they have never checked in
+    const checkInDate = new Date(m.lastCheckIn);
+    return checkInDate >= twoMonthsAgo;
+  });
 
-  let html = `<!DOCTYPE html><html><head><title>Elite Bulk Print 3-Up Tags</title>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;900&display=swap" rel="stylesheet">
+  if (membersToPrint.length === 0) {
+    return alert("No active members found who have checked in within the past 2 months.");
+  }
+  
+  if (!window.confirm(`Found ${membersToPrint.length} active members who visited in the last 2 months.\n\nGenerate Full-Size VIP Access Cards for them?\n\n(This will use ${membersToPrint.length} blank CR80 cards).`)) return;
+
+  let html = `<!DOCTYPE html><html><head><title>Elite CR80 Member Cards</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;900&display=swap" rel="stylesheet">
   <style>
     @page { size: 3.375in 2.125in; margin: 0; }
     @media print { 
       * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } 
       .card-page { page-break-after: always; }
     }
-    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background: #fff; }
-    .card-page { width: 3.375in; height: 2.125in; display: flex; flex-direction: row; overflow: hidden; box-sizing: border-box; }
+    body { font-family: 'Montserrat', -apple-system, sans-serif; margin: 0; padding: 0; background: #fff; }
     
-    /* --- FRONT TAG: SPLIT LEVEL DESIGN --- */
-    .tag { 
-      width: 1.125in; height: 2.125in; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; 
-      position: relative; overflow: hidden; background: #ffffff;
+    .card-page { 
+      width: 3.375in; height: 2.125in; position: relative; overflow: hidden; 
+      box-sizing: border-box; display: flex;
     }
     
-    /* Pre-punched hole space */
-    .hole-space { height: 0.35in; width: 100%; flex-shrink: 0; z-index: 10; background: #fff; }
+    /* --- FRONT OF CARD --- */
+    .front { color: #fff; }
+    .bg-anthony { background: linear-gradient(135deg, #001f3f 0%, #0a4b7a 50%, #1080ad 100%); }
+    .bg-harper { background: linear-gradient(135deg, #4a1806 0%, #8a3508 50%, #dd6d22 100%); }
     
-    /* Showcasing the New Logo + Montserrat Text */
-    .brand-header { 
-      width: 100%; display: flex; justify-content: center; align-items: center; gap: 2px; /* Decreased gap here! */
-      padding: 0 0.05in; z-index: 10; margin-top: 0.02in; background: #fff; box-sizing: border-box;
+    .shape1 { position: absolute; top: -0.6in; right: -0.4in; width: 1.8in; height: 1.8in; background: rgba(255,255,255,0.06); border-radius: 50%; z-index: 1; }
+    .shape2 { position: absolute; bottom: -0.6in; left: 25%; width: 2.5in; height: 0.4in; background: rgba(255,255,255,0.08); transform: rotate(45deg); z-index: 1; }
+    
+    .qr-section { 
+      width: 1.35in; display: flex; flex-direction: column; align-items: center; 
+      justify-content: center; padding-left: 0.15in; z-index: 10;
     }
-    .brand-logo { width: 0.36in; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
-    .brand-logo img { width: 100%; height: auto; object-fit: contain; drop-shadow: 0px 1px 2px rgba(0,0,0,0.1); }
-    
-    .brand-text { display: flex; flex-direction: column; font-family: 'Montserrat', sans-serif; line-height: 1; text-align: left; justify-content: center; }
-    
-    /* FORCE NO-WRAP SO IT NEVER STACKS */
-    .brand-text-bold { font-size: 11px; font-weight: 900; color: #001f3f; text-transform: uppercase; letter-spacing: -0.2px; margin-bottom: 2px; white-space: nowrap; }
-    .brand-text-light { font-size: 4.8px; font-weight: 600; color: #475569; text-transform: uppercase; white-space: nowrap; }
+    .qr-box { 
+      background: #ffffff; padding: 0.05in; border-radius: 0.08in; 
+      box-shadow: 0 5px 12px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center;
+    }
+    .qr-img { width: 0.95in; height: 0.95in; border-radius: 0.03in; }
+    .qr-label { 
+      font-size: 5px; font-weight: 900; letter-spacing: 1.5px; margin-top: 0.08in; 
+      text-transform: uppercase; color: rgba(255,255,255,0.85); text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    }
 
-    /* Dynamic Angled Bottom Polygon - Raised to close the gap */
-    .bottom-poly {
-      position: absolute; bottom: 0; left: 0; right: 0; height: 1.45in;
-      clip-path: polygon(0 15%, 100% 0, 100% 100%, 0 100%);
-      display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 0.08in;
-      z-index: 5;
-    }
-    .poly-anthony { background: linear-gradient(150deg, #001f3f 0%, #1080ad 100%); }
-    .poly-harper { background: linear-gradient(150deg, #5c1e08 0%, #dd6d22 100%); }
-    
-    /* Elevated QR Container bridging the gap */
-    .qr-wrapper { 
-      background: #ffffff; padding: 0.04in; border-radius: 0.06in; 
-      box-shadow: 0 4px 10px rgba(0,0,0,0.3); 
-      display: flex; flex-direction: column; align-items: center; z-index: 10;
-      margin-top: auto; margin-bottom: 0.03in;
-    }
-    .qr-code { width: 0.72in; height: 0.72in; display: block; border-radius: 0.02in; }
-    
-    /* High-Tech ID Display */
-    .bottom-text { text-align: center; width: 100%; z-index: 10; display: flex; flex-direction: column; align-items: center; gap: 2px; }
-    .member-id { font-size: 13px; font-weight: 900; color: #fff; letter-spacing: 1.5px; text-shadow: 0 1px 3px rgba(0,0,0,0.5); font-family: monospace; }
-    
-    .tech-bar { width: 40%; height: 1.5px; background: rgba(255,255,255,0.4); border-radius: 1px; margin: 1px 0; }
-    .scan-text { font-size: 4px; font-weight: 900; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 1.5px; }
-
-    /* --- BACK TAG --- */
-    .back-tag { 
-      width: 1.125in; height: 2.125in; box-sizing: border-box; background: #fff; display: flex; flex-direction: column; 
-      align-items: center; position: relative; overflow: hidden;
+    .info-section { 
+      flex: 1; padding: 0 0.15in 0 0.1in; display: flex; flex-direction: column; 
+      justify-content: center; align-items: flex-start; z-index: 10;
     }
     
-    .back-hole-space { height: 0.42in; width: 100%; flex-shrink: 0; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+    .logo-container { margin-bottom: 0.15in; width: 100%; }
+    .logo-container img { max-height: 0.4in; max-width: 100%; object-fit: contain; drop-shadow: 0px 2px 3px rgba(0,0,0,0.2); }
     
-    .back-content { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; padding: 0 0.08in; text-align: center; }
+    .member-name { 
+      font-size: 12px; font-weight: 900; text-transform: uppercase; margin-bottom: 2px; 
+      line-height: 1.1; text-shadow: 0 2px 4px rgba(0,0,0,0.5); 
+    }
+    .member-type { 
+      font-size: 6px; font-weight: 700; color: rgba(255,255,255,0.9); text-transform: uppercase; 
+      letter-spacing: 1.5px; margin-bottom: 0.12in;
+    }
+    .member-id { 
+      font-size: 9px; font-family: monospace; font-weight: 900; background: rgba(0,0,0,0.3); 
+      padding: 0.04in 0.08in; border-radius: 0.04in; border: 1px solid rgba(255,255,255,0.15);
+      letter-spacing: 1px;
+    }
     
-    .if-found { background: #0f172a; color: #fff; font-size: 5.5px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; padding: 4px 8px; border-radius: 20px; margin-bottom: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    /* --- BACK OF CARD --- */
+    .back { 
+      background: #f8fafc; display: flex; flex-direction: column; align-items: center; 
+      justify-content: center; padding: 0.2in; text-align: center; position: relative;
+    }
+    .back-header { font-size: 7.5px; font-weight: 900; color: #001f3f; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.15in; }
     
-    .back-text { font-size: 5.5px; font-weight: 600; color: #475569; line-height: 1.4; margin-bottom: 8px; }
-    .back-text strong { color: #0f172a; font-size: 6.5px; font-weight: 900; display: block; margin-bottom: 1px; text-transform: uppercase; letter-spacing: 0.2px; }
+    .addresses { display: flex; gap: 0.25in; margin-bottom: 0.15in; width: 100%; justify-content: center; }
+    .back-address { font-size: 6px; line-height: 1.5; color: #475569; text-align: left; }
+    .back-address strong { color: #0f172a; font-size: 7px; font-weight: 900; text-transform: uppercase; display: block; margin-bottom: 2px; border-bottom: 1px solid #cbd5e1; padding-bottom: 1px; }
     
-    .back-accent { height: 4px; width: 100%; background: linear-gradient(to right, #1080ad, #dd6d22); position: absolute; bottom: 0; }
+    .back-footer { font-size: 5px; color: #64748b; max-width: 90%; line-height: 1.4; font-weight: 500; }
+    .back-accent { position: absolute; bottom: 0; left: 0; width: 100%; height: 0.05in; background: linear-gradient(to right, #1080ad, #dd6d22); }
   </style></head><body>`;
 
   const logoUrl = '/wellness_corner_2.png';
-  
-  const genericBackHTML = `
-    <div class="back-tag">
-      <div class="back-hole-space"></div>
-      <div class="back-content">
-        <div class="if-found">If found, return to:</div>
-        <div class="back-text"><strong>Anthony Wellness</strong>309 W Main St<br/>Anthony, KS 67003<br/>(620) 842-5190</div>
-        <div class="back-text" style="margin-bottom:0;"><strong>Harper Wellness</strong>615 W 12th St<br/>Harper, KS 67058<br/>(620) 896-1202</div>
-      </div>
-      <div class="back-accent"></div>
-    </div>
-  `;
 
-  for (let i = 0; i < membersToPrint.length; i += 3) {
-    const chunk = membersToPrint.slice(i, i + 3);
+  membersToPrint.forEach(m => {
+    const isHarper = m.center && m.center.toLowerCase().includes('harper');
+    const bgClass = isHarper ? 'bg-harper' : 'bg-anthony';
+    const qrColor = isHarper ? '5c1e08' : '001f3f'; 
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(m.id)}&color=${qrColor}&bgcolor=ffffff`;
     
-    // --- PRINT THE FRONT OF THE CARD ---
-    html += `<div class="card-page">`;
-    chunk.forEach(m => {
-      const isHarper = m.center && m.center.toLowerCase().includes('harper');
-      const centerNameBold = isHarper ? 'HARPER' : 'ANTHONY';
-      
-      // Dynamically spread out the "WELLNESS CENTER" text to match the width of the word above it.
-      const wellnessCenterSpacing = isHarper ? '0.6px' : '0.85px';
-      
-      const polyClass = isHarper ? 'poly-harper' : 'poly-anthony';
-      const qrColor = isHarper ? '5c1e08' : '001f3f'; 
-      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(m.id)}&color=${qrColor}&bgcolor=ffffff`;
-      
-      html += `
-        <div class="tag">
-          <div class="hole-space"></div>
-          
-          <div class="brand-header">
-            <div class="brand-logo">
-              <img src="${logoUrl}" />
-            </div>
-            <div class="brand-text">
-              <span class="brand-text-bold">${centerNameBold}</span>
-              <span class="brand-text-light" style="letter-spacing: ${wellnessCenterSpacing};">WELLNESS CENTER</span>
-            </div>
+    // Page 1: FRONT
+    html += `
+      <div class="card-page front ${bgClass}">
+        <div class="shape1"></div>
+        <div class="shape2"></div>
+        
+        <div class="qr-section">
+          <div class="qr-box">
+            <img class="qr-img" src="${qrUrl}" />
           </div>
-          
-          <div class="bottom-poly ${polyClass}">
-            <div class="qr-wrapper">
-              <img class="qr-code" src="${qrUrl}" />
-            </div>
-            
-            <div class="bottom-text">
-              <div class="member-id">${m.id}</div>
-              <div class="tech-bar"></div>
-              <div class="scan-text">Member Access</div>
-            </div>
+          <div class="qr-label">Scan to Enter</div>
+        </div>
+        
+        <div class="info-section">
+          <div class="logo-container">
+            <img src="${logoUrl}" />
+          </div>
+          <div class="member-name">${m.firstName} <br/>${m.lastName}</div>
+          <div class="member-type">${m.type} PLAN</div>
+          <div class="member-id">ID: ${m.id}</div>
+        </div>
+      </div>
+    `;
+
+    // Page 2: BACK
+    html += `
+      <div class="card-page back">
+        <div class="back-header">Return Postage Guaranteed</div>
+        
+        <div class="addresses">
+          <div class="back-address">
+            <strong>Anthony Wellness</strong>
+            309 W Main St<br/>Anthony, KS 67003<br/>(620) 842-5190
+          </div>
+          <div class="back-address">
+            <strong>Harper Wellness</strong>
+            615 W 12th St<br/>Harper, KS 67058<br/>(620) 896-1202
           </div>
         </div>
-      `;
-    });
-    
-    // Fill remaining slots with blanks if chunk < 3
-    for (let j = chunk.length; j < 3; j++) { html += `<div class="tag" style="background: #f1f5f9;"></div>`; }
-    html += `</div>`; 
-
-    // --- PRINT THE BACK OF THE CARD ---
-    html += `<div class="card-page">`;
-    html += genericBackHTML.repeat(3);
-    html += `</div>`; 
-  }
+        
+        <div class="back-footer">
+          This card is the property of Patterson Health Center. It is non-transferable and intended for the exclusive use of the member named on the reverse side. If found, please drop in any USPS mailbox or return to the addresses above.
+        </div>
+        <div class="back-accent"></div>
+      </div>
+    `;
+  });
 
   html += `</body></html>`;
   
@@ -1468,7 +1465,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
   setTimeout(() => w.print(), 5000); 
 }} className="bg-[#1080ad] text-white px-6 py-2 rounded-xl font-bold shadow-xl shadow-[#1080ad]/20 hover:bg-[#0c6b91] transition-all"
 >
-  💳 Print Elite Split-Level Tags
+  💳 Print Active Member VIP Cards
 </button>
         {activeTab === 'classes' && (() => {
           const allClasses = [
