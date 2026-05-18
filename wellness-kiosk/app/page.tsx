@@ -1414,7 +1414,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
       const centerNameBold = isHarper ? 'HARPER' : 'ANTHONY';
       
       // Dynamically spread out the "WELLNESS CENTER" text to match the width of the word above it.
-      const wellnessCenterSpacing = isHarper ? '0.6px' : '1.4px';
+      const wellnessCenterSpacing = isHarper ? '0.6px' : '0.85px';
       
       const polyClass = isHarper ? 'poly-harper' : 'poly-anthony';
       const qrColor = isHarper ? '5c1e08' : '001f3f'; 
