@@ -568,7 +568,7 @@ const filteredMembers = scopedMembers.filter(m => { if (!(m.firstName + ' ' + m.
 
   useEffect(() => { let scanner = null; if (view === 'secret_scanner' && scannerActive) { scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 280, height: 280} }, false); scanner.render((decodedText) => { processCheckIn(decodedText, "Camera Scan"); }, () => {}); } return () => { if(scanner) scanner.clear().catch(e => console.error(e)); }; }, [view, scannerActive]);
 
-// --- QR SCANNER ENGINE FOR KIOSK ---
+// --- QR SCANNER ENGINE FOR THE KIOSK ---
   useEffect(() => {
     let scanner = null;
     if (view === 'kiosk' && isScanning) {
