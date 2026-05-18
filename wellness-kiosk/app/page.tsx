@@ -1313,21 +1313,48 @@ var showToast = function(message, type, duration) { setToast({ message: message,
   const twoMonthsAgo = new Date();
   twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
   
-  // 3. Filter using common variations for the check-in date property
+  // 3. Smart filter checking inside the 'visits' property
   membersToPrint = membersToPrint.filter(m => {
-    const dateValue = m.lastCheckIn || m.lastVisit || m.lastActive || m.checkInDate || m.lastCheckin || m.latestCheckIn;
-    if (!dateValue) return false; 
+    let latestVisit = null;
     
-    const checkInDate = new Date(dateValue);
-    return checkInDate >= twoMonthsAgo;
+    if (m.visits) {
+      // If visits is an array of dates or objects
+      if (Array.isArray(m.visits)) {
+        m.visits.forEach(v => {
+          let d = null;
+          if (typeof v === 'string' || typeof v === 'number') d = new Date(v);
+          else if (v && typeof v === 'object') d = new Date(v.date || v.createdTime || v.timestamp || v.dateTime);
+          
+          if (d && !isNaN(d.getTime())) {
+            if (!latestVisit || d > latestVisit) latestVisit = d;
+          }
+        });
+      } 
+      // If visits is a comma-separated string of dates
+      else if (typeof m.visits === 'string') {
+        if (m.visits.includes(',')) {
+          m.visits.split(',').forEach(str => {
+            const d = new Date(str.trim());
+            if (!isNaN(d.getTime()) && (!latestVisit || d > latestVisit)) latestVisit = d;
+          });
+        } else {
+          const d = new Date(m.visits);
+          if (!isNaN(d.getTime())) latestVisit = d;
+        }
+      }
+    }
+    
+    // Keep the member if their latest visit is within 2 months
+    return latestVisit && latestVisit >= twoMonthsAgo;
   });
 
-  // 4. Smart Fallback: If it still finds 0, show the actual database properties to diagnose
+  // 4. Smart Diagnostic Fallback
   if (membersToPrint.length === 0) {
-    const sampleMember = filteredMembers[0];
-    const availableProperties = sampleMember ? Object.keys(sampleMember).join(', ') : 'No member data available';
+    const sample = filteredMembers.find(m => m.visits) || filteredMembers[0];
+    const visitsType = sample ? typeof sample.visits : 'undefined';
+    const visitsVal = sample ? JSON.stringify(sample.visits) : 'null';
     
-    return alert(`No members matched the date filter.\n\nYour member records contain these properties:\n[ ${availableProperties} ]\n\nLet me know which one looks like the check-in date or visit timestamp!`);
+    return alert(`Still matched 0 members.\n\nDiagnostic Info:\n• Type of 'visits': ${visitsType}\n• Value of 'visits': ${visitsVal}\n\nIf it shows a simple number above, let me know and we will connect this button to your main Check-in Log history instead!`);
   }
   
   if (!window.confirm(`Found ${membersToPrint.length} active members who visited in the last 2 months.\n\nGenerate Full-Size VIP Access Cards for them?\n\n(This will use ${membersToPrint.length} blank CR80 cards).`)) return;
