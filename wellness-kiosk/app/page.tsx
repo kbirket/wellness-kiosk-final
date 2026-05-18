@@ -1305,14 +1305,14 @@ var showToast = function(message, type, duration) { setToast({ message: message,
 >
   🔥 TEMP: BULK PRINT LETTERS
 </button>
- <button onClick={() => {
+<button onClick={() => {
   const membersToPrint = filteredMembers.filter(m => !m.inactive);
   if (membersToPrint.length === 0) return alert("No active members found to print.");
   
   const totalCards = Math.ceil(membersToPrint.length / 3);
-  if (!window.confirm(`Generate Ultra-Premium 3-Up key tags for ${membersToPrint.length} members?\n\nThis will use ${totalCards} blank cards.\n\n(Please wait about 5-8 seconds after clicking OK for the ${membersToPrint.length} QR codes to generate).`)) return;
+  if (!window.confirm(`Generate Elite Split-Level 3-Up key tags for ${membersToPrint.length} members?\n\nThis will use ${totalCards} blank cards.\n\n(Please wait a few seconds after clicking OK for the QR codes to generate).`)) return;
 
-  let html = `<!DOCTYPE html><html><head><title>Ultra-Premium Bulk Print 3-Up Tags</title><style>
+  let html = `<!DOCTYPE html><html><head><title>Elite Bulk Print 3-Up Tags</title><style>
     @page { size: 3.375in 2.125in; margin: 0; }
     @media print { 
       * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } 
@@ -1321,44 +1321,47 @@ var showToast = function(message, type, duration) { setToast({ message: message,
     body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background: #fff; }
     .card-page { width: 3.375in; height: 2.125in; display: flex; flex-direction: row; overflow: hidden; box-sizing: border-box; }
     
-    /* --- FRONT TAG (REMOVED PERFORATION BORDERS) --- */
+    /* --- FRONT TAG: SPLIT LEVEL DESIGN --- */
     .tag { 
       width: 1.125in; height: 2.125in; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; 
-      position: relative; overflow: hidden;
+      position: relative; overflow: hidden; background: #ffffff;
     }
     
-    /* Dynamic Cyber/Modern Background */
-    .tag-anthony { background: linear-gradient(150deg, #001f3f 0%, #082f56 40%, #1080ad 100%); }
-    .tag-harper { background: linear-gradient(150deg, #5c1e08 0%, #9c3c08 40%, #dd6d22 100%); }
+    /* Pre-punched hole space (blank white at top) */
+    .hole-space { height: 0.38in; width: 100%; flex-shrink: 0; z-index: 10; background: #fff; }
     
-    /* Geometric "Cool" Accents */
-    .accent-shape-1 { position: absolute; top: -0.2in; right: -0.3in; width: 1in; height: 1in; background: rgba(255,255,255,0.08); border-radius: 50%; z-index: 1; }
-    .accent-shape-2 { position: absolute; bottom: 0.2in; left: -0.4in; width: 1.2in; height: 0.15in; background: rgba(255,255,255,0.1); transform: rotate(45deg); z-index: 1; }
+    /* Showcasing the New Full-Color Logo */
+    .logo-sec { width: 100%; display: flex; justify-content: center; align-items: center; padding: 0 0.05in; z-index: 10; margin-bottom: 0.05in; background: #fff; }
+    /* No filter! Let the colors shine */
+    .logo-sec img { width: 85%; max-height: 0.55in; object-fit: contain; drop-shadow: 0px 1px 2px rgba(0,0,0,0.1); }
     
-    /* Pre-punched hole space */
-    .hole-space { height: 0.42in; width: 100%; flex-shrink: 0; z-index: 5; }
+    /* Dynamic Angled Bottom Polygon */
+    .bottom-poly {
+      position: absolute; bottom: 0; left: 0; right: 0; height: 1.35in;
+      clip-path: polygon(0 15%, 100% 0, 100% 100%, 0 100%);
+      display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 0.06in;
+      z-index: 5;
+    }
+    .poly-anthony { background: linear-gradient(150deg, #001f3f 0%, #1080ad 100%); }
+    .poly-harper { background: linear-gradient(150deg, #5c1e08 0%, #dd6d22 100%); }
     
-    /* Much Larger Logo */
-    .logo-sec { width: 100%; display: flex; justify-content: center; align-items: center; margin-bottom: 0.05in; z-index: 10; padding: 0 4px; box-sizing: border-box; }
-    .logo-sec img { width: 92%; max-height: 0.38in; object-fit: contain; filter: brightness(0) invert(1); drop-shadow: 0px 2px 4px rgba(0,0,0,0.4); }
-    
-    /* Sleek QR Container */
+    /* Elevated QR Container bridging the gap */
     .qr-wrapper { 
-      background: #ffffff; padding: 0.04in; border-radius: 0.08in; 
-      box-shadow: 0 6px 12px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(0,0,0,0.1); 
+      background: #ffffff; padding: 0.04in; border-radius: 0.06in; 
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3); 
       display: flex; flex-direction: column; align-items: center; z-index: 10;
+      margin-top: auto; margin-bottom: 0.02in;
     }
-    /* Keeping QR high-contrast for scanners */
-    .qr-code { width: 0.78in; height: 0.78in; display: block; border-radius: 0.04in; }
+    .qr-code { width: 0.72in; height: 0.72in; display: block; border-radius: 0.02in; }
     
     /* High-Tech ID Display */
-    .bottom-text { margin-top: auto; padding-bottom: 0.06in; text-align: center; width: 100%; z-index: 10; display: flex; flex-direction: column; align-items: center; gap: 2px; }
-    .member-id { font-size: 13px; font-weight: 900; color: #fff; letter-spacing: 2px; text-shadow: 0 2px 4px rgba(0,0,0,0.6); font-family: monospace; }
+    .bottom-text { text-align: center; width: 100%; z-index: 10; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .member-id { font-size: 13px; font-weight: 900; color: #fff; letter-spacing: 1.5px; text-shadow: 0 1px 3px rgba(0,0,0,0.5); font-family: monospace; }
     
-    .tech-bar { width: 60%; height: 2px; background: rgba(255,255,255,0.3); border-radius: 1px; margin: 1px 0; }
-    .scan-text { font-size: 4.5px; font-weight: 900; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 2px; }
+    .tech-bar { width: 40%; height: 1.5px; background: rgba(255,255,255,0.4); border-radius: 1px; margin: 1px 0; }
+    .scan-text { font-size: 4px; font-weight: 900; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 1.5px; }
 
-    /* --- BACK TAG (REMOVED PERFORATION BORDERS) --- */
+    /* --- BACK TAG --- */
     .back-tag { 
       width: 1.125in; height: 2.125in; box-sizing: border-box; background: #fff; display: flex; flex-direction: column; 
       align-items: center; position: relative; overflow: hidden;
@@ -1368,7 +1371,6 @@ var showToast = function(message, type, duration) { setToast({ message: message,
     
     .back-content { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; padding: 0 0.08in; text-align: center; }
     
-    /* Modern pill badge */
     .if-found { background: #0f172a; color: #fff; font-size: 5.5px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; padding: 4px 8px; border-radius: 20px; margin-bottom: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     
     .back-text { font-size: 5.5px; font-weight: 600; color: #475569; line-height: 1.4; margin-bottom: 8px; }
@@ -1377,7 +1379,9 @@ var showToast = function(message, type, duration) { setToast({ message: message,
     .back-accent { height: 4px; width: 100%; background: linear-gradient(to right, #1080ad, #dd6d22); position: absolute; bottom: 0; }
   </style></head><body>`;
 
-  const logoUrl = 'https://pattersonhc.org/sites/default/files/wellness_white.png';
+  // Update this to point to the file in your public folder!
+  const logoUrl = '/wellness_corner_2.png';
+  
   const genericBackHTML = `
     <div class="back-tag">
       <div class="back-hole-space"></div>
@@ -1397,29 +1401,27 @@ var showToast = function(message, type, duration) { setToast({ message: message,
     html += `<div class="card-page">`;
     chunk.forEach(m => {
       const isHarper = m.center && m.center.toLowerCase().includes('harper');
-      const tagClass = isHarper ? 'tag-harper' : 'tag-anthony';
-      // High contrast QR for reliable scanning
+      const polyClass = isHarper ? 'poly-harper' : 'poly-anthony';
       const qrColor = isHarper ? '5c1e08' : '001f3f'; 
       const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(m.id)}&color=${qrColor}&bgcolor=ffffff`;
       
       html += `
-        <div class="tag ${tagClass}">
-          <div class="accent-shape-1"></div>
-          <div class="accent-shape-2"></div>
+        <div class="tag">
           <div class="hole-space"></div>
-          
           <div class="logo-sec">
             <img src="${logoUrl}" />
           </div>
           
-          <div class="qr-wrapper">
-            <img class="qr-code" src="${qrUrl}" />
-          </div>
-          
-          <div class="bottom-text">
-            <div class="member-id">${m.id}</div>
-            <div class="tech-bar"></div>
-            <div class="scan-text">Member Access</div>
+          <div class="bottom-poly ${polyClass}">
+            <div class="qr-wrapper">
+              <img class="qr-code" src="${qrUrl}" />
+            </div>
+            
+            <div class="bottom-text">
+              <div class="member-id">${m.id}</div>
+              <div class="tech-bar"></div>
+              <div class="scan-text">Member Access</div>
+            </div>
           </div>
         </div>
       `;
@@ -1444,7 +1446,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
   setTimeout(() => w.print(), 4000); 
 }} className="bg-[#1080ad] text-white px-6 py-2 rounded-xl font-bold shadow-xl shadow-[#1080ad]/20 hover:bg-[#0c6b91] transition-all"
 >
-  💳 Print VIP Keychain Tags
+  💳 Print Elite Split-Level Tags
 </button>
         {activeTab === 'classes' && (() => {
           const allClasses = [
