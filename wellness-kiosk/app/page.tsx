@@ -1310,9 +1310,11 @@ var showToast = function(message, type, duration) { setToast({ message: message,
   if (membersToPrint.length === 0) return alert("No active members found to print.");
   
   const totalCards = Math.ceil(membersToPrint.length / 3);
-  if (!window.confirm(`Generate Elite Split-Level 3-Up key tags for ${membersToPrint.length} members?\n\nThis will use ${totalCards} blank cards.\n\n(Please wait a few seconds after clicking OK for the QR codes to generate).`)) return;
+  if (!window.confirm(`Generate Elite Split-Level 3-Up key tags for ${membersToPrint.length} members?\n\nThis will use ${totalCards} blank cards.\n\n(Please wait a few seconds after clicking OK for the fonts and QR codes to load).`)) return;
 
-  let html = `<!DOCTYPE html><html><head><title>Elite Bulk Print 3-Up Tags</title><style>
+  let html = `<!DOCTYPE html><html><head><title>Elite Bulk Print 3-Up Tags</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+  <style>
     @page { size: 3.375in 2.125in; margin: 0; }
     @media print { 
       * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } 
@@ -1330,11 +1332,18 @@ var showToast = function(message, type, duration) { setToast({ message: message,
     /* Pre-punched hole space (blank white at top) */
     .hole-space { height: 0.38in; width: 100%; flex-shrink: 0; z-index: 10; background: #fff; }
     
-    /* Showcasing the New Full-Color Logo */
-    .logo-sec { width: 100%; display: flex; justify-content: center; align-items: center; padding: 0 0.05in; z-index: 10; margin-bottom: 0.05in; background: #fff; }
-    /* No filter! Let the colors shine */
-    .logo-sec img { width: 85%; max-height: 0.55in; object-fit: contain; drop-shadow: 0px 1px 2px rgba(0,0,0,0.1); }
+    /* Showcasing the New Logo + Montserrat Text */
+    .brand-header { 
+      width: 100%; display: flex; justify-content: center; align-items: center; gap: 4px;
+      padding: 0 0.05in; z-index: 10; margin-bottom: 0.06in; background: #fff; box-sizing: border-box;
+    }
+    .brand-logo { width: 0.28in; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+    .brand-logo img { width: 100%; height: auto; object-fit: contain; drop-shadow: 0px 1px 2px rgba(0,0,0,0.1); }
     
+    .brand-text { display: flex; flex-direction: column; font-family: 'Montserrat', sans-serif; line-height: 1; text-align: left; justify-content: center; }
+    .brand-text-bold { font-size: 8px; font-weight: 700; color: #001f3f; text-transform: uppercase; letter-spacing: -0.2px; margin-bottom: 1px; }
+    .brand-text-light { font-size: 4px; font-weight: 400; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; }
+
     /* Dynamic Angled Bottom Polygon */
     .bottom-poly {
       position: absolute; bottom: 0; left: 0; right: 0; height: 1.35in;
@@ -1379,7 +1388,6 @@ var showToast = function(message, type, duration) { setToast({ message: message,
     .back-accent { height: 4px; width: 100%; background: linear-gradient(to right, #1080ad, #dd6d22); position: absolute; bottom: 0; }
   </style></head><body>`;
 
-  // Update this to point to the file in your public folder!
   const logoUrl = '/wellness_corner_2.png';
   
   const genericBackHTML = `
@@ -1401,6 +1409,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
     html += `<div class="card-page">`;
     chunk.forEach(m => {
       const isHarper = m.center && m.center.toLowerCase().includes('harper');
+      const centerNameBold = isHarper ? 'HARPER' : 'ANTHONY';
       const polyClass = isHarper ? 'poly-harper' : 'poly-anthony';
       const qrColor = isHarper ? '5c1e08' : '001f3f'; 
       const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(m.id)}&color=${qrColor}&bgcolor=ffffff`;
@@ -1408,8 +1417,15 @@ var showToast = function(message, type, duration) { setToast({ message: message,
       html += `
         <div class="tag">
           <div class="hole-space"></div>
-          <div class="logo-sec">
-            <img src="${logoUrl}" />
+          
+          <div class="brand-header">
+            <div class="brand-logo">
+              <img src="${logoUrl}" />
+            </div>
+            <div class="brand-text">
+              <span class="brand-text-bold">${centerNameBold}</span>
+              <span class="brand-text-light">WELLNESS CENTER</span>
+            </div>
           </div>
           
           <div class="bottom-poly ${polyClass}">
@@ -1443,7 +1459,8 @@ var showToast = function(message, type, duration) { setToast({ message: message,
   w.document.write(html);
   w.document.close();
   
-  setTimeout(() => w.print(), 4000); 
+  // 5 seconds gives Google Fonts and the QR API plenty of time to render before the print dialog opens
+  setTimeout(() => w.print(), 5000); 
 }} className="bg-[#1080ad] text-white px-6 py-2 rounded-xl font-bold shadow-xl shadow-[#1080ad]/20 hover:bg-[#0c6b91] transition-all"
 >
   💳 Print Elite Split-Level Tags
