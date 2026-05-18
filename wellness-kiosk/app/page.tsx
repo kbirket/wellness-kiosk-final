@@ -1309,52 +1309,31 @@ var showToast = function(message, type, duration) { setToast({ message: message,
   // 1. Filter out inactive members first
   let membersToPrint = filteredMembers.filter(m => !m.inactive);
   
-  // 2. Calculate the date exactly 2 months ago
+  // 2. Calculate the date exactly 2 months ago (Relative to today: May 18, 2026)
   const twoMonthsAgo = new Date();
   twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
   
-  // 3. Smart filter checking inside the 'visits' property
+  // 3. Filter for members who checked in within the last 2 months using 'lastVisit'
   membersToPrint = membersToPrint.filter(m => {
-    let latestVisit = null;
+    // Target 'lastVisit' (the camelCase version of 'Last Visit')
+    const dateValue = m.lastVisit || m['Last Visit'] || m.lastCheckIn;
     
-    if (m.visits) {
-      // If visits is an array of dates or objects
-      if (Array.isArray(m.visits)) {
-        m.visits.forEach(v => {
-          let d = null;
-          if (typeof v === 'string' || typeof v === 'number') d = new Date(v);
-          else if (v && typeof v === 'object') d = new Date(v.date || v.createdTime || v.timestamp || v.dateTime);
-          
-          if (d && !isNaN(d.getTime())) {
-            if (!latestVisit || d > latestVisit) latestVisit = d;
-          }
-        });
-      } 
-      // If visits is a comma-separated string of dates
-      else if (typeof m.visits === 'string') {
-        if (m.visits.includes(',')) {
-          m.visits.split(',').forEach(str => {
-            const d = new Date(str.trim());
-            if (!isNaN(d.getTime()) && (!latestVisit || d > latestVisit)) latestVisit = d;
-          });
-        } else {
-          const d = new Date(m.visits);
-          if (!isNaN(d.getTime())) latestVisit = d;
-        }
-      }
-    }
+    if (!dateValue) return false; 
     
-    // Keep the member if their latest visit is within 2 months
-    return latestVisit && latestVisit >= twoMonthsAgo;
+    const checkInDate = new Date(dateValue);
+    // Ensure it's a valid date and fits our 2-month window
+    return !isNaN(checkInDate.getTime()) && checkInDate >= twoMonthsAgo;
   });
 
-  // 4. Smart Diagnostic Fallback
+  // 4. Upgraded Fallback Scanner: Scans ALL records to find missing keys
   if (membersToPrint.length === 0) {
-    const sample = filteredMembers.find(m => m.visits) || filteredMembers[0];
-    const visitsType = sample ? typeof sample.visits : 'undefined';
-    const visitsVal = sample ? JSON.stringify(sample.visits) : 'null';
+    const allUniqueKeys = new Set();
+    filteredMembers.forEach(member => {
+      Object.keys(member).forEach(key => allUniqueKeys.add(key));
+    });
+    const propertiesList = Array.from(allUniqueKeys).join(', ');
     
-    return alert(`Still matched 0 members.\n\nDiagnostic Info:\n• Type of 'visits': ${visitsType}\n• Value of 'visits': ${visitsVal}\n\nIf it shows a simple number above, let me know and we will connect this button to your main Check-in Log history instead!`);
+    return alert(`Matched 0 members.\n\nProperties found across ALL database records:\n[ ${propertiesList} ]`);
   }
   
   if (!window.confirm(`Found ${membersToPrint.length} active members who visited in the last 2 months.\n\nGenerate Full-Size VIP Access Cards for them?\n\n(This will use ${membersToPrint.length} blank CR80 cards).`)) return;
