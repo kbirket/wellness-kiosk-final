@@ -1258,7 +1258,6 @@ var showToast = function(message, type, duration) { setToast({ message: message,
     .accent{height:3px;background:linear-gradient(to right,#dba51f,#dd6d22)}
     .window-addr{margin-top:0.9in;margin-left:0.5in;font-size:12px;line-height:1.5;color:#1e293b;font-weight:600;min-height:0.85in}
     .body{padding-top:0}
-    .date{font-size:9px;color:#94a3b8;text-align:right;margin-bottom:6px}
     .greeting{font-size:12px;margin-bottom:6px;font-weight:700;color:#003d6b}
     .intro{font-size:10.5px;color:#475569;line-height:1.4;margin-bottom:8px}
     .section-title{font-size:9px;font-weight:900;color:#003d6b;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px;padding-bottom:2px;border-bottom:2px solid #dba51f;margin-top:10px}
