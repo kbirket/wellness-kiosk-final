@@ -1313,7 +1313,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
   if (!window.confirm(`Generate Elite Split-Level 3-Up key tags for ${membersToPrint.length} members?\n\nThis will use ${totalCards} blank cards.\n\n(Please wait a few seconds after clicking OK for the fonts and QR codes to load).`)) return;
 
   let html = `<!DOCTYPE html><html><head><title>Elite Bulk Print 3-Up Tags</title>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;800&display=swap" rel="stylesheet">
   <style>
     @page { size: 3.375in 2.125in; margin: 0; }
     @media print { 
@@ -1329,24 +1329,24 @@ var showToast = function(message, type, duration) { setToast({ message: message,
       position: relative; overflow: hidden; background: #ffffff;
     }
     
-    /* Pre-punched hole space (blank white at top) */
-    .hole-space { height: 0.38in; width: 100%; flex-shrink: 0; z-index: 10; background: #fff; }
+    /* Pre-punched hole space - Reduced slightly to make room for bigger logo */
+    .hole-space { height: 0.32in; width: 100%; flex-shrink: 0; z-index: 10; background: #fff; }
     
-    /* Showcasing the New Logo + Montserrat Text */
+    /* Showcasing the New Logo + Montserrat Text (Scaled Up) */
     .brand-header { 
-      width: 100%; display: flex; justify-content: center; align-items: center; gap: 4px;
-      padding: 0 0.05in; z-index: 10; margin-bottom: 0.06in; background: #fff; box-sizing: border-box;
+      width: 100%; display: flex; justify-content: center; align-items: center; gap: 5px;
+      padding: 0 0.05in; z-index: 10; margin-bottom: 0.08in; background: #fff; box-sizing: border-box;
     }
-    .brand-logo { width: 0.28in; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+    .brand-logo { width: 0.36in; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
     .brand-logo img { width: 100%; height: auto; object-fit: contain; drop-shadow: 0px 1px 2px rgba(0,0,0,0.1); }
     
     .brand-text { display: flex; flex-direction: column; font-family: 'Montserrat', sans-serif; line-height: 1; text-align: left; justify-content: center; }
-    .brand-text-bold { font-size: 8px; font-weight: 700; color: #001f3f; text-transform: uppercase; letter-spacing: -0.2px; margin-bottom: 1px; }
-    .brand-text-light { font-size: 4px; font-weight: 400; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; }
+    .brand-text-bold { font-size: 11px; font-weight: 800; color: #001f3f; text-transform: uppercase; letter-spacing: -0.2px; margin-bottom: 1.5px; }
+    .brand-text-light { font-size: 4.8px; font-weight: 500; color: #475569; text-transform: uppercase; }
 
-    /* Dynamic Angled Bottom Polygon */
+    /* Dynamic Angled Bottom Polygon - Lowered to fit larger logo */
     .bottom-poly {
-      position: absolute; bottom: 0; left: 0; right: 0; height: 1.35in;
+      position: absolute; bottom: 0; left: 0; right: 0; height: 1.25in;
       clip-path: polygon(0 15%, 100% 0, 100% 100%, 0 100%);
       display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 0.06in;
       z-index: 5;
@@ -1410,6 +1410,11 @@ var showToast = function(message, type, duration) { setToast({ message: message,
     chunk.forEach(m => {
       const isHarper = m.center && m.center.toLowerCase().includes('harper');
       const centerNameBold = isHarper ? 'HARPER' : 'ANTHONY';
+      
+      // Dynamically spread out the "WELLNESS CENTER" text to match the width of the word above it.
+      // "ANTHONY" is wider than "HARPER", so it needs more letter spacing.
+      const wellnessCenterSpacing = isHarper ? '0.5px' : '1.3px';
+      
       const polyClass = isHarper ? 'poly-harper' : 'poly-anthony';
       const qrColor = isHarper ? '5c1e08' : '001f3f'; 
       const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(m.id)}&color=${qrColor}&bgcolor=ffffff`;
@@ -1424,7 +1429,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
             </div>
             <div class="brand-text">
               <span class="brand-text-bold">${centerNameBold}</span>
-              <span class="brand-text-light">WELLNESS CENTER</span>
+              <span class="brand-text-light" style="letter-spacing: ${wellnessCenterSpacing};">WELLNESS CENTER</span>
             </div>
           </div>
           
