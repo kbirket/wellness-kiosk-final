@@ -65,7 +65,7 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: data.error.message || "Airtable Error" }, { status: 400 });
     }
 
-    return NextResponse.json({ success: true, pin: newPIN, data: data });
+    return NextResponse.json({ success: true, pin: newPIN, airtableId: data.records && data.records[0] ? data.records[0].id : null, data: data });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
