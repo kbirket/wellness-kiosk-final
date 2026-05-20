@@ -93,8 +93,12 @@ export default function WellnessHub() {
   const [editingVisitor, setEditingVisitor] = useState(null);
  const [corpSearch, setCorpSearch] = useState('');
   const [renewMenuOpen, setRenewMenuOpen] = useState(null);   
-  const [editVisitModal, setEditVisitModal] = useState(null);
+ const [editVisitModal, setEditVisitModal] = useState(null);
   const [payments, setPayments] = useState([]);
+  const [cardRequestModal, setCardRequestModal] = useState(null);
+  const [cardRequestNote, setCardRequestNote] = useState('');
+  const [requestCardOnAdd, setRequestCardOnAdd] = useState(false);
+  const [requestCardNoteOnAdd, setRequestCardNoteOnAdd] = useState('');
   useEffect(() => { localStorage.setItem('wellnessUsagePrefs', JSON.stringify(usageBasedCorps)); }, [usageBasedCorps]);
 // Emergency local backup
   useEffect(() => {
@@ -319,7 +323,23 @@ const handleAddMemberSubmit = async (e) => {
       try {
         const res = await fetch('/api/add-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName, lastName, email, phone, plan, center, corporateSponsor: sponsor, needsOrientation, address, city, state: mstate, zip: mzip, billingMethod: billing, access247, badgeNumber, startDate, discountCode, discountExpiration, monthlyRate: finalMonthlyRate }) });
         const result = await res.json();
-        if (result.success) { setNewMemberPin({ name: `${firstName} ${lastName}`, pin: result.pin || '1111' }); } else { alert('Error: ' + result.error); }
+        if (result.success) {
+          setNewMemberPin({ name: `${firstName} ${lastName}`, pin: result.pin || '1111' });
+          if (requestCardOnAdd && result.airtableId) {
+            try {
+              await fetch('/api/request-card', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ memberAirtableId: result.airtableId, requestedBy: user ? user.name : 'Unknown', note: requestCardNoteOnAdd || 'New member sign-up' })
+              });
+              showToast('Card request added to Kristen\'s queue.', 'success', 4000);
+            } catch (cardErr) {
+              showToast('Member created, but card request failed. Try again from their profile.', 'warning', 5000);
+            }
+            setRequestCardOnAdd(false);
+            setRequestCardNoteOnAdd('');
+          }
+        } else { alert('Error: ' + result.error); }
       } catch (err) { alert('Network error. Please try again.'); }
     }
     setIsAdding(false);
@@ -2636,7 +2656,8 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
                          <div className="grid grid-cols-2 gap-5 mt-2 mb-2"><div><label className="text-xs font-bold text-green-600 uppercase mb-1 ml-2 block tracking-widest">Discount / Promo</label><input id="discount" placeholder="e.g. Farm Bureau $10" className="w-full p-4 bg-green-50 border border-green-200 rounded-xl outline-none focus:border-green-600 font-bold text-green-800 placeholder:text-green-300 transition-colors" /></div><div><label className="text-xs font-bold text-green-600 uppercase mb-1 ml-2 block tracking-widest">Expiration Date</label><input type="date" id="discount_exp" className="w-full p-4 bg-green-50 border border-green-200 rounded-xl outline-none focus:border-green-600 font-bold text-green-800 transition-colors" /></div></div>
                          <label className="flex items-center gap-3 bg-amber-50 border border-amber-100 rounded-xl p-4 cursor-pointer hover:bg-amber-100 transition-colors"><input type="checkbox" id="access247" className="w-5 h-5 rounded border-slate-300 text-[#f59e0b] focus:ring-[#f59e0b]" /><div><p className="text-sm font-bold text-amber-800">24/7 Badge Access</p><p className="text-[10px] text-amber-500">Member has a key fob or badge for after-hours access</p></div></label>
                          <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">24/7 Badge Number</label><input id="badgenum" placeholder="e.g. 1042" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div>
-                         <label className="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-xl p-4 cursor-pointer hover:bg-blue-100 transition-colors"><input type="checkbox" id="orientation" defaultChecked={true} className="w-5 h-5 rounded border-slate-300 text-[#1080ad] focus:ring-[#1080ad]" /><div><p className="text-sm font-bold text-blue-800">Needs Orientation</p><p className="text-[10px] text-blue-500">Member will need a facility walkthrough before checking in</p></div></label>
+                     <label className="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-xl p-4 cursor-pointer hover:bg-blue-100 transition-colors"><input type="checkbox" id="orientation" defaultChecked={true} className="w-5 h-5 rounded border-slate-300 text-[#1080ad] focus:ring-[#1080ad]" /><div><p className="text-sm font-bold text-blue-800">Needs Orientation</p><p className="text-[10px] text-blue-500">Member will need a facility walkthrough before checking in</p></div></label>
+                         <label className="flex items-center gap-3 bg-amber-50 border border-amber-100 rounded-xl p-4 cursor-pointer hover:bg-amber-100 transition-colors"><input type="checkbox" checked={requestCardOnAdd} onChange={(e) => setRequestCardOnAdd(e.target.checked)} className="w-5 h-5 rounded border-slate-300 text-[#dba51f] focus:ring-[#dba51f]" /><div className="flex-1"><p className="text-sm font-bold text-amber-800">Request Card Print</p><p className="text-[10px] text-amber-600">Adds this member to Kristen's card print queue (she will be emailed)</p>{requestCardOnAdd && (<input type="text" value={requestCardNoteOnAdd} onChange={(e) => setRequestCardNoteOnAdd(e.target.value)} placeholder="Optional note (e.g. Rush, hand-deliver)" className="w-full mt-2 p-2 bg-white border border-amber-200 rounded-lg text-xs outline-none focus:border-[#dba51f]" onClick={(e) => e.stopPropagation()} />)}</div></label>
                        </>
                      )}
                      {familyFlow && (
@@ -2645,6 +2666,7 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
                          <input type="hidden" id="center" value={familyFlow.center} />
                          <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-center gap-3"><Users size={18} className="text-blue-600" /><div><p className="text-sm font-bold text-blue-800">{familyFlow.plan} · {familyFlow.center}</p><p className="text-[10px] text-blue-500">Same plan and center as primary member</p></div></div>
                          <label className="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-xl p-4 cursor-pointer hover:bg-blue-100 transition-colors"><input type="checkbox" id="orientation" defaultChecked={true} className="w-5 h-5 rounded border-slate-300 text-[#1080ad] focus:ring-[#1080ad]" /><div><p className="text-sm font-bold text-blue-800">Needs Orientation</p><p className="text-[10px] text-blue-500">This family member also needs a walkthrough</p></div></label>
+                         <label className="flex items-center gap-3 bg-amber-50 border border-amber-100 rounded-xl p-4 cursor-pointer hover:bg-amber-100 transition-colors"><input type="checkbox" checked={requestCardOnAdd} onChange={(e) => setRequestCardOnAdd(e.target.checked)} className="w-5 h-5 rounded border-slate-300 text-[#dba51f] focus:ring-[#dba51f]" /><div className="flex-1"><p className="text-sm font-bold text-amber-800">Request Card Print</p><p className="text-[10px] text-amber-600">Adds this family member to Kristen's card print queue</p>{requestCardOnAdd && (<input type="text" value={requestCardNoteOnAdd} onChange={(e) => setRequestCardNoteOnAdd(e.target.value)} placeholder="Optional note" className="w-full mt-2 p-2 bg-white border border-amber-200 rounded-lg text-xs outline-none focus:border-[#dba51f]" onClick={(e) => e.stopPropagation()} />)}</div></label>
                        </>
                      )}
                      <button type="submit" disabled={isAdding} className="w-full bg-[#1080ad] text-white p-5 rounded-xl font-bold mt-4 shadow-lg hover:bg-blue-800 transition-colors text-lg flex items-center justify-center gap-2">{isAdding ? 'Saving to Airtable...' : familyFlow ? 'Add Family Member' : 'Create Member Profile'}</button>
@@ -2790,6 +2812,7 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
                       w.document.close();
                       setTimeout(() => w.print(), 1000);
                     }} className="bg-[#1080ad]/10 text-[#1080ad] hover:bg-[#1080ad] hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs"><QrCode size={20}/> Print Card</button>
+                    <button onClick={() => { setCardRequestModal(selectedMember); setCardRequestNote(''); }} className="bg-[#dba51f]/10 text-[#dba51f] hover:bg-[#dba51f] hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs"><Bell size={20}/> Request Card</button>
                    {!selectedMember.inactive && (<button onClick={() => handleConvertToVisitor(selectedMember)} className="bg-purple-50 text-purple-600 hover:bg-purple-600 hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs"><Eye size={20}/> Convert to Visitor</button>)}
                      <button onClick={async () => { if (!window.confirm(`Mark ${selectedMember.firstName} ${selectedMember.lastName} as ${selectedMember.inactive ? 'ACTIVE' : 'INACTIVE'}?`)) return; try { await fetch('/api/update-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: selectedMember.airtableId, inactive: !selectedMember.inactive }) }); const updated = { ...selectedMember, inactive: !selectedMember.inactive }; setSelectedMember(updated); setMembers(prev => prev.map(m => m.airtableId === selectedMember.airtableId ? updated : m)); } catch (err) { alert('Could not update.'); } }} className={`${selectedMember.inactive ? 'bg-green-50 text-green-600 hover:bg-green-600' : 'bg-red-50 text-red-600 hover:bg-red-600'} hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs`}><AlertCircle size={20}/> {selectedMember.inactive ? 'Reactivate' : 'Mark Inactive'}</button>
                     {user?.role === 'admin' && (<button onClick={handleDeleteMember} disabled={isDeleting} className="bg-red-50 text-red-600 hover:bg-red-600 hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs">{isDeleting ? '...' : <Trash2 size={20}/>} Delete</button>)}
@@ -2914,8 +2937,55 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
         );
       })()}
 
-      {/* BRANDED TOAST NOTIFICATION */}
-      {toast && (
+{/* REQUEST CARD MODAL */}
+      {cardRequestModal && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-md p-8 relative shadow-2xl">
+            <button onClick={() => { setCardRequestModal(null); setCardRequestNote(''); }} className="absolute top-4 right-4 text-slate-300 hover:text-red-500"><X size={20}/></button>
+            <div className="text-center mb-6">
+              <Bell size={40} className="text-[#dba51f] mx-auto mb-3" />
+              <h3 className="text-xl font-black text-[#001f3f]">Request Card Print</h3>
+              <p className="text-sm text-slate-400 mt-1">for {cardRequestModal.firstName} {cardRequestModal.lastName}</p>
+            </div>
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 mb-5 flex items-start gap-2">
+              <AlertCircle size={14} className="text-blue-500 shrink-0 mt-0.5" />
+              <p className="text-[11px] text-blue-700 font-medium">This will add the member to Kristen's print queue and send her an email notification. She'll print and deliver the card.</p>
+            </div>
+            <div className="mb-6">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 block">Reason or Note (Optional)</label>
+              <textarea value={cardRequestNote} onChange={(e) => setCardRequestNote(e.target.value)} placeholder="e.g. Lost original card, Got married — name change, Damaged" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#dba51f] text-sm min-h-[80px]" />
+            </div>
+            <div className="flex gap-3">
+              <button onClick={async () => {
+                try {
+                  const res = await fetch('/api/request-card', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      memberAirtableId: cardRequestModal.airtableId,
+                      requestedBy: user ? user.name : 'Unknown',
+                      note: cardRequestNote
+                    })
+                  });
+                  const result = await res.json();
+                  if (result.success) {
+                    setCardRequestModal(null);
+                    setCardRequestNote('');
+                    showToast('Card request submitted! Kristen will be notified.', 'success', 4000);
+                  } else {
+                    alert('Error: ' + (result.error || 'Could not submit request.'));
+                  }
+                } catch (err) {
+                  alert('Network error. Please try again.');
+                }
+              }} className="flex-1 bg-[#dba51f] text-white py-3 rounded-xl font-bold text-sm hover:bg-amber-600 transition-colors">Submit Request</button>
+              <button onClick={() => { setCardRequestModal(null); setCardRequestNote(''); }} className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold text-sm hover:bg-slate-200 transition-colors">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* BRANDED TOAST NOTIFICATION */}      {toast && (
         <div className="fixed top-6 right-6 z-[300] animate-in fade-in slide-in-from-top-4 duration-300">
           <div className={"px-6 py-4 rounded-2xl shadow-2xl border-2 flex items-center gap-4 max-w-md " + (toast.type === 'success' ? "bg-green-50 border-green-300 text-green-800" : toast.type === 'warning' ? "bg-amber-50 border-amber-300 text-amber-800" : toast.type === 'error' ? "bg-red-50 border-red-300 text-red-800" : "bg-blue-50 border-blue-300 text-blue-800")}>
             {toast.type === 'success' ? <CheckCircle size={24} className="text-green-500 shrink-0" /> : toast.type === 'warning' ? <AlertCircle size={24} className="text-amber-500 shrink-0" /> : toast.type === 'error' ? <AlertCircle size={24} className="text-red-500 shrink-0" /> : <CheckCircle size={24} className="text-blue-500 shrink-0" />}
