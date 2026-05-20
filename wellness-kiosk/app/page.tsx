@@ -1339,7 +1339,7 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
   if (!window.confirm('Found ' + membersToPrint.length + ' active members who visited in the last 2 months.\n\nGenerate Full-Size VIP Access Cards for them?\n\n(This will use ' + membersToPrint.length + ' blank CR80 cards).')) return;
 
   let html = `<!DOCTYPE html><html><head><title>Elite CR80 Member Cards</title>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;500;700;900&display=swap" rel="stylesheet">
   <style>
     @page { size: 3.375in 2.125in; margin: 0; }
     @media print { 
@@ -1383,18 +1383,13 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
     .logo-container { margin-bottom: 0.15in; width: 100%; }
     .logo-container img { max-height: 0.4in; max-width: 100%; object-fit: contain; drop-shadow: 0px 2px 3px rgba(0,0,0,0.2); }
     
-    .member-name { 
-      font-size: 12px; font-weight: 900; text-transform: uppercase; margin-bottom: 2px; 
-      line-height: 1.1; text-shadow: 0 2px 4px rgba(0,0,0,0.5); 
+    .center-name { 
+      font-size: 22px; font-weight: 900; text-transform: uppercase; margin-bottom: 0; 
+      line-height: 1; text-shadow: 0 2px 4px rgba(0,0,0,0.5); letter-spacing: 1px;
     }
-    .member-type { 
-      font-size: 6px; font-weight: 700; color: rgba(255,255,255,0.9); text-transform: uppercase; 
-      letter-spacing: 1.5px; margin-bottom: 0.12in;
-    }
-    .member-id { 
-      font-size: 9px; font-family: monospace; font-weight: 900; background: rgba(0,0,0,0.3); 
-      padding: 0.04in 0.08in; border-radius: 0.04in; border: 1px solid rgba(255,255,255,0.15);
-      letter-spacing: 1px;
+    .center-sub { 
+      font-size: 11px; font-weight: 300; text-transform: uppercase; margin-top: 4px;
+      letter-spacing: 3px; color: rgba(255,255,255,0.95);
     }
     
     /* --- BACK OF CARD --- */
@@ -1437,9 +1432,8 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
           <div class="logo-container">
             <img src="${logoUrl}" />
           </div>
-          <div class="member-name">${m.firstName} <br/>${m.lastName}</div>
-          <div class="member-type">${m.type} PLAN</div>
-          <div class="member-id">ID: ${m.id}</div>
+        <div class="center-name">${isHarper ? 'Harper' : 'Anthony'}</div>
+          <div class="center-sub">Wellness Center</div>
         </div>
       </div>
     `;
@@ -1447,7 +1441,7 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
     // Page 2: BACK
     html += `
       <div class="card-page back">
-        <div class="back-header">Return Postage Guaranteed</div>
+        <div class="back-header">If Found, Please Return</div>
         
         <div class="addresses">
           <div class="back-address">
@@ -1461,7 +1455,7 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
         </div>
         
         <div class="back-footer">
-          This card is the property of Patterson Health Center. It is non-transferable and intended for the exclusive use of the member named on the reverse side. If found, please drop in any USPS mailbox or return to the addresses above.
+          This card is the property of Patterson Health Center. It is non-transferable and intended for the exclusive use of the member named on the reverse side. If found, please return to one of the addresses above. Thank you!
         </div>
         <div class="back-accent"></div>
       </div>
