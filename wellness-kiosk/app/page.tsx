@@ -1389,7 +1389,12 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
     }
     .center-sub { 
       font-size: 11px; font-weight: 300; text-transform: uppercase; margin-top: 4px;
-      letter-spacing: 3px; color: rgba(255,255,255,0.95);
+      letter-spacing: 3px; color: rgba(255,255,255,0.95); margin-bottom: 0.12in;
+    }
+    .member-id { 
+      font-size: 9px; font-family: monospace; font-weight: 900; background: rgba(0,0,0,0.3); 
+      padding: 0.04in 0.08in; border-radius: 0.04in; border: 1px solid rgba(255,255,255,0.15);
+      letter-spacing: 1px;
     }
     
     /* --- BACK OF CARD --- */
@@ -1434,6 +1439,7 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
           </div>
         <div class="center-name">${isHarper ? 'Harper' : 'Anthony'}</div>
           <div class="center-sub">Wellness Center</div>
+          <div class="member-id">ID: ${m.id}</div>
         </div>
       </div>
     `;
