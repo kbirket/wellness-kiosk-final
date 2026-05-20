@@ -1433,11 +1433,7 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
           <div class="qr-label">Scan to Enter</div>
         </div>
         
-        <div class="info-section">
-          <div class="logo-container">
-            <img src="${logoUrl}" />
-          </div>
-        <div class="center-name">${isHarper ? 'Harper' : 'Anthony'}</div>
+      <div class="center-name">${isHarper ? 'Harper' : 'Anthony'}</div>
           <div class="center-sub">Wellness Center</div>
           <div class="member-id">ID: ${m.id}</div>
         </div>
