@@ -121,7 +121,7 @@ useEffect(() => {
     });
   }, [visits.length]);
   
-  // --- CENTRAL PRICING ENGINE ---
+  // --- CENTRAL PRICING ---
 const getBaseRate = (p, b) => {
     const r = {
       'SINGLE': { 'Month-to-Month': 35, 'Auto-Draft': 32, '6-Month Prepay': 200, '12-Month Prepay': 378 },
