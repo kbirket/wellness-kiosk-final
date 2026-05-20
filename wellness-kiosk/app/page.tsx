@@ -1307,37 +1307,36 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
   🔥 TEMP: BULK PRINT LETTERS
 </button>
 <button onClick={() => {
-  // 1. Filter out inactive members first
+  // Step 1: Filter out inactive members
   let membersToPrint = filteredMembers.filter(m => !m.inactive);
   
-  // 2. Calculate the date exactly 2 months ago (Relative to today: May 18, 2026)
+  // Step 2: Calculate cutoff date — 2 months ago
   const twoMonthsAgo = new Date();
   twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
   
-  // 3. Filter for members who checked in within the last 2 months using 'lastVisit'
-  membersToPrint = membersToPrint.filter(m => {
-    // Target 'lastVisit' (the camelCase version of 'Last Visit')
-    const dateValue = m.lastVisit || m['Last Visit'] || m.lastCheckIn;
-    
-    if (!dateValue) return false; 
-    
-    const checkInDate = new Date(dateValue);
-    // Ensure it's a valid date and fits our 2-month window
-    return !isNaN(checkInDate.getTime()) && checkInDate >= twoMonthsAgo;
+  // Step 3: Build a lookup of each member's most recent visit time from the visits array
+  const lastVisitByName = {};
+  visits.forEach(v => {
+    const visitTime = new Date(v.time);
+    if (isNaN(visitTime.getTime())) return;
+    const existing = lastVisitByName[v.name];
+    if (!existing || visitTime > existing) {
+      lastVisitByName[v.name] = visitTime;
+    }
   });
-
-  // 4. Upgraded Fallback Scanner: Scans ALL records to find missing keys
+  
+  // Step 4: Filter members to only those whose last visit was within the past 2 months
+  membersToPrint = membersToPrint.filter(m => {
+    const fullName = m.firstName + ' ' + m.lastName;
+    const lastVisit = lastVisitByName[fullName];
+    return lastVisit && lastVisit >= twoMonthsAgo;
+  });
+  
   if (membersToPrint.length === 0) {
-    const allUniqueKeys = new Set();
-    filteredMembers.forEach(member => {
-      Object.keys(member).forEach(key => allUniqueKeys.add(key));
-    });
-    const propertiesList = Array.from(allUniqueKeys).join(', ');
-    
-    return alert(`Matched 0 members.\n\nProperties found across ALL database records:\n[ ${propertiesList} ]`);
+    return alert('No active members with a check-in in the last 2 months were found.');
   }
   
-  if (!window.confirm(`Found ${membersToPrint.length} active members who visited in the last 2 months.\n\nGenerate Full-Size VIP Access Cards for them?\n\n(This will use ${membersToPrint.length} blank CR80 cards).`)) return;
+  if (!window.confirm('Found ' + membersToPrint.length + ' active members who visited in the last 2 months.\n\nGenerate Full-Size VIP Access Cards for them?\n\n(This will use ' + membersToPrint.length + ' blank CR80 cards).')) return;
 
   let html = `<!DOCTYPE html><html><head><title>Elite CR80 Member Cards</title>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;900&display=swap" rel="stylesheet">
