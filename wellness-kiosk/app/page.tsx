@@ -1249,32 +1249,33 @@ var showToast = function(message, type, duration) { setToast({ message: message,
       * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
       .page-break { page-break-after: always; }
     }
-    body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
+body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
     .page{max-width:7.5in;margin:0 auto;position:relative;page-break-inside:avoid;}
     .hdr{background:#003d6b;padding:10px 24px;display:flex;align-items:center;gap:12px}
     .hdr-logo{height:24px;opacity:.95}
     .hdr-name{font-size:14px;font-weight:700;color:#fff}
-    .hdr-sub{font-size:8px;color:#8bb8d9;letter-spacing:1px;margin-top:1px}
+    .hdr-sub{font-size:9px;color:#8bb8d9;letter-spacing:1px;margin-top:1px}
     .accent{height:3px;background:linear-gradient(to right,#dba51f,#dd6d22)}
-    .window-addr{margin-top:0.9in;margin-left:0.5in;font-size:12px;line-height:1.5;color:#1e293b;font-weight:600;min-height:0.85in}
+    .window-addr{margin-top:0.9in;margin-left:0.5in;font-size:13px;line-height:1.5;color:#1e293b;font-weight:600;min-height:0.85in}
     .body{padding-top:0}
-    .greeting{font-size:12px;margin-bottom:6px;font-weight:700;color:#003d6b}
-    .intro{font-size:10.5px;color:#475569;line-height:1.4;margin-bottom:8px}
-    .section-title{font-size:9px;font-weight:900;color:#003d6b;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px;padding-bottom:2px;border-bottom:2px solid #dba51f;margin-top:10px}
-    .cred-section{display:flex;align-items:center;gap:24px;justify-content:center;margin:6px 0;padding:8px 16px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0}
-    .how-to{font-size:10px;color:#475569;line-height:1.4;margin:6px 0;padding:8px 12px;background:#eff6ff;border-radius:5px;border:1px solid #bfdbfe}
+    .date{font-size:11px;color:#94a3b8;text-align:right;margin-bottom:8px}
+    .greeting{font-size:16px;margin-bottom:10px;font-weight:700;color:#003d6b}
+    .intro{font-size:13px;color:#475569;line-height:1.5;margin-bottom:10px}
+    .section-title{font-size:12px;font-weight:900;color:#003d6b;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;padding-bottom:3px;border-bottom:2px solid #dba51f;margin-top:14px}
+    .cred-section{display:flex;align-items:center;gap:24px;justify-content:center;margin:8px 0;padding:10px 16px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0}
+    .how-to{font-size:13px;color:#475569;line-height:1.5;margin:8px 0;padding:10px 14px;background:#eff6ff;border-radius:5px;border:1px solid #bfdbfe}
     .how-to strong{color:#003d6b}
-    .portal-box{margin:8px 0;padding:10px;background:#f0fdf4;border-radius:6px;border:1.5px solid #bbf7d0;text-align:center}
-    .box{border:1.5px solid #003d6b;border-radius:5px;overflow:hidden;margin-bottom:8px}
-    .box-hdr{background:#003d6b;padding:4px 12px;font-size:8px;font-weight:700;color:#fff;letter-spacing:1.5px}
-    .box-body{padding:0 12px}
-    .row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #e2e8f0}
+    .portal-box{margin:10px 0;padding:12px;background:#f0fdf4;border-radius:6px;border:1.5px solid #bbf7d0;text-align:center}
+    .box{border:1.5px solid #003d6b;border-radius:5px;overflow:hidden;margin-bottom:10px}
+    .box-hdr{background:#003d6b;padding:5px 14px;font-size:10px;font-weight:700;color:#fff;letter-spacing:1.5px}
+    .box-body{padding:0 14px}
+    .row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #e2e8f0}
     .row:last-child{border-bottom:none}
-    .lbl{font-size:10px;color:#64748b}
-    .val{font-size:10px;font-weight:700;color:#003d6b}
-    .sign{font-size:10px;margin-bottom:1px;margin-top:10px}
-    .sign-name{font-size:10px;font-weight:700;color:#003d6b}
-    .sign-title{font-size:9px;color:#94a3b8}
+    .lbl{font-size:12px;color:#64748b}
+    .val{font-size:13px;font-weight:700;color:#003d6b}
+    .sign{font-size:13px;margin-bottom:2px;margin-top:14px}
+    .sign-name{font-size:13px;font-weight:700;color:#003d6b}
+    .sign-title{font-size:11px;color:#94a3b8}
   </style></head><body>`;
 
   membersToPrint.forEach((m, index) => {
