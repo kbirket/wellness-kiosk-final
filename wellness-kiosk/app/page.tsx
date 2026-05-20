@@ -250,7 +250,7 @@ const handleSelfieUpload = async (imageData, memberId) => {
   const scopedMembers = members.filter(m => viewingCenter === 'both' || (m.center && m.center.toLowerCase().includes(viewingCenter)));
    const filteredVisits = visits.filter(v => viewingCenter === 'both' || (v.center && v.center.toLowerCase().includes(viewingCenter)));
   const memberMatches = kioskInput.length >= 2 ? members.filter(m => !m.inactive && ((m.firstName + ' ' + m.lastName).toLowerCase().includes(kioskInput.toLowerCase()) || m.id.toLowerCase().includes(kioskInput.toLowerCase()))).slice(0, 4) : [];
-  const visitorMatches = kioskInput.length >= 2 ? visitors.filter(v => { const today = new Date(); const exp = new Date(v.expirationDate + 'T23:59:59'); return exp >= today && v.orientationComplete && v.passActivated && (v.firstName + ' ' + v.lastName).toLowerCase().includes(kioskInput.toLowerCase()); }).slice(0, 2) : [];
+  const visitorMatches = kioskInput.length >= 2 ? visitors.filter(v => { const today = new Date(); const exp = new Date(v.expirationDate + 'T23:59:59'); const hasPasses = v.passesRemaining !== null && v.passesRemaining !== undefined && v.passesRemaining > 0; return (exp >= today || hasPasses) && v.orientationComplete && v.passActivated && (v.firstName + ' ' + v.lastName).toLowerCase().includes(kioskInput.toLowerCase()); }).slice(0, 2) : [];
   const kioskMatches = [...memberMatches.map(m => ({...m, _type: 'member'})), ...visitorMatches.map(v => ({...v, id: 'VISITOR', _type: 'visitor'}))];
   const stats = { total: scopedMembers.length, active: scopedMembers.filter(m => !m.inactive && m.status === 'ACTIVE').length, inactive: scopedMembers.filter(m => m.inactive).length, overdue: scopedMembers.filter(m => !m.inactive && m.status === 'OVERDUE').length, expiring: scopedMembers.filter(m => !m.inactive && m.status === 'EXPIRING').length, today: filteredVisits.filter(v => new Date(v.time).toDateString() === new Date().toDateString()).length };
   
@@ -928,7 +928,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
   /* --- PUBLIC KIOSK VIEW --- */
   if (view === 'kiosk') {
     const kioskMemberMatches = kioskInput.length >= 2 ? members.filter(m => !m.inactive && ((m.firstName + ' ' + m.lastName).toLowerCase().includes(kioskInput.toLowerCase()) || m.id.toLowerCase().includes(kioskInput.toLowerCase()))).slice(0, 4) : [];
-    const kioskVisitorMatches = kioskInput.length >= 2 ? visitors.filter(v => { const today = new Date(); const exp = new Date(v.expirationDate + 'T23:59:59'); return exp >= today && v.orientationComplete && v.passActivated && (v.firstName + ' ' + v.lastName).toLowerCase().includes(kioskInput.toLowerCase()); }).slice(0, 2) : [];
+    const kioskVisitorMatches = kioskInput.length >= 2 ? visitors.filter(v => { const today = new Date(); const exp = new Date(v.expirationDate + 'T23:59:59'); const hasPasses = v.passesRemaining !== null && v.passesRemaining !== undefined && v.passesRemaining > 0; return (exp >= today || hasPasses) && v.orientationComplete && v.passActivated && (v.firstName + ' ' + v.lastName).toLowerCase().includes(kioskInput.toLowerCase()); }).slice(0, 2) : [];
     const allKioskMatches = [...kioskMemberMatches.map(m => ({...m, _type: 'member'})), ...kioskVisitorMatches.map(v => ({...v, _type: 'visitor'}))];
     const isHarper = viewingCenter === 'harper';
     const centerColor = isHarper ? '#dd6d22' : '#1080ad';
