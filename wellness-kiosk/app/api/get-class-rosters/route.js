@@ -28,7 +28,7 @@ export async function GET(request) {
       if (offset) params.set('offset', offset);
 
       const response = await fetch(
-        `https://api.airtable.com/v0/${baseId}/Class Rosters?${params.toString()}`,
+        `https://api.airtable.com/v0/${baseId}/Class Roster?${params.toString()}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
