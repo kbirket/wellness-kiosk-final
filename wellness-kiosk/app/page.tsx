@@ -1569,7 +1569,7 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
           <div className="grid grid-cols-4 gap-6">
             <ProStatCard value={visitors.filter(v => { const exp = new Date(v.expirationDate + 'T23:59:59'); const hasPasses = v.passesRemaining !== null && v.passesRemaining !== undefined && v.passesRemaining > 0; return exp >= new Date() || hasPasses; }).length} label="Active Passes" color="#16a34a" />
             <ProStatCard value={visitors.filter(v => { const exp = new Date(v.expirationDate + 'T23:59:59'); const hasPasses = v.passesRemaining !== null && v.passesRemaining !== undefined && v.passesRemaining > 0; return exp < new Date() && !hasPasses; }).length} label="Expired" color="#dc2626" />
-            <ProStatCard value={visitors.filter(v => v.passType === 'Day Pass').length} label="Day Passes" color="#1080ad" />
+            <ProStatCard value={visitors.filter(v => v.passType === 'Day Pass').length} label="Walk-in Day Passes (all-time)" color="#1080ad" />
             <ProStatCard value={visitors.filter(v => v.passType !== 'Day Pass').length} label="Courtesy Passes" color="#8b5cf6" />
           </div>
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-visible pb-24">
@@ -2039,8 +2039,11 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
                     // New members
                     const newMembers = scopedMembers.filter(mem => { if (!mem.startDate) return false; const d = new Date(mem.startDate); return d.getFullYear() === yr && d.getMonth() === mo; });
                     
-                    // Day pass visitors this month
+                    // Day pass visitors this month (walk-ins only)
                     const dayPassVisitors = visitors.filter(v => v.passType === 'Day Pass' && v.purchaseDate && new Date(v.purchaseDate).getFullYear() === yr && new Date(v.purchaseDate).getMonth() === mo).length;
+                    // Member day-pass payments this month ($5 amount, member payment record)
+                    const memberDayPasses = payments.filter(p => { if (!p.date) return false; const d = new Date(p.date); const amt = parseFloat(p.amount) || 0; return d.getFullYear() === yr && d.getMonth() === mo && amt === 5 && p.memberId !== 'VISITOR'; }).length;
+                    const totalDayPasses = dayPassVisitors + memberDayPasses;
                     
                     // Build pie chart CSS
                     const pieData = [
@@ -2097,7 +2100,9 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
 <div class="section-title">Other Information</div>
 <table><thead><tr><th>Metric</th><th style="text-align:right">Value</th></tr></thead><tbody>
 <tr><td class="stat-label">New Members</td><td class="stat-value">${newMembers.length}</td></tr>
-<tr><td class="stat-label">Paid-Daily Visitors</td><td class="stat-value">${dayPassVisitors}</td></tr>
+<tr><td class="stat-label">Day Pass Activity (Total)</td><td class="stat-value">${totalDayPasses}</td></tr>
+<tr><td class="stat-label" style="font-size:10px;color:#94a3b8;padding-left:20px;">— Walk-in Visitors</td><td class="stat-value" style="font-size:14px;color:#64748b;">${dayPassVisitors}</td></tr>
+<tr><td class="stat-label" style="font-size:10px;color:#94a3b8;padding-left:20px;">— Existing Members ($5)</td><td class="stat-value" style="font-size:14px;color:#64748b;">${memberDayPasses}</td></tr>
 </tbody></table>
 </div>
 </div>
