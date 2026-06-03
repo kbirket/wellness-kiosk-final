@@ -2,10 +2,7 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request) {
   try {
-    const body = await request.json();
-    const { recordId, paidMonths, contactName, contactEmail, address, city, state, zip } = body;
-
-  const body = await request.json();
+const body = await request.json();
     const { recordId } = body;
     
     // Map known JS-style field names to Airtable field names
