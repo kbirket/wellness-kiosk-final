@@ -1811,8 +1811,8 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
                 <table className="w-full text-left border-collapse">
                   <thead className="bg-slate-50 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b">
                     <tr>
-                      <th className="px-6 py-4">Member / Visitor</th>
-                      <th className="px-4 py-4">ID</th>
+                    <th className="px-6 py-4 w-64">Member / Visitor</th>
+                      <th className="px-4 py-4 w-24">ID</th>
                       <th className="px-4 py-4 w-28">Amount</th>
                       <th className="px-4 py-4 w-28">Method</th>
                       <th className="px-4 py-4 w-24">Date</th>
