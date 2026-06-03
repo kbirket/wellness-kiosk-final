@@ -717,9 +717,9 @@ showToast('Network error.', 'error', 3000);
       }
     } else {
     // No visit yet today — create a new one
-      const targetDate = new Date(classDate + 'T00:00:00');
-      const now = new Date();
-      const visitISO = (targetDate.toDateString() === now.toDateString()) ? now.toISOString() : new Date(classDate + 'T' + classTimeStr).toISOString();
+      // Always use the class's scheduled time (not the current clock time)
+      // so that late-logged check-ins still match the class's actual start time
+      const visitISO = new Date(classDate + 'T' + classTimeStr).toISOString();
       try {
         const res = await fetch('/api/visits', {
           method: 'POST',
