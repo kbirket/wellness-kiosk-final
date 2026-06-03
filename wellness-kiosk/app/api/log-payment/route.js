@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request) {
   try {
-const { airtableId, method, currentDueDate, amount, paymentDate } = await request.json();    const baseId = process.env.AIRTABLE_BASE_ID;
+const { airtableId, method, currentDueDate, amount, paymentDate, note } = await request.json();    const baseId = process.env.AIRTABLE_BASE_ID;
     const token = process.env.AIRTABLE_PAT;
     
     // 1. Calculate the NEW due date
@@ -17,9 +17,11 @@ const { airtableId, method, currentDueDate, amount, paymentDate } = await reques
     const payAmount = Number(amount) || 0;
     const checkNum = method.startsWith('Check #') ? method.replace('Check #', '') : '';
     const payMethod = method.startsWith('Check') ? 'Check' : method;
-    const noteText = checkNum 
+    const userNote = note && note.trim() ? note.trim() : '';
+    const baseNote = checkNum 
         ? 'Check #' + checkNum + ' - Logged by staff via Wellness Hub' 
         : 'Logged by staff via Wellness Hub';
+    const noteText = userNote ? userNote + ' | ' + baseNote : baseNote;
 
     const payFields = {
       "Member": [airtableId],
