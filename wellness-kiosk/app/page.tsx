@@ -2084,7 +2084,6 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
 <tr><td class="stat-label">Total Visits</td><td class="stat-value">${monthVisits.length}</td></tr>
 <tr><td class="stat-label">Average Visits Per Day</td><td class="stat-value">${avgPerDay}</td></tr>
 <tr><td class="stat-label">Employee & Family Visits</td><td class="stat-value">${empVisits.length}</td></tr>
-<tr><td class="stat-label">Day Passes</td><td class="stat-value">${monthDayPasses}</td></tr>
 <tr><td class="stat-label">Corporate Member Visits</td><td class="stat-value">${corpVisits.length}</td></tr>
 </tbody></table>
 
