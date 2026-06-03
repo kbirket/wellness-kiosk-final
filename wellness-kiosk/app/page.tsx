@@ -1499,18 +1499,19 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
   💳 Print Active Member VIP Cards
 </button>
         {activeTab === 'classes' && (() => {
-          const allClasses = [
+         const allClasses = [
             { name: 'Low-Impact Aerobics', center: 'anthony', days: 'Mon - Fri', time: '9:30 AM', capacity: 25, color: 'border-[#1080ad]' },
             { name: 'Sit & Get Fit', center: 'anthony', days: 'Mon - Fri', time: '11:00 AM', capacity: 20, color: 'border-[#1080ad]' },
             { name: 'Modified Sit & Get Fit', center: 'anthony', days: 'Mon, Wed, Fri', time: '2:00 PM', capacity: 20, color: 'border-[#1080ad]' },
             { name: 'Low Impact Aerobics', center: 'harper', days: 'Mon, Wed, Fri', time: '10:00 AM', capacity: 25, color: 'border-[#f59e0b]' },
-            { name: 'Chair Class', center: 'harper', days: 'Mon, Wed, Fri', time: '11:00 AM', capacity: 20, color: 'border-[#f59e0b]' }
+            { name: 'Chair Class', center: 'harper', days: 'Mon, Wed, Fri', time: '11:00 AM', capacity: 20, color: 'border-[#f59e0b]' },
+            { name: 'Water Aerobics', center: 'harper', days: 'Mon, Wed, Fri', time: '12:15 PM', capacity: 50, color: 'border-[#1080ad]', startDate: '2026-06-08', endDate: '2026-07-03', instructor: 'Loretta' }
           ];
           const selectedClassDate = new Date(checkinDate + 'T00:00:00');
           const todayIdx = selectedClassDate.getDay();
           const dayMap = {0:'Sun',1:'Mon',2:'Tue',3:'Wed',4:'Thu',5:'Fri',6:'Sat'};
           const todayName = dayMap[todayIdx];
-          const displayedClasses = allClasses.filter(c => { const isRightCenter = viewingCenter === 'both' || c.center === viewingCenter; const isRightDay = c.days === 'Mon - Fri' ? (todayIdx >= 1 && todayIdx <= 5) : c.days.includes(todayName); return isRightCenter && isRightDay; });
+          const displayedClasses = allClasses.filter(c => { const isRightCenter = viewingCenter === 'both' || c.center === viewingCenter; const isRightDay = c.days === 'Mon - Fri' ? (todayIdx >= 1 && todayIdx <= 5) : c.days.includes(todayName); const selectedDateStr = checkinDate; const afterStart = !c.startDate || selectedDateStr >= c.startDate; const beforeEnd = !c.endDate || selectedDateStr <= c.endDate; return isRightCenter && isRightDay && afterStart && beforeEnd; });
           const todayStr = selectedClassDate.toDateString();
           const isViewingToday = todayStr === new Date().toDateString();
           return (
