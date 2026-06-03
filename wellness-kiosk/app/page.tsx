@@ -665,11 +665,25 @@ showToast('Network error.', 'error', 3000);
     }
   };
 
-  const handleClassCheckIn = async (mem, className, classCenter, classDate) => {
+  const handleClassCheckIn = async (mem, className, classCenter, classDate, classTime) => {
     const fullName = mem.firstName + ' ' + mem.lastName;
     const scanCenter = classCenter === 'anthony' ? 'Anthony' : 'Harper';
     const classMethod = 'Class: ' + className;
     const targetDateStr = new Date(classDate + 'T00:00:00').toDateString();
+    
+    // Parse class time "10:00 AM" → "10:00:00", "12:15 PM" → "12:15:00"
+    const parseClassTime = function(timeStr) {
+      if (!timeStr) return '12:00:00';
+      const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+      if (!match) return '12:00:00';
+      let hr = parseInt(match[1]);
+      const min = match[2];
+      const ampm = match[3].toUpperCase();
+      if (ampm === 'PM' && hr !== 12) hr += 12;
+      if (ampm === 'AM' && hr === 12) hr = 0;
+      return String(hr).padStart(2, '0') + ':' + min + ':00';
+    };
+    const classTimeStr = parseClassTime(classTime);
     
     // Check if member already has a visit on this date
     const existingVisit = visits.find(function(v) {
@@ -702,10 +716,10 @@ showToast('Network error.', 'error', 3000);
         return false;
       }
     } else {
-      // No visit yet today — create a new one
+    // No visit yet today — create a new one
       const targetDate = new Date(classDate + 'T00:00:00');
       const now = new Date();
-      const visitISO = (targetDate.toDateString() === now.toDateString()) ? now.toISOString() : new Date(classDate + 'T12:00:00').toISOString();
+      const visitISO = (targetDate.toDateString() === now.toDateString()) ? now.toISOString() : new Date(classDate + 'T' + classTimeStr).toISOString();
       try {
         const res = await fetch('/api/visits', {
           method: 'POST',
@@ -1543,10 +1557,10 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
                         <p className="text-slate-500 font-medium mb-12 flex items-center gap-2"><Clock size={16}/> {activeClass.time} • {activeClass.center === 'anthony' ? 'Anthony Wellness Center' : 'Harper Wellness Center'}</p>
                         <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 block">Scan Badge or Type Name</label>
                         <div className="flex gap-3">
-                          <input autoFocus className="flex-1 p-5 border-2 border-slate-200 rounded-2xl outline-none focus:border-[#1080ad] text-2xl bg-slate-50" placeholder="e.g. Smith" value={kioskInput} onChange={(e) => setKioskInput(e.target.value)}onKeyDown={(e) => { if (e.key === 'Enter') { var foundMember = members.find(function(mem) { return mem.id === kioskInput.toUpperCase().trim() || (mem.firstName + ' ' + mem.lastName).toLowerCase().includes(kioskInput.toLowerCase()); }); if (foundMember) { handleClassCheckIn(foundMember, activeClass.name, activeClass.center, checkinDate); } else { showToast('Member not found. Try searching by name.', 'error', 3000); } setKioskInput(''); } }} />
-                          <button onClick={() => { var foundMem = members.find(function(mem) { return mem.id === kioskInput.toUpperCase().trim() || (mem.firstName + ' ' + mem.lastName).toLowerCase().includes(kioskInput.toLowerCase()); }); if (foundMem) { handleClassCheckIn(foundMem, activeClass.name, activeClass.center, checkinDate); } else { showToast('Member not found. Try searching by name.', 'error', 3000); } setKioskInput(''); }} className="bg-[#001f3f] text-white px-8 rounded-2xl font-bold text-xl hover:bg-blue-900 transition-colors shadow-lg">Check In</button>
+                          <input autoFocus className="flex-1 p-5 border-2 border-slate-200 rounded-2xl outline-none focus:border-[#1080ad] text-2xl bg-slate-50" placeholder="e.g. Smith" value={kioskInput} onChange={(e) => setKioskInput(e.target.value)}onKeyDown={(e) => { if (e.key === 'Enter') { var foundMember = members.find(function(mem) { return mem.id === kioskInput.toUpperCase().trim() || (mem.firstName + ' ' + mem.lastName).toLowerCase().includes(kioskInput.toLowerCase()); }); if (foundMember) { handleClassCheckIn(foundMember, activeClass.name, activeClass.center, checkinDate, activeClass.time); } else { showToast('Member not found. Try searching by name.', 'error', 3000); } setKioskInput(''); } }} />
+                          <button onClick={() => { var foundMem = members.find(function(mem) { return mem.id === kioskInput.toUpperCase().trim() || (mem.firstName + ' ' + mem.lastName).toLowerCase().includes(kioskInput.toLowerCase()); }); if (foundMem) { handleClassCheckIn(foundMem, activeClass.name, activeClass.center, checkinDate, activeClass.time); } else { showToast('Member not found. Try searching by name.', 'error', 3000); } setKioskInput(''); }} className="bg-[#001f3f] text-white px-8 rounded-2xl font-bold text-xl hover:bg-blue-900 transition-colors shadow-lg">Check In</button>
                         </div>
-                        {kioskMatches.length > 0 && (<div className="absolute top-[80%] left-0 right-0 mt-2 bg-white border-2 border-[#1080ad] rounded-2xl shadow-2xl z-50 overflow-hidden text-left">{kioskMatches.map(m => (<button key={m._type + (m.airtableId || m.id)} onClick={() => { handleClassCheckIn(m, activeClass.name, activeClass.center, checkinDate); setKioskInput(''); }} className="w-full p-4 border-b border-slate-100 hover:bg-blue-50 transition-colors flex justify-between items-center group"><div><p className="font-bold text-[#001f3f] text-lg">{m.firstName} {m.lastName}</p></div><div className="bg-[#1080ad] text-white px-4 py-2 rounded-xl text-sm font-bold shadow-md group-hover:scale-105 transition-transform">Check In</div></button>))}</div>)}
+                        {kioskMatches.length > 0 && (<div className="absolute top-[80%] left-0 right-0 mt-2 bg-white border-2 border-[#1080ad] rounded-2xl shadow-2xl z-50 overflow-hidden text-left">{kioskMatches.map(m => (<button key={m._type + (m.airtableId || m.id)} onClick={() => { handleClassCheckIn(m, activeClass.name, activeClass.center, checkinDate, activeClass.time); setKioskInput(''); }} className="w-full p-4 border-b border-slate-100 hover:bg-blue-50 transition-colors flex justify-between items-center group"><div><p className="font-bold text-[#001f3f] text-lg">{m.firstName} {m.lastName}</p></div><div className="bg-[#1080ad] text-white px-4 py-2 rounded-xl text-sm font-bold shadow-md group-hover:scale-105 transition-transform">Check In</div></button>))}</div>)}
                         {kioskMessage.text && (<div className={`mt-6 p-4 rounded-xl text-center font-bold text-lg ${kioskMessage.type==='success'?'bg-green-100 text-green-700':kioskMessage.type==='warning'?'bg-yellow-100 text-yellow-700':'bg-red-100 text-red-700'}`}>{kioskMessage.text}{kioskMessage.subtext && <p className="text-sm mt-1">{kioskMessage.subtext}</p>}</div>)}
                       </div>
                       <div className="w-full md:w-80 bg-slate-50 rounded-2xl p-6 border border-slate-100 flex flex-col h-[400px]">
