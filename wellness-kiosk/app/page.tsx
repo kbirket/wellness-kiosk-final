@@ -1176,10 +1176,16 @@ var showToast = function(message, type, duration) { setToast({ message: message,
           
           const ninetyMinsAgo = new Date(Date.now() - 90 * 60 * 1000);
           const currentOccupancy = filteredVisits.filter(v => new Date(v.time) > ninetyMinsAgo).length;
+        // Scale thresholds based on whether viewing one center or both
+          const isBoth = viewingCenter === 'both';
+          const steadyMin = isBoth ? 7 : 4;
+          const steadyMax = isBoth ? 16 : 8;
+          const busyMin = isBoth ? 17 : 9;
           let occStatus = 'Quiet'; 
           let occColor = '#16a34a';
-          if (currentOccupancy > 15 && currentOccupancy <= 35) { occStatus = 'Steady'; occColor = '#f59e0b'; }
-          else if (currentOccupancy > 35) { occStatus = 'Busy'; occColor = '#ef4444'; }
+          if (currentOccupancy === 0) { occStatus = 'Empty'; occColor = '#94a3b8'; }
+          else if (currentOccupancy >= steadyMin && currentOccupancy <= steadyMax) { occStatus = 'Steady'; occColor = '#f59e0b'; }
+          else if (currentOccupancy >= busyMin) { occStatus = 'Busy'; occColor = '#ef4444'; }
 
           return (
             <div className="space-y-8">
