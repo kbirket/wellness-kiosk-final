@@ -1919,13 +1919,16 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
             const rate = parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0;
             const planLabel = m.type.includes('CORPORATE') ? 'Corporate' : m.type === 'SINGLE' ? 'Single' : m.type.includes('FAMILY') ? 'Family' : m.type.includes('SENIOR') ? 'Senior' : m.type.includes('STUDENT') ? 'Student' : 'Other';
             
-            const isCorp = m.type.includes('CORPORATE') || m.sponsorName;
+ const isCorp = m.type.includes('CORPORATE') || m.sponsorName;
             let isCollected = false;
             if (isCorp) {
               const sponsor = corporatePartners.find(cp => cp.sponsorMatch === m.sponsorName);
-              isCollected = sponsor && sponsor.paidMonths && sponsor.paidMonths.split(',').some(str => str.startsWith(reportMonth));
+              const sponsorPaidUnified = sponsor && sponsor.paidMonths && sponsor.paidMonths.split(',').some(str => str.startsWith(reportMonth));
+              const sponsorPaidHarper = sponsor && sponsor.paidMonthsHarper && sponsor.paidMonthsHarper.split(',').some(str => str.startsWith(reportMonth));
+              const sponsorPaidAnthony = sponsor && sponsor.paidMonthsAnthony && sponsor.paidMonthsAnthony.split(',').some(str => str.startsWith(reportMonth));
+              isCollected = sponsorPaidUnified || sponsorPaidHarper || sponsorPaidAnthony;
             } else {
-              isCollected = !!m.paymentMethod;
+              isCollected = payments.some(p => { if (!p.date || p.memberRecId !== m.airtableId) return false; const d = new Date(p.date); return d.getFullYear() === y && targetMonths.includes(d.getMonth()); });
             }
             if (isCollected) { collectedRevenueByPlan[planLabel] = (collectedRevenueByPlan[planLabel] || 0) + rate; }
           });
@@ -1946,8 +1949,7 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
             return { label, value: Math.round(value), color: colorMap[label] || '#64748b' };
           });
 
-          const actualRevenue = paidMembers.filter(m => m.paymentMethod).reduce((sum, m) => sum + (parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0), 0);
-          const corpCollected = corporatePartners.reduce((sum, cp) => {
+const actualRevenue = paidMembers.filter(m => payments.some(p => { if (!p.date || p.memberRecId !== m.airtableId) return false; const d = new Date(p.date); return d.getFullYear() === y && targetMonths.includes(d.getMonth()); })).reduce((sum, m) => sum + (parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0), 0);          const corpCollected = corporatePartners.reduce((sum, cp) => {
             const isPaid = cp.paidMonths && cp.paidMonths.split(',').some(str => str.startsWith(reportMonth));
             if (!isPaid) return sum;
             const corpMems = paidMembers.filter(m => m.sponsorName === cp.sponsorMatch);
