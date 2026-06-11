@@ -1844,8 +1844,7 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
                       <th className="px-4 py-4 w-28">Method</th>
                       <th className="px-4 py-4 w-24">Date</th>
                       <th className="px-4 py-4 w-28">Info</th>
-                      <th className="px-4 py-4 w-16"></th>
-                    </tr>
+<th className="px-4 py-4 w-28"></th>                    </tr>
                   </thead>
                   <tbody className="text-sm">
                     {periodPayments.length === 0 ? (
