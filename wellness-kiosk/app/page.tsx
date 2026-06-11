@@ -2890,8 +2890,11 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
                  </div>
                  </>)}
 
-                 {user?.role !== 'business' && (<div className="mt-14 grid grid-cols-2 md:grid-cols-3 gap-3">
-                    <button onClick={async () => { await processCheckIn(selectedMember.id, "Director Override"); setSelectedMember(null); }} className="col-span-2 md:col-span-3 bg-[#001f3f] text-white py-4 rounded-xl font-bold shadow-xl shadow-blue-900/20 active:scale-95 transition-all text-sm flex items-center justify-center gap-2"><CheckCircle size={18} /> Force Manual Check-In</button>
+                 {user?.role !== 'business' && (<div className="mt-14 space-y-6">
+                    <button onClick={async () => { await processCheckIn(selectedMember.id, "Director Override"); setSelectedMember(null); }} className="w-full bg-[#001f3f] text-white py-4 rounded-xl font-bold shadow-xl shadow-blue-900/20 active:scale-95 transition-all text-sm flex items-center justify-center gap-2"><CheckCircle size={18} /> Force Manual Check-In</button>
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Member Tools</p>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     <button onClick={() => setEditMode(!editMode)} className="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs"><FileText size={20} /> Edit Member</button>
                     {selectedMember.type.includes('FAMILY') && (<button onClick={() => { if (!selectedMember.familyGroupId) { alert('This member does not have a Family Group linked in Airtable. Please add one in Airtable first, or use the Add Member button with a Family plan to create a new family.'); return; } setFamilyFlow({ familyRecordId: selectedMember.familyGroupId, familyName: selectedMember.familyName || `${selectedMember.lastName} Family`, lastName: selectedMember.lastName, plan: selectedMember.type, center: selectedMember.center, email: selectedMember.email, phone: selectedMember.phone, corporateSponsor: selectedMember.sponsorName, addedMembers: [] }); setShowAddModal(true); setSelectedMember(null); }} className="bg-purple-50 text-purple-600 hover:bg-purple-600 hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs"><Users size={20} /> Add to Family</button>)}
                     <button onClick={() => { setProratePayment(false); setCheckNumber(''); setCustomPayAmount(''); setPaymentModal(selectedMember); }} className="bg-green-50 text-green-600 hover:bg-green-600 hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs"><CreditCard size={20} /> Log Payment</button>
@@ -2900,6 +2903,11 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
                       setTimeout(() => w.print(), 500); 
                     }} className="bg-slate-50 text-slate-600 hover:bg-slate-600 hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs"><Printer size={20} /> Payment Letter</button>
                      <button onClick={() => { const rate = parseFloat(String(selectedMember.monthlyRate).replace(/[^0-9.]/g, '')) || 0; printReceipt(selectedMember, selectedMember.paymentMethod || 'See records', rate.toFixed(2), false, selectedMember.nextPayment); }} className="bg-[#16a34a]/10 text-[#16a34a] hover:bg-[#16a34a] hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs"><CreditCard size={20} /> Print Receipt</button>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Communication & Cards</p>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                      <button onClick={() => { 
   const isHarper = selectedMember.center && selectedMember.center.toLowerCase().includes('harper'); 
   const centerName = isHarper ? 'Harper Wellness Center' : 'Anthony Wellness Center'; 
@@ -2931,10 +2939,17 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
                       w.document.close();
                       setTimeout(() => w.print(), 1000);
                     }} className="bg-[#1080ad]/10 text-[#1080ad] hover:bg-[#1080ad] hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs"><QrCode size={20}/> Print Card</button>
-                    <button onClick={() => { setCardRequestModal(selectedMember); setCardRequestNote(''); }} className="bg-[#dba51f]/10 text-[#dba51f] hover:bg-[#dba51f] hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs"><Bell size={20}/> Request Card</button>                     {user && user.role !== 'business' && (<button onClick={() => { setRefundModal({ member: selectedMember, originalPayment: null }); setRefundAmount(''); setRefundReason(''); setRefundMethod('Cash'); setRefundCheckNumber(''); setRefundDate(new Date().toISOString().split('T')[0]); }} className="bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs"><RotateCcw size={20}/> Issue Refund</button>)}
+                    <button onClick={() => { setCardRequestModal(selectedMember); setCardRequestNote(''); }} className="bg-[#dba51f]/10 text-[#dba51f] hover:bg-[#dba51f] hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs"><Bell size={20}/> Request Card</button>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Account Status</p>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">                   {user && user.role !== 'business' && (<button onClick={() => { setRefundModal({ member: selectedMember, originalPayment: null }); setRefundAmount(''); setRefundReason(''); setRefundMethod('Cash'); setRefundCheckNumber(''); setRefundDate(new Date().toISOString().split('T')[0]); }} className="bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs"><RotateCcw size={20}/> Issue Refund</button>)}
                    {!selectedMember.inactive && (<button onClick={() => handleConvertToVisitor(selectedMember)} className="bg-purple-50 text-purple-600 hover:bg-purple-600 hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs"><Eye size={20}/> Convert to Visitor</button>)}
                      <button onClick={async () => { if (!window.confirm(`Mark ${selectedMember.firstName} ${selectedMember.lastName} as ${selectedMember.inactive ? 'ACTIVE' : 'INACTIVE'}?`)) return; try { await fetch('/api/update-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: selectedMember.airtableId, inactive: !selectedMember.inactive }) }); const updated = { ...selectedMember, inactive: !selectedMember.inactive }; setSelectedMember(updated); setMembers(prev => prev.map(m => m.airtableId === selectedMember.airtableId ? updated : m)); } catch (err) { alert('Could not update.'); } }} className={`${selectedMember.inactive ? 'bg-green-50 text-green-600 hover:bg-green-600' : 'bg-red-50 text-red-600 hover:bg-red-600'} hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs`}><AlertCircle size={20}/> {selectedMember.inactive ? 'Reactivate' : 'Mark Inactive'}</button>
                     {user?.role === 'admin' && (<button onClick={handleDeleteMember} disabled={isDeleting} className="bg-red-50 text-red-600 hover:bg-red-600 hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs">{isDeleting ? '...' : <Trash2 size={20}/>} Delete</button>)}
+                      </div>
+                    </div>
                  </div>)}
               </div>
            </div>
