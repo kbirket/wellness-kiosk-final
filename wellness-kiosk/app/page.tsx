@@ -1939,7 +1939,9 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
             } else {
               isCollected = payments.some(p => { if (!p.date || p.memberRecId !== m.airtableId) return false; const d = new Date(p.date); return d.getFullYear() === y && targetMonths.includes(d.getMonth()); });
             }
-            if (isCollected) { collectedRevenueByPlan[planLabel] = (collectedRevenueByPlan[planLabel] || 0) + rate; }
+           if (isCollected) { collectedRevenueByPlan[planLabel] = (collectedRevenueByPlan[planLabel] || 0) + rate; }
+            var memRefundTotal = payments.filter(p => { if (!p.date || !p.isRefund || p.memberRecId !== m.airtableId) return false; const d = new Date(p.date); return d.getFullYear() === y && targetMonths.includes(d.getMonth()); }).reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
+            if (memRefundTotal > 0) { collectedRevenueByPlan[planLabel] = (collectedRevenueByPlan[planLabel] || 0) - memRefundTotal; }
           });
 
           // ADD VISITOR REVENUE
@@ -1947,7 +1949,7 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
             if (!v.purchaseDate || !v.amountPaid || v.amountPaid <= 0) return false;
             const d = new Date(v.purchaseDate);
             return d.getFullYear() === y && targetMonths.includes(d.getMonth()) && (viewingCenter === 'both' || (v.center && v.center.toLowerCase().includes(viewingCenter)));
-          }).reduce((sum, v) => sum + Number(v.amountPaid), 0);
+          }).reduce((sum, v) => sum + Number(v.amountPaid), 0) - payments.filter(p => { if (!p.date || !p.isRefund) return false; const vis = visitors.find(vv => vv.airtableId === p.memberRecId); if (!vis) return false; const d = new Date(p.date); if (d.getFullYear() !== y || !targetMonths.includes(d.getMonth())) return false; if (viewingCenter !== 'both' && (!vis.center || !vis.center.toLowerCase().includes(viewingCenter))) return false; return true; }).reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
 
           if (visitorRevenue > 0) {
             collectedRevenueByPlan['Visitor Passes'] = visitorRevenue;
@@ -1958,7 +1960,7 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
             return { label, value: Math.round(value), color: colorMap[label] || '#64748b' };
           });
 
-const actualRevenue = paidMembers.filter(m => payments.some(p => { if (!p.date || p.memberRecId !== m.airtableId) return false; const d = new Date(p.date); return d.getFullYear() === y && targetMonths.includes(d.getMonth()); })).reduce((sum, m) => sum + (parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0), 0);          const corpCollected = corporatePartners.reduce((sum, cp) => {
+const memberRefundsTotal = payments.filter(p => { if (!p.date || !p.isRefund) return false; const mem = members.find(mm => mm.airtableId === p.memberRecId); if (!mem) return false; if (mem.type.includes('CORPORATE') || mem.sponsorName) return false; const d = new Date(p.date); if (d.getFullYear() !== y || !targetMonths.includes(d.getMonth())) return false; if (viewingCenter !== 'both' && (!mem.center || !mem.center.toLowerCase().includes(viewingCenter))) return false; return true; }).reduce((s, p) => s + (parseFloat(p.amount) || 0), 0); const actualRevenue = paidMembers.filter(m => payments.some(p => { if (!p.date || p.memberRecId !== m.airtableId || p.isRefund) return false; const d = new Date(p.date); return d.getFullYear() === y && targetMonths.includes(d.getMonth()); })).reduce((sum, m) => sum + (parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0), 0) - memberRefundsTotal;          const corpCollected = corporatePartners.reduce((sum, cp) => {
             const isPaid = cp.paidMonths && cp.paidMonths.split(',').some(str => str.startsWith(reportMonth));
             if (!isPaid) return sum;
             const corpMems = paidMembers.filter(m => m.sponsorName === cp.sponsorMatch);
