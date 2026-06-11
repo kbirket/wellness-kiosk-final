@@ -422,7 +422,7 @@ const handleAddMemberSubmit = async (e) => {
         return;
       }
 
-      // Step 2: Mark the old member record as inactive with a conversion note
+      // Step 2: Mark the old member record as inactive plus a conversion note
       const existingNotes = member.notes || '';
       const conversionNote = `[${new Date().toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'})}] Converted to Visitor status.`;
       const newNotes = existingNotes.trim() === '' ? conversionNote : `${existingNotes}\n${conversionNote}`;
