@@ -1851,9 +1851,12 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
                     {periodPayments.length === 0 ? (
                       <tr><td colSpan="7" className="text-center py-12 text-slate-400 font-medium italic">No payments logged for {monthName}.</td></tr>
                     ) : periodPayments.sort((a,b) => new Date(b.date) - new Date(a.date)).map(function(p) {
-                      var mem = p.memberId === 'VISITOR' ? visitors.find(v => v.airtableId === p.memberRecId) : members.find(m => m.airtableId === p.memberRecId);
-                      var displayName = mem ? `${mem.firstName} ${mem.lastName}` : (p.memberId === 'VISITOR' ? 'Visitor' : 'Unknown');
-                      var displayId = p.memberId === 'VISITOR' ? 'VISITOR' : (mem ? mem.id : '—');
+                      var memberMatch = members.find(m => m.airtableId === p.memberRecId);
+                      var visitorMatch = !memberMatch ? visitors.find(v => v.airtableId === p.memberRecId) : null;
+                      var mem = memberMatch || visitorMatch;
+                      var isActualVisitor = !memberMatch && visitorMatch;
+                      var displayName = mem ? `${mem.firstName} ${mem.lastName}` : 'Unknown';
+                      var displayId = memberMatch ? memberMatch.id : (isActualVisitor ? 'VISITOR' : '—');
                       var displayMethod = p.method === 'Check' && p.checkNumber ? 'Check #' + p.checkNumber : p.method;
                       return (
                         <tr key={p.airtableId} className="border-b hover:bg-slate-50/80">
