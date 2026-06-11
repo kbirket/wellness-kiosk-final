@@ -1798,9 +1798,9 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
             });
           }
           
-          var totalCollected = periodPayments.reduce(function(s, p) { return s + (parseFloat(p.amount) || 0); }, 0);
+          var totalCollected = periodPayments.reduce(function(s, p) { var amt = parseFloat(p.amount) || 0; return s + (p.isRefund ? -amt : amt); }, 0);
           var byMethod = {};
-          periodPayments.forEach(function(p) { var m = p.method || 'Unknown'; byMethod[m] = (byMethod[m] || 0) + (parseFloat(p.amount) || 0); });
+          periodPayments.forEach(function(p) { var m = p.method || 'Unknown'; var amt = parseFloat(p.amount) || 0; byMethod[m] = (byMethod[m] || 0) + (p.isRefund ? -amt : amt); });
           
           return (
             <div className="space-y-6">
@@ -1861,7 +1861,7 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
                         <tr key={p.airtableId} className="border-b hover:bg-slate-50/80">
                           <td className="px-6 py-4 font-bold text-slate-800">{displayName}</td>
                           <td className="px-4 py-4 font-mono text-slate-400 text-xs">{displayId}</td>
-                          <td className="px-4 py-4 font-black text-[#16a34a]">${(parseFloat(p.amount) || 0).toFixed(2)}</td>
+                          <td className={"px-4 py-4 font-black " + (p.isRefund ? "text-red-500" : "text-[#16a34a]")}>{p.isRefund ? '-$' : '$'}{(parseFloat(p.amount) || 0).toFixed(2)}{p.isRefund && <span className="ml-2 px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[8px] font-black tracking-widest">REFUND</span>}</td>
                           <td className="px-4 py-4"><span title={p.method === 'Unknown' ? 'Payment method not recorded — this is likely a historical visitor record created before payment tracking was added.' : ''} className={"px-3 py-1 rounded-full text-[10px] font-black " + (p.method === 'Cash' ? 'bg-green-100 text-green-700' : p.method.includes('Check') ? 'bg-amber-100 text-amber-700' : p.method === 'Card' ? 'bg-purple-100 text-purple-700' : p.method === 'Unknown' ? 'bg-slate-100 text-slate-500 cursor-help' : 'bg-blue-100 text-blue-700')}>{displayMethod}</span></td>
                           <td className="px-4 py-4 text-xs text-slate-600">{p.date ? new Date(p.date + 'T00:00:00').toLocaleDateString('en-US', {month: 'short', day: 'numeric'}) : '—'}</td>
                           <td className="px-4 py-4 text-xs text-slate-400 truncate max-w-[120px]" title={p.notes}>{p.notes ? p.notes.replace('Logged by staff via Wellness Hub', '').replace(' - ', '').trim() || '—' : '—'}</td>
