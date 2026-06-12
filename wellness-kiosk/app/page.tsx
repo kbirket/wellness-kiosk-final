@@ -2004,8 +2004,7 @@ const memberRefundsTotal = payments.filter(p => { if (!p.date || !p.isRefund) re
             const boardGross = boardPayments.filter(p => !p.isRefund).reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
             const boardRefundsTotal = boardPayments.filter(p => p.isRefund).reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
 const boardNet = boardGross - boardRefundsTotal;
-            const debugBlock = '<div style="background:#fef3c7;border:2px solid #f59e0b;padding:12px;margin:20px 0;font-family:monospace;font-size:10px;">DEBUG: boardPayments=' + boardPayments.length + ' | boardGross=$' + boardGross.toFixed(2) + ' | boardRefundsTotal=$' + boardRefundsTotal.toFixed(2) + ' | boardNet=$' + boardNet.toFixed(2) + ' | refunds found=' + boardPayments.filter(p => p.isRefund).length + ' | refund details: ' + JSON.stringify(boardPayments.filter(p => p.isRefund).map(p => ({amt: p.amount, isRefund: p.isRefund, date: p.date}))) + '</div>';            
-            // Revenue breakdown by member/visitor type from actual payments
+const debugBlock = '<div style="background:#fef3c7;border:2px solid #f59e0b;padding:12px;margin:20px 0;font-family:monospace;font-size:10px;">DEBUG: boardPayments=' + boardPayments.length + ' | boardGross=$' + boardGross.toFixed(2) + ' | boardRefundsTotal=$' + boardRefundsTotal.toFixed(2) + ' | boardNet=$' + boardNet.toFixed(2) + '<br/>ALL payments debug: ' + JSON.stringify(boardPayments.map(p => ({amt: p.amount, isRefund: p.isRefund, isRefundType: typeof p.isRefund, date: p.date}))) + '</div>';            // Revenue breakdown by member/visitor type from actual payments
             const boardRevByCategory = { 'Standard Members': 0, 'Corporate Members': 0, 'Visitor Passes': 0 };
             boardPayments.forEach(p => {
               const amt = parseFloat(p.amount) || 0;
