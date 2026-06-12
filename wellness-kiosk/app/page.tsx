@@ -106,7 +106,7 @@ export default function WellnessHub() {
   const [refundReason, setRefundReason] = useState('');
   const [refundMethod, setRefundMethod] = useState('Cash');
   const [refundCheckNumber, setRefundCheckNumber] = useState('');
-  const [refundDate, setRefundDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [refundDate, setRefundDate] = useState(() => new Date().toLocaleDateString('en-CA'));
   useEffect(() => { localStorage.setItem('wellnessUsagePrefs', JSON.stringify(usageBasedCorps)); }, [usageBasedCorps]);
 // Emergency local backup
   useEffect(() => {
@@ -2944,7 +2944,7 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
                     </div>
                     <div>
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Account Status</p>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">                   {user && user.role !== 'business' && (<button onClick={() => { setRefundModal({ member: selectedMember, originalPayment: null }); setRefundAmount(''); setRefundReason(''); setRefundMethod('Cash'); setRefundCheckNumber(''); setRefundDate(new Date().toISOString().split('T')[0]); }} className="bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs"><RotateCcw size={20}/> Issue Refund</button>)}
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">                   {user && user.role !== 'business' && (<button onClick={() => { setRefundModal({ member: selectedMember, originalPayment: null }); setRefundAmount(''); setRefundReason(''); setRefundMethod('Cash'); setRefundCheckNumber(''); setRefundDate(new Date().toLocaleDateString('en-CA')); }} className="bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs"><RotateCcw size={20}/> Issue Refund</button>)}
                    {!selectedMember.inactive && (<button onClick={() => handleConvertToVisitor(selectedMember)} className="bg-purple-50 text-purple-600 hover:bg-purple-600 hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs"><Eye size={20}/> Convert to Visitor</button>)}
                      <button onClick={async () => { if (!window.confirm(`Mark ${selectedMember.firstName} ${selectedMember.lastName} as ${selectedMember.inactive ? 'ACTIVE' : 'INACTIVE'}?`)) return; try { await fetch('/api/update-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: selectedMember.airtableId, inactive: !selectedMember.inactive }) }); const updated = { ...selectedMember, inactive: !selectedMember.inactive }; setSelectedMember(updated); setMembers(prev => prev.map(m => m.airtableId === selectedMember.airtableId ? updated : m)); } catch (err) { alert('Could not update.'); } }} className={`${selectedMember.inactive ? 'bg-green-50 text-green-600 hover:bg-green-600' : 'bg-red-50 text-red-600 hover:bg-red-600'} hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs`}><AlertCircle size={20}/> {selectedMember.inactive ? 'Reactivate' : 'Mark Inactive'}</button>
                     {user?.role === 'admin' && (<button onClick={handleDeleteMember} disabled={isDeleting} className="bg-red-50 text-red-600 hover:bg-red-600 hover:text-white py-4 rounded-xl font-bold shadow-sm transition-all flex flex-col items-center justify-center gap-2 text-xs">{isDeleting ? '...' : <Trash2 size={20}/>} Delete</button>)}
@@ -2975,7 +2975,7 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
             </div>
             <div className="mb-4">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Payment Date</p>
-              <input type="date" id="paymentDate" defaultValue={new Date().toISOString().split('T')[0]} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#16a34a] text-sm font-bold text-[#001f3f]" />
+              <input type="date" id="paymentDate" defaultValue={new Date().toLocaleDateString('en-CA')} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#16a34a] text-sm font-bold text-[#001f3f]" />
             </div>
          <div className="mb-5">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Payment Amount</p>
