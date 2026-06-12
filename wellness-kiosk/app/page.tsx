@@ -1989,8 +1989,8 @@ const memberRefundsTotal = payments.filter(p => { if (!p.date || !p.isRefund) re
             const centerName = viewingCenter === 'both' ? 'All Centers' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1) + ' Wellness Center';
             const directorName = viewingCenter === 'harper' ? 'Patrick Johnson' : viewingCenter === 'anthony' ? 'Deanna Smithhisler' : 'Kristen (Administrator)';
             
-            // Payments-based revenue for the board period
-            const boardPayments = payments.filter(p => {
+        // Payments-based revenue for the board period — pulls both from Payments table and Visitor purchase records, mirroring the Payments tab
+            const boardStandardPayments = payments.filter(p => {
               if (!p.date) return false;
               const d = new Date(p.date);
               if (d.getFullYear() !== y || !targetMonths.includes(d.getMonth())) return false;
@@ -2001,6 +2001,23 @@ const memberRefundsTotal = payments.filter(p => { if (!p.date || !p.isRefund) re
               if (vis) return vis.center && vis.center.toLowerCase().includes(viewingCenter);
               return false;
             });
+            const boardVisitorPayments = visitors.filter(v => {
+              if (!v.purchaseDate || !v.amountPaid || v.amountPaid <= 0) return false;
+              const d = new Date(v.purchaseDate);
+              if (d.getFullYear() !== y || !targetMonths.includes(d.getMonth())) return false;
+              if (viewingCenter === 'both') return true;
+              return v.center && v.center.toLowerCase().includes(viewingCenter);
+            }).map(v => ({
+              airtableId: 'vis_' + v.airtableId,
+              memberRecId: v.airtableId,
+              memberId: 'VISITOR',
+              amount: v.amountPaid,
+              date: v.purchaseDate,
+              method: v.paymentMethod || 'Unknown',
+              notes: 'Visitor Pass: ' + v.passType,
+              isRefund: false
+            }));
+            const boardPayments = [...boardStandardPayments, ...boardVisitorPayments];
             const boardGross = boardPayments.filter(p => !p.isRefund).reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
             const boardRefundsTotal = boardPayments.filter(p => p.isRefund).reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
 const boardNet = boardGross - boardRefundsTotal;
@@ -2133,8 +2150,8 @@ const boardRevRows = Object.entries(boardRevByCategory).filter(([_, v]) => v !==
                     const memberDayPasses = payments.filter(p => { if (!p.date) return false; const d = new Date(p.date); const amt = parseFloat(p.amount) || 0; return d.getFullYear() === yr && d.getMonth() === mo && amt === 5 && p.memberId !== 'VISITOR'; }).length;
                     const totalDayPasses = dayPassVisitors + memberDayPasses;
                     
-                    // Revenue calculations based on actual payments
-                    const monthPayments = payments.filter(p => {
+                  // Revenue calculations based on actual payments — pulls from Payments table AND Visitor purchase records
+                    const monthStandardPayments = payments.filter(p => {
                       if (!p.date) return false;
                       const d = new Date(p.date);
                       if (d.getFullYear() !== yr || d.getMonth() !== mo) return false;
@@ -2145,6 +2162,23 @@ const boardRevRows = Object.entries(boardRevByCategory).filter(([_, v]) => v !==
                       if (vis) return vis.center && vis.center.toLowerCase().includes(viewingCenter);
                       return false;
                     });
+                    const monthVisitorPayments = visitors.filter(v => {
+                      if (!v.purchaseDate || !v.amountPaid || v.amountPaid <= 0) return false;
+                      const d = new Date(v.purchaseDate);
+                      if (d.getFullYear() !== yr || d.getMonth() !== mo) return false;
+                      if (viewingCenter === 'both') return true;
+                      return v.center && v.center.toLowerCase().includes(viewingCenter);
+                    }).map(v => ({
+                      airtableId: 'vis_' + v.airtableId,
+                      memberRecId: v.airtableId,
+                      memberId: 'VISITOR',
+                      amount: v.amountPaid,
+                      date: v.purchaseDate,
+                      method: v.paymentMethod || 'Unknown',
+                      notes: 'Visitor Pass: ' + v.passType,
+                      isRefund: false
+                    }));
+                    const monthPayments = [...monthStandardPayments, ...monthVisitorPayments];
                     const grossCollected = monthPayments.filter(p => !p.isRefund).reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
                     const monthRefunds = monthPayments.filter(p => p.isRefund);
                     const totalRefunds = monthRefunds.reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
