@@ -2091,6 +2091,30 @@ const memberRefundsTotal = payments.filter(p => { if (!p.date || !p.isRefund) re
                     const memberDayPasses = payments.filter(p => { if (!p.date) return false; const d = new Date(p.date); const amt = parseFloat(p.amount) || 0; return d.getFullYear() === yr && d.getMonth() === mo && amt === 5 && p.memberId !== 'VISITOR'; }).length;
                     const totalDayPasses = dayPassVisitors + memberDayPasses;
                     
+                    // Revenue calculations based on actual payments
+                    const monthPayments = payments.filter(p => {
+                      if (!p.date) return false;
+                      const d = new Date(p.date);
+                      if (d.getFullYear() !== yr || d.getMonth() !== mo) return false;
+                      if (viewingCenter === 'both') return true;
+                      const mem = members.find(mm => mm.airtableId === p.memberRecId);
+                      if (mem) return mem.center && mem.center.toLowerCase().includes(viewingCenter);
+                      const vis = visitors.find(vv => vv.airtableId === p.memberRecId);
+                      if (vis) return vis.center && vis.center.toLowerCase().includes(viewingCenter);
+                      return false;
+                    });
+                    const grossCollected = monthPayments.filter(p => !p.isRefund).reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
+                    const monthRefunds = monthPayments.filter(p => p.isRefund);
+                    const totalRefunds = monthRefunds.reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
+                    const netCollected = grossCollected - totalRefunds;
+                    const byMethod = {};
+                    monthPayments.forEach(p => {
+                      const methodKey = p.method || 'Unknown';
+                      const amt = parseFloat(p.amount) || 0;
+                      byMethod[methodKey] = (byMethod[methodKey] || 0) + (p.isRefund ? -amt : amt);
+                    });
+                    const methodColors = { Cash: '#16a34a', Check: '#f59e0b', Card: '#8b5cf6', ACH: '#1080ad', Unknown: '#64748b' };
+                    
                     // Build pie chart CSS
                     const pieData = [
                       { label: 'Single', value: singleCount, color: '#1080ad' },
@@ -2132,6 +2156,22 @@ const memberRefundsTotal = payments.filter(p => { if (!p.date || !p.isRefund) re
 <tr><td class="stat-label">Employee & Family Visits</td><td class="stat-value">${empVisits.length}</td></tr>
 <tr><td class="stat-label">Corporate Member Visits</td><td class="stat-value">${corpVisits.length}</td></tr>
 </tbody></table>
+
+<div class="section-title">Revenue Collected</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+<div>
+<table><thead><tr><th>Category</th><th style="text-align:right">Amount</th></tr></thead><tbody>
+<tr><td class="stat-label">Gross Collected</td><td class="stat-value" style="color:#16a34a">$${grossCollected.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td></tr>
+${totalRefunds > 0 ? `<tr><td class="stat-label" style="color:#991b1b">Refunds Issued (${monthRefunds.length})</td><td class="stat-value" style="color:#ef4444">-$${totalRefunds.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td></tr>` : ''}
+<tr style="background:#f0fdf4"><td class="stat-label" style="font-weight:900;color:#003d6b;text-transform:uppercase;letter-spacing:0.5px;font-size:10px">Net Collected</td><td class="stat-value" style="color:#16a34a;font-size:14px">$${netCollected.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td></tr>
+</tbody></table>
+</div>
+<div>
+<table><thead><tr><th>Method</th><th style="text-align:right">Net Amount</th></tr></thead><tbody>
+${Object.entries(byMethod).sort((a, b) => b[1] - a[1]).map(([m, amt]) => `<tr><td class="stat-label" style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:${methodColors[m] || '#64748b'};display:inline-block"></span>${m}</td><td class="stat-value" style="color:${amt < 0 ? '#ef4444' : '#003d6b'}">${amt < 0 ? '-' : ''}$${Math.abs(amt).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td></tr>`).join('') || '<tr><td colspan="2" style="padding:12px;text-align:center;color:#94a3b8;font-style:italic">No payments this month</td></tr>'}
+</tbody></table>
+</div>
+</div>
 
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
 <div>
