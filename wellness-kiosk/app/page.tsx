@@ -2003,8 +2003,8 @@ const memberRefundsTotal = payments.filter(p => { if (!p.date || !p.isRefund) re
             });
             const boardGross = boardPayments.filter(p => !p.isRefund).reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
             const boardRefundsTotal = boardPayments.filter(p => p.isRefund).reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
-            const boardNet = boardGross - boardRefundsTotal;
-            
+const boardNet = boardGross - boardRefundsTotal;
+            console.log('BOARD DEBUG — boardPayments:', boardPayments.length, 'boardGross:', boardGross, 'boardRefundsTotal:', boardRefundsTotal, 'boardNet:', boardNet, 'refunds in boardPayments:', boardPayments.filter(p => p.isRefund));            
             // Revenue breakdown by member/visitor type from actual payments
             const boardRevByCategory = { 'Standard Members': 0, 'Corporate Members': 0, 'Visitor Passes': 0 };
             boardPayments.forEach(p => {
