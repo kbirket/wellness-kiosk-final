@@ -1793,15 +1793,13 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
           // 3. Combine them
           var periodPayments = [...standardPayments, ...visitorPayments];
 
-          if (viewingCenter !== 'both') {
+        if (viewingCenter !== 'both') {
             periodPayments = periodPayments.filter(function(p) {
-              if (p.memberId === 'VISITOR') {
-                var vis = visitors.find(v => v.airtableId === p.memberRecId);
-                return vis && vis.center && vis.center.toLowerCase().includes(viewingCenter);
-              } else {
-                var mem = members.find(function(m) { return m.airtableId === p.memberRecId; });
-                return mem && mem.center && mem.center.toLowerCase().includes(viewingCenter);
-              }
+              var mem = members.find(function(m) { return m.airtableId === p.memberRecId; });
+              if (mem) return mem.center && mem.center.toLowerCase().includes(viewingCenter);
+              var vis = visitors.find(function(v) { return v.airtableId === p.memberRecId; });
+              if (vis) return vis.center && vis.center.toLowerCase().includes(viewingCenter);
+              return false;
             });
           }
           
