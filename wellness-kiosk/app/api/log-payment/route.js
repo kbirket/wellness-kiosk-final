@@ -5,13 +5,15 @@ export async function POST(request) {
 const { airtableId, method, currentDueDate, amount, paymentDate, note } = await request.json();    const baseId = process.env.AIRTABLE_BASE_ID;
     const token = process.env.AIRTABLE_PAT;
     
-    // 1. Calculate the NEW due date
-    let nextDate = new Date();
-    if (currentDueDate && currentDueDate !== 'N/A') {
-        nextDate = new Date(currentDueDate);
+  // 1. Calculate the NEW due date — advance one month from the payment date the staff entered
+    let nextDate;
+    if (paymentDate) {
+        nextDate = new Date(paymentDate + 'T00:00:00');
+    } else {
+        nextDate = new Date();
     }
     nextDate.setMonth(nextDate.getMonth() + 1);
-    const nextPaymentDue = nextDate.toISOString().split('T')[0];
+    const nextPaymentDue = nextDate.toLocaleDateString('en-CA');
     
     // 2. Create the Payment Record
     const payAmount = Number(amount) || 0;
