@@ -1,6 +1,5 @@
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
-
 export async function POST(request) {
   try {
     const { airtableId, memberName, method, amount, refundDate, originalPaymentId, reason } = await request.json();
@@ -49,7 +48,44 @@ export async function POST(request) {
       return Response.json({ success: false, error: data.error ? (data.error.message || JSON.stringify(data.error)) : 'Failed to save refund' }, { status: 400 });
     }
     
-    return Response.json({ success: true, recordId: data.records && data.records[0] ? data.records[0].id : null });
+    // If this refund is linked to an original payment, roll back the member's Next Payment Due by one month
+    let dueDateRolledBack = false;
+    let newDueDate = null;
+    if (originalPaymentId) {
+      try {
+        const memRes = await fetch('https://api.airtable.com/v0/' + baseId + '/Members/' + airtableId, {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const memData = await memRes.json();
+        if (memRes.ok && !memData.error && memData.fields && memData.fields['Next Payment Due']) {
+          const currentDue = new Date(memData.fields['Next Payment Due'] + 'T00:00:00');
+          currentDue.setMonth(currentDue.getMonth() - 1);
+          newDueDate = currentDue.toISOString().split('T')[0];
+          
+          const updateRes = await fetch('https://api.airtable.com/v0/' + baseId + '/Members/' + airtableId, {
+            method: 'PATCH',
+            headers: {
+              'Authorization': 'Bearer ' + token,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              fields: { 'Next Payment Due': newDueDate }
+            })
+          });
+          if (updateRes.ok) dueDateRolledBack = true;
+        }
+      } catch (rollbackErr) {
+        // Refund record was created successfully; due-date rollback is best-effort
+        console.error('Could not roll back due date:', rollbackErr);
+      }
+    }
+    
+    return Response.json({ 
+      success: true, 
+      recordId: data.records && data.records[0] ? data.records[0].id : null,
+      dueDateRolledBack,
+      newDueDate
+    });
   } catch (err) {
     return Response.json({ success: false, error: err.message }, { status: 500 });
   }
