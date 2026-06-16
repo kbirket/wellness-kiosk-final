@@ -1,6 +1,6 @@
 export async function POST(request) {
   try {
-    const { memberAirtableId, requestedBy, note } = await request.json();
+    const { memberAirtableId, requestedBy, note, printType } = await request.json();
     
     if (!memberAirtableId || !requestedBy) {
       return Response.json({ success: false, error: 'Missing required fields' }, { status: 400 });
@@ -19,7 +19,8 @@ export async function POST(request) {
             'Member': [memberAirtableId],
             'Requested By': requestedBy,
             'Note': note || '',
-            'Status': 'Pending'
+            'Status': 'Pending',
+            'Print Type': printType || 'Card'
           }
         })
       }
