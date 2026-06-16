@@ -96,7 +96,8 @@ export default function WellnessHub() {
  const [editVisitModal, setEditVisitModal] = useState(null);
   const [payments, setPayments] = useState([]);
  const [cardRequestModal, setCardRequestModal] = useState(null);
-  const [cardRequestNote, setCardRequestNote] = useState('');
+const [cardRequestNote, setCardRequestNote] = useState('');
+  const [cardRequestType, setCardRequestType] = useState('Card');
   const [requestCardOnAdd, setRequestCardOnAdd] = useState(false);
   const [requestCardNoteOnAdd, setRequestCardNoteOnAdd] = useState('');
   const [cardQueue, setCardQueue] = useState([]);   
@@ -232,7 +233,7 @@ const handleSelfieUpload = async (imageData, memberId) => {
       if (data.records) { setCorporatePartners(data.records.map(r => { const rawName = r.fields['Company Name']; const name = Array.isArray(rawName) ? rawName[0] : (rawName || ''); const rawMatch = r.fields['Sponsor Match']; const sponsorMatch = Array.isArray(rawMatch) ? rawMatch[0] : (rawMatch || name); return { id: r.id, name: String(name).trim(), sponsorMatch: String(sponsorMatch).trim(), contactName: r.fields['Contact Name'] || '', contactEmail: r.fields['Contact Email'] || '', paidMonths: r.fields['Paid Months'] || '', paidMonthsHarper: r.fields['Paid Months Harper'] || '', paidMonthsAnthony: r.fields['Paid Months Anthony'] || '', address: r.fields['Street Address'] || '', city: r.fields['City'] || '', state: r.fields['State'] || 'KS', zip: r.fields['Zip'] || '' }; }).filter(p => p.name).sort((a,b) => a.name.localeCompare(b.name))); }
     }).catch(() => {});
      fetch('/api/get-payments').then(res => res.json()).then(data => { if (data.records) { setPayments(data.records.map(function(r) { var memberLink = r.fields['Member'] || []; var memberRecId = Array.isArray(memberLink) ? memberLink[0] || '' : memberLink; var refundOfLink = r.fields['Refund Of'] || []; var refundOfId = Array.isArray(refundOfLink) ? refundOfLink[0] || '' : refundOfLink; return { airtableId: r.id, memberRecId: String(memberRecId).trim(), memberId: r.fields['Member Lookup'] && Array.isArray(r.fields['Member Lookup']) ? r.fields['Member Lookup'][0] : (r.fields['Member Lookup'] || 'VISITOR'), amount: r.fields['Amount'] || 0, method: r.fields['Payment Method'] || 'Cash', date: r.fields['Payment Date'] || '', notes: r.fields['Notes'] || '', checkNumber: r.fields['Check Number'] || '', isRefund: !!r.fields['Is Refund'], refundOf: String(refundOfId).trim() }; })); } }).catch(function() {});
-        fetch('/api/get-card-queue').then(res => res.json()).then(data => { if (data.records) { setCardQueue(data.records.map(function(r) { var memberLink = r.fields['Member'] || []; var memberRecId = Array.isArray(memberLink) ? memberLink[0] || '' : memberLink; return { airtableId: r.id, memberRecId: String(memberRecId).trim(), requestedBy: r.fields['Requested By'] || '', requestedDate: r.fields['Requested Date'] || '', note: r.fields['Note'] || '', status: r.fields['Status'] || 'Pending', printedDate: r.fields['Printed Date'] || '' }; })); } }).catch(function() {});     fetch('/api/get-visitors').then(res => res.json()).then(data => {
+        fetch('/api/get-card-queue').then(res => res.json()).then(data => { if (data.records) { setCardQueue(data.records.map(function(r) { var memberLink = r.fields['Member'] || []; var memberRecId = Array.isArray(memberLink) ? memberLink[0] || '' : memberLink; return { airtableId: r.id, memberRecId: String(memberRecId).trim(), requestedBy: r.fields['Requested By'] || '', requestedDate: r.fields['Requested Date'] || '', note: r.fields['Note'] || '', status: r.fields['Status'] || 'Pending', printedDate: r.fields['Printed Date'] || '', printType: r.fields['Print Type'] || 'Card' }; })); } }).catch(function() {});     fetch('/api/get-visitors').then(res => res.json()).then(data => {
       if (data.records) {
         setVisitors(data.records.map(r => ({
           airtableId: r.id, firstName: r.fields['First Name'] || '', lastName: r.fields['Last Name'] || '', email: r.fields['Email'] || '', phone: r.fields['Phone'] || '', passType: r.fields['Pass Type'] || '', amountPaid: r.fields['Amount Paid'] || 0, paymentMethod: r.fields['Payment Method'] || 'Card', referringProvider: r.fields['Referring Provider'] || '', purchaseDate: r.fields['Purchase Date'] || '', expirationDate: r.fields['Expiration Date'] || '', center: r.fields['Center'] || '', pin: r.fields['PIN'] || '', orientationComplete: !!r.fields['Orientation Complete'], totalVisits: r.fields['Total Visits'] || 0, address: r.fields['Street Address'] || '', city: r.fields['City'] || '', state: r.fields['State'] || '', zip: r.fields['Zip'] || '', notes: r.fields['Notes'] || '', passActivated: r.fields['Pass Activated'] !== false && r.fields['Pass Activated'] !== 'false', passesRemaining: r.fields['Passes Remaining'] !== undefined ? Number(r.fields['Passes Remaining']) : null,
@@ -3430,7 +3431,7 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
       {cardRequestModal && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-white rounded-2xl w-full max-w-md p-8 relative shadow-2xl">
-            <button onClick={() => { setCardRequestModal(null); setCardRequestNote(''); }} className="absolute top-4 right-4 text-slate-300 hover:text-red-500"><X size={20}/></button>
+            <button onClick={() => { setCardRequestModal(null); setCardRequestNote(''); setCardRequestType('Card'); }} className="absolute top-4 right-4 text-slate-300 hover:text-red-500"><X size={20}/></button>
             <div className="text-center mb-6">
               <Bell size={40} className="text-[#dba51f] mx-auto mb-3" />
               <h3 className="text-xl font-black text-[#001f3f]">Request Card Print</h3>
@@ -3439,6 +3440,15 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
             <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 mb-5 flex items-start gap-2">
               <AlertCircle size={14} className="text-blue-500 shrink-0 mt-0.5" />
               <p className="text-[11px] text-blue-700 font-medium">This will add the member to Kristen's print queue and send her an email notification. She'll print and deliver the card.</p>
+            </div>
+            <div className="mb-4">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 block">Print Type</label>
+              <div className="grid grid-cols-3 gap-2">
+                {['Card', 'Fob', 'Both'].map(t => (
+                  <button key={t} type="button" onClick={() => setCardRequestType(t)} className={"py-3 rounded-xl text-xs font-bold border-2 transition-all " + (cardRequestType === t ? "bg-[#dba51f] text-white border-[#dba51f]" : "bg-slate-50 text-slate-500 border-slate-200 hover:border-[#dba51f]/40")}>{t}</button>
+                ))}
+              </div>
+              <p className="text-[10px] text-slate-400 mt-2 italic">Default is Card. Use Fob for members who don't want to carry a full card. Both for members who want one of each.</p>
             </div>
             <div className="mb-6">
               <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 block">Reason or Note (Optional)</label>
@@ -3451,10 +3461,11 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                      memberAirtableId: cardRequestModal.airtableId,
-                      requestedBy: user ? user.name : 'Unknown',
-                      note: cardRequestNote
-                    })
+                        memberAirtableId: cardRequestModal.airtableId,
+                        requestedBy: user ? user.name : 'Unknown',
+                        note: cardRequestNote,
+                        printType: cardRequestType
+                      })
                   });
                   const result = await res.json();
                   if (result.success) {
@@ -3468,7 +3479,7 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
                   alert('Network error. Please try again.');
                 }
               }} className="flex-1 bg-[#dba51f] text-white py-3 rounded-xl font-bold text-sm hover:bg-amber-600 transition-colors">Submit Request</button>
-              <button onClick={() => { setCardRequestModal(null); setCardRequestNote(''); }} className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold text-sm hover:bg-slate-200 transition-colors">Cancel</button>
+              <button onClick={() => { setCardRequestModal(null); setCardRequestNote(''); setCardRequestType('Card'); }} className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold text-sm hover:bg-slate-200 transition-colors">Cancel</button>
             </div>
           </div>
         </div>
