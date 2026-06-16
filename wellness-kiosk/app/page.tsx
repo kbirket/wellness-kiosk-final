@@ -2484,9 +2484,7 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
                     
                     <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mt-6">
                       <div className="flex items-center justify-between mb-4">
-                       <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mt-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-bold text-[#001f3f] flex items-center gap-2"><KeyRound size={18} className="text-[#8b5cf6]"/> Pending Fobs ({fobRequests.length})</h3>
+                                               <h3 className="text-lg font-bold text-[#001f3f] flex items-center gap-2"><KeyRound size={18} className="text-[#8b5cf6]"/> Pending Fobs ({fobRequests.length})</h3>
                         <button onClick={handlePrint3UpFob} disabled={fobRequests.length < 3} className={"px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors " + (fobRequests.length >= 3 ? "bg-[#8b5cf6] text-white hover:bg-purple-700 shadow-sm" : "bg-slate-100 text-slate-400 cursor-not-allowed")} title={fobRequests.length >= 3 ? "Print the 3 oldest fob requests on one card" : "Need at least 3 pending fob requests"}><Printer size={14}/> Print 3-Up Fob {fobRequests.length < 3 && '(' + fobRequests.length + '/3)'}</button>
                       </div>
                       {fobRequests.length === 0 ? (
