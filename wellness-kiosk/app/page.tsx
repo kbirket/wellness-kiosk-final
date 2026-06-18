@@ -602,8 +602,7 @@ const processCheckIn = async (memberId, method = "Manual Entry") => {
     }
   };
 
-  useEffect(() => { let scanner = null; if (view === 'secret_scanner' && scannerActive) { scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 280, height: 280} }, false); scanner.render((decodedText) => { processCheckIn(decodedText, "Camera Scan"); }, () => {}); } return () => { if(scanner) scanner.clear().catch(e => console.error(e)); }; }, [view, scannerActive]);
-
+useEffect(() => { let scanner = null; if (view === 'secret_scanner' && scannerActive) { scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 280, height: 280}, rememberLastUsedCamera: true, showTorchButtonIfSupported: true }, false); scanner.render((decodedText) => { processCheckIn(decodedText, "Camera Scan"); }, () => {}); } return () => { if(scanner) scanner.clear().catch(e => console.error(e)); }; }, [view, scannerActive]);
 // --- QR SCANNER ENGINE FOR THE KIOSK ---
   useEffect(() => {
     let scanner = null;
@@ -1110,9 +1109,15 @@ var showToast = function(message, type, duration) { setToast({ message: message,
           </div>
         )}
 
-        {/* SCANNER OVERLAY */}
+ {/* SCANNER OVERLAY */}
         {isScanning && (
           <div className="fixed inset-0 bg-[#001226]/95 backdrop-blur-2xl z-[200] flex flex-col items-center justify-center p-6">
+            <style>{`
+              #reader__dashboard_section_csr a, #reader a, #reader__filescan_input, #reader button, #reader span { color: #1080ad !important; font-weight: 700 !important; font-size: 16px !important; text-decoration: underline !important; }
+              #reader__dashboard_section_csr { background: rgba(16, 128, 173, 0.1) !important; padding: 20px !important; border-radius: 16px !important; }
+              #reader__camera_selection { background: rgba(255,255,255,0.95) !important; color: #001f3f !important; font-weight: 700 !important; padding: 8px !important; border-radius: 8px !important; border: 2px solid #1080ad !important; }
+              #reader * { color: #fff; }
+            `}</style>
             <button onClick={() => setIsScanning(false)} className="absolute top-10 right-10 text-white/20 hover:text-white"><X size={60} /></button>
             <div className="mb-12 text-center">
               <h2 className="text-white text-4xl font-black mb-4 tracking-[0.2em] uppercase">Badge Scanner</h2>
