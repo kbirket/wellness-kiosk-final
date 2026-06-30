@@ -2052,14 +2052,16 @@ const memberRefundsTotal = payments.filter(p => { if (!p.date || !p.isRefund) re
             const boardGross = boardPayments.filter(p => !p.isRefund).reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
             const boardRefundsTotal = boardPayments.filter(p => p.isRefund).reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
 const boardNet = boardGross - boardRefundsTotal;
-          const boardRevByCategory = { 'Standard Members': 0, 'Corporate Members': 0, 'Visitor Passes': 0 };
+          const boardRevByCategory = { 'Standard Members': 0, 'Paying Corporate': 0, 'HD6 / HCHF': 0, 'Visitor Passes': 0 };
             boardPayments.forEach(p => {
               const amt = parseFloat(p.amount) || 0;
               const signedAmt = p.isRefund ? -amt : amt;
               const mem = members.find(mm => mm.airtableId === p.memberRecId);
               if (mem) {
-                if (mem.type.includes('CORPORATE') || mem.sponsorName) {
-                  boardRevByCategory['Corporate Members'] += signedAmt;
+                if (mem.type.includes('HD6') || mem.type === 'HCHF') {
+                  boardRevByCategory['HD6 / HCHF'] += signedAmt;
+                } else if (mem.type.includes('CORPORATE') || mem.sponsorName) {
+                  boardRevByCategory['Paying Corporate'] += signedAmt;
                 } else {
                   boardRevByCategory['Standard Members'] += signedAmt;
                 }
@@ -2068,7 +2070,10 @@ const boardNet = boardGross - boardRefundsTotal;
                 if (vis) boardRevByCategory['Visitor Passes'] += signedAmt;
               }
             });
-const boardRevRows = Object.entries(boardRevByCategory).filter(([_, v]) => v !== 0).map(([label, val]) => `<tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-weight:600;">${label}</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:900;color:${val < 0 ? '#ef4444' : '#16a34a'};">${val < 0 ? '-' : ''}$${Math.abs(val).toLocaleString()}</td></tr>`).join('') + (boardRefundsTotal > 0 ? `<tr><td colspan="2" style="padding:6px 12px;font-size:9px;font-style:italic;color:#94a3b8;text-align:center;border-bottom:1px solid #e2e8f0;">Category totals are net of ${boardPayments.filter(p => p.isRefund).length} refund${boardPayments.filter(p => p.isRefund).length !== 1 ? 's' : ''} totaling $${boardRefundsTotal.toLocaleString()}</td></tr>` : '');
+            
+            // Add HD6/HCHF count to show member roster even when revenue is $0
+            const hd6hchfMemberCount = scopedMembers.filter(m => m.type.includes('HD6') || m.type === 'HCHF').length;
+const boardRevRows = Object.entries(boardRevByCategory).filter(([label, v]) => v !== 0 || label === 'HD6 / HCHF').map(([label, val]) => { if (label === 'HD6 / HCHF') { return `<tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-weight:600;color:#64748b;">${label} <span style="font-size:9px;color:#94a3b8;font-weight:500;">(${hd6hchfMemberCount} member${hd6hchfMemberCount !== 1 ? 's' : ''}, comped — no revenue)</span></td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:900;color:#94a3b8;">$0</td></tr>`; } return `<tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-weight:600;">${label}</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:900;color:${val < 0 ? '#ef4444' : '#16a34a'};">${val < 0 ? '-' : ''}$${Math.abs(val).toLocaleString()}</td></tr>`; }).join('') + (boardRefundsTotal > 0 ? `<tr><td colspan="2" style="padding:6px 12px;font-size:9px;font-style:italic;color:#94a3b8;text-align:center;border-bottom:1px solid #e2e8f0;">Category totals are net of ${boardPayments.filter(p => p.isRefund).length} refund${boardPayments.filter(p => p.isRefund).length !== 1 ? 's' : ''} totaling $${boardRefundsTotal.toLocaleString()}</td></tr>` : '');
 
             const planRows = planChartData.filter(d => d.value > 0).map(d => `<tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-weight:600;">${d.label}</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:900;color:#003d6b;">${d.value}</td></tr>`).join('');
             const revRows = boardRevRows || '<tr><td colspan="2" style="padding:12px;text-align:center;color:#94a3b8;font-style:italic">No payments collected this period</td></tr>';
