@@ -2147,7 +2147,7 @@ const boardRevRows = Object.entries(boardRevByCategory).filter(([_, v]) => v !==
                     const avgPerDay = daysInMonth > 0 ? Math.round(monthVisits.length / daysInMonth) : 0;
                     
                     // Employee + family visits
-                    const corpVisits = monthVisits.filter(v => v.type && (v.type.includes('CORPORATE') || v.type.includes('HD6')));
+                    const corpVisits = monthVisits.filter(v => v.type && v.type.includes('CORPORATE'));                     const hd6hchfVisits = monthVisits.filter(v => v.type && (v.type.includes('HD6') || v.type === 'HCHF'));
                     const empVisits = monthVisits.filter(v => (!v.type || !v.type.includes('VISITOR')) && !(v.type && (v.type.includes('CORPORATE') || v.type.includes('HD6'))));
                     
                     // Membership stats
@@ -2252,8 +2252,8 @@ const boardRevRows = Object.entries(boardRevByCategory).filter(([_, v]) => v !==
 <tr><td class="stat-label">Total Visits</td><td class="stat-value">${monthVisits.length}</td></tr>
 <tr><td class="stat-label">Average Visits Per Day</td><td class="stat-value">${avgPerDay}</td></tr>
 <tr><td class="stat-label">Employee & Family Visits</td><td class="stat-value">${empVisits.length}</td></tr>
-<tr><td class="stat-label">Corporate Member Visits</td><td class="stat-value">${corpVisits.length}</td></tr>
-</tbody></table>
+<tr><td class="stat-label">Paying Corporate Visits</td><td class="stat-value">${corpVisits.length}</td></tr>
+<tr><td class="stat-label">HD6 / HCHF Visits</td><td class="stat-value">${hd6hchfVisits.length}</td></tr></tbody></table>
 
 <div class="section-title">Revenue Collected</div>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
