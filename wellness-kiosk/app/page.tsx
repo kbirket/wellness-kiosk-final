@@ -270,7 +270,7 @@ const handleSelfieUpload = async (imageData, memberId) => {
   const kioskMatches = [...memberMatches.map(m => ({...m, _type: 'member'})), ...visitorMatches.map(v => ({...v, id: 'VISITOR', _type: 'visitor'}))];
   const stats = { total: scopedMembers.length, active: scopedMembers.filter(m => !m.inactive && m.status === 'ACTIVE').length, inactive: scopedMembers.filter(m => m.inactive).length, overdue: scopedMembers.filter(m => !m.inactive && m.status === 'OVERDUE').length, expiring: scopedMembers.filter(m => !m.inactive && m.status === 'EXPIRING').length, today: filteredVisits.filter(v => new Date(v.time).toDateString() === new Date().toDateString()).length };
   
-  const reportStats = { 
+const reportStats = { 
       single: scopedMembers.filter(m => m.type === 'SINGLE').length, 
       family: scopedMembers.filter(m => m.type === 'FAMILY').length, 
       senior: scopedMembers.filter(m => m.type === 'SENIOR' || m.type === 'SENIOR CITIZEN').length, 
@@ -280,10 +280,11 @@ const handleSelfieUpload = async (imageData, memberId) => {
       corporateFamily: scopedMembers.filter(m => m.type === 'CORPORATE FAMILY').length, 
       dayPass: scopedMembers.filter(m => m.type.includes('DAY PASS')).length, 
       staff: scopedMembers.filter(m => m.type.includes('HD6')).length, 
+      hd6hchf: scopedMembers.filter(m => m.type.includes('HD6') || m.type === 'HCHF').length,
       military: scopedMembers.filter(m => m.type.includes('MILITARY')).length 
   };
   
-  const planChartData = [{label:'Single',value:reportStats.single,color:'#1080ad'},{label:'Family',value:reportStats.family,color:'#f59e0b'},{label:'Senior',value:reportStats.senior+reportStats.seniorFamily,color:'#16a34a'},{label:'Student',value:reportStats.student,color:'#8b5cf6'},{label:'Corporate',value:reportStats.corporate+reportStats.corporateFamily,color:'#ef4444'},{label:'Other (Staff/Mil/Pass)',value:reportStats.staff+reportStats.military+reportStats.dayPass,color:'#64748b'}];
+const planChartData = [{label:'Single',value:reportStats.single,color:'#1080ad'},{label:'Family',value:reportStats.family,color:'#f59e0b'},{label:'Senior',value:reportStats.senior+reportStats.seniorFamily,color:'#16a34a'},{label:'Student',value:reportStats.student,color:'#8b5cf6'},{label:'Paying Corporate',value:reportStats.corporate+reportStats.corporateFamily,color:'#ef4444'},{label:'HD6 / HCHF',value:reportStats.hd6hchf,color:'#dba51f'},{label:'Other (Mil/Pass)',value:reportStats.military+reportStats.dayPass,color:'#64748b'}];
   const statusChartData = [{label:'Active',value:stats.active,color:'#16a34a'},{label:'Expiring Soon',value:stats.expiring,color:'#f59e0b'},{label:'Overdue / Locked',value:stats.overdue,color:'#ef4444'},{label:'Inactive',value:stats.inactive,color:'#94a3b8'}];
   const familyMembers = activeMember ? members.filter(m => m.id !== activeMember.id && ((m.email && m.email.toLowerCase() === activeMember.email.toLowerCase()) || (m.phone && m.phone === activeMember.phone))) : [];
 
