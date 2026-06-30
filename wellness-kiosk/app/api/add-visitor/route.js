@@ -7,26 +7,26 @@ function generatePIN() {
   } while (pin === '0000' || pin === '1111');
   return pin;
 }
-function getExpirationDate(passType) {
-  const now = new Date();
+function getExpirationDate(passType, purchaseDate) {
+  const start = purchaseDate ? new Date(purchaseDate + 'T12:00:00') : new Date();
   switch (passType) {
     case 'Day Pass':
-      now.setHours(23, 59, 59, 999);
-      return now.toISOString().slice(0, 10);
+      start.setHours(23, 59, 59, 999);
+      return start.toISOString().slice(0, 10);
     case '2-Week Courtesy':
-      now.setDate(now.getDate() + 14);
-      return now.toISOString().slice(0, 10);
+      start.setDate(start.getDate() + 14);
+      return start.toISOString().slice(0, 10);
     case 'Month Courtesy':
-      now.setMonth(now.getMonth() + 1);
-      return now.toISOString().slice(0, 10);
+      start.setMonth(start.getMonth() + 1);
+      return start.toISOString().slice(0, 10);
     case 'Prepaid Passes':
-      now.setFullYear(now.getFullYear() + 1);
-      return now.toISOString().slice(0, 10);
+      start.setFullYear(start.getFullYear() + 1);
+      return start.toISOString().slice(0, 10);
     case 'Converted Member':
-      now.setFullYear(now.getFullYear() + 5);
-      return now.toISOString().slice(0, 10);
+      start.setFullYear(start.getFullYear() + 5);
+      return start.toISOString().slice(0, 10);
     default:
-      return now.toISOString().slice(0, 10);
+      return start.toISOString().slice(0, 10);
   }
 }
 function getAmountPaid(passType) {
@@ -45,7 +45,8 @@ export async function POST(request) {
   try {
     const body = await request.json();
     const newPIN = body.pin || generatePIN();
-    const expirationDate = getExpirationDate(body.passType);
+    const purchaseDate = body.purchaseDate || new Date().toISOString().slice(0, 10);
+    const expirationDate = getExpirationDate(body.passType, body.purchaseDate);
     const amountPaid = body.passType === 'Prepaid Passes' ? (body.amountPaid || 0) : getAmountPaid(body.passType);
     const fields = {
       "First Name": body.firstName,
@@ -59,7 +60,7 @@ export async function POST(request) {
       "Pass Type": body.passType,
       "Amount Paid": amountPaid,
       "Referring Provider": body.referringProvider || '',
-      "Purchase Date": new Date().toISOString().slice(0, 10),
+      "Purchase Date": purchaseDate,
       "Expiration Date": expirationDate,
       "Center": body.center,
       "PIN": newPIN,
