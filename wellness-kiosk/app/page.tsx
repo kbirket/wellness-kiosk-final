@@ -2781,7 +2781,8 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
                 state: e.target.vstate.value, 
                 zip: e.target.vzip.value, 
                 passType: passType, 
-                center: e.target.vcenter.value, 
+                purchaseDate: (document.getElementById('vbackdate_check') && document.getElementById('vbackdate_check').checked) ? document.getElementById('vbackdate_date').value : null,
+                center: e.target.vcenter.value,
                 referringProvider: e.target.vprovider.value, 
                 notes: e.target.vnotes.value, 
                 passesRemaining: passesRemaining, 
@@ -2811,6 +2812,17 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
               <div className="grid grid-cols-2 gap-5"><div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Email</label><input type="email" id="vemail" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div><div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Phone</label><input id="vphone" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div></div>
               <div className="grid grid-cols-2 gap-5"><div className="col-span-2"><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Street Address</label><input id="vaddress" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div><div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">City</label><input id="vcity" placeholder="Harper" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div><div className="grid grid-cols-2 gap-3"><div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">State</label><input id="vstate" defaultValue="KS" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div><div><label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Zip</label><input id="vzip" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] transition-colors" /></div></div></div>
               
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input type="checkbox" id="vbackdate_check" onChange={function(e) { var row = document.getElementById('vbackdate_row'); if (row) row.style.display = e.target.checked ? 'block' : 'none'; }} className="w-4 h-4 rounded border-slate-300 text-[#dba51f]" />
+                  <span className="text-xs font-bold text-amber-700 uppercase tracking-widest">Backdate Purchase</span>
+                </label>
+                <div id="vbackdate_row" style={{display: 'none'}} className="mt-3">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Purchase Date</label>
+                  <input type="date" id="vbackdate_date" defaultValue={new Date().toLocaleDateString('en-CA')} max={new Date().toLocaleDateString('en-CA')} className="w-full p-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#dba51f] text-sm font-bold text-[#001f3f]" />
+                  <p className="text-[10px] text-amber-700 mt-2 italic">Use this when adding a visitor after their actual visit date.</p>
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-5">
                 <div>
                   <label className="text-xs font-bold text-slate-400 uppercase mb-1 ml-2 block tracking-widest">Pass Type</label>
