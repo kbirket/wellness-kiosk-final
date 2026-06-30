@@ -1965,7 +1965,7 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
           
           paidMembers.forEach(m => {
             const rate = parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0;
-            const planLabel = m.type.includes('CORPORATE') ? 'Corporate' : m.type === 'SINGLE' ? 'Single' : m.type.includes('FAMILY') ? 'Family' : m.type.includes('SENIOR') ? 'Senior' : m.type.includes('STUDENT') ? 'Student' : 'Other';
+            const planLabel = m.type.includes('CORPORATE') ? 'Paying Corporate' : m.type === 'SINGLE' ? 'Single' : m.type.includes('FAMILY') ? 'Family' : m.type.includes('SENIOR') ? 'Senior' : m.type.includes('STUDENT') ? 'Student' : 'Other';
             
  const isCorp = m.type.includes('CORPORATE') || m.sponsorName;
             let isCollected = false;
@@ -1995,7 +1995,7 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
           }
 
           const revChartData = Object.entries(collectedRevenueByPlan).filter(([_, v]) => v > 0).sort((a, b) => b[1] - a[1]).map(([label, value]) => {
-            const colorMap = { Single: '#1080ad', Family: '#f59e0b', Senior: '#16a34a', Student: '#8b5cf6', Corporate: '#ef4444', 'Visitor Passes': '#14b8a6', Other: '#64748b' };
+            const colorMap = { Single: '#1080ad', Family: '#f59e0b', Senior: '#16a34a', Student: '#8b5cf6', 'Paying Corporate': '#ef4444', 'Visitor Passes': '#14b8a6', Other: '#64748b' };
             return { label, value: Math.round(value), color: colorMap[label] || '#64748b' };
           });
 
