@@ -531,6 +531,8 @@ const processCheckIn = async (memberId, method = "Manual Entry", overrideCooldow
     const m = membersRef.current.find(m => {
       if (m.id === id) return true;
       if (m.legacyMemberIds && m.legacyMemberIds.split(',').map(x => x.trim().toUpperCase()).includes(id)) return true;
+      const fullName = (m.firstName + ' ' + m.lastName).toUpperCase().trim();
+      if (fullName === id) return true;
       return false;
     });
 
