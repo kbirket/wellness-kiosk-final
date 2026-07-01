@@ -1683,8 +1683,8 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
           )}
         </div>)}
 
-        {activeTab === 'reports' && (() => {
-          const isCustomRange = reportMonth === 'custom';
+{activeTab === 'corporate' && (() => { 
+  const isCustomRange = reportMonth === 'custom';
           let periodStr, yearStr, y, targetMonths = [], displayPeriod = '';
           let rangeStart = null, rangeEnd = null;
           if (isCustomRange) {
