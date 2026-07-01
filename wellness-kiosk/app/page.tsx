@@ -544,7 +544,7 @@ const processCheckIn = async (memberId, method = "Manual Entry", overrideCooldow
         if (v.legacyMemberId.toUpperCase() !== id) return false;
         const today = new Date();
         const exp = new Date(v.expirationDate + 'T23:59:59');
-        return exp >= today && legacyMemberId: r.fields['Legacy Member ID'] || '', convertedToMember: !!r.fields['Converted to Member'], convertedDate: r.fields['Converted Date'] || '', memberRecordId: r.fields['Member Record ID'] || '' })));;
+return exp >= today && !v.convertedToMember && v.orientationComplete && v.passActivated;
       });
       if (legacyVisitor) {
         await processVisitorCheckIn(legacyVisitor);
@@ -1084,7 +1084,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
   /* --- PUBLIC KIOSK VIEW --- */
   if (view === 'kiosk') {
     const kioskMemberMatches = kioskInput.length >= 2 ? members.filter(m => !m.inactive && ((m.firstName + ' ' + m.lastName).toLowerCase().includes(kioskInput.toLowerCase()) || m.id.toLowerCase().includes(kioskInput.toLowerCase()))).slice(0, 4) : [];
-    const kioskVisitorMatches = kioskInput.length >= 2 ? visitors.filter(v => { const today = new Date(); const exp = new Date(v.expirationDate + 'T23:59:59'); const hasPasses = v.passesRemaining !== null && v.passesRemaining !== undefined && v.passesRemaining > 0; return (exp >= today || hasPasses) && legacyMemberId: r.fields['Legacy Member ID'] || '', convertedToMember: !!r.fields['Converted to Member'], convertedDate: r.fields['Converted Date'] || '', memberRecordId: r.fields['Member Record ID'] || '' }))); && (v.firstName + ' ' + v.lastName).toLowerCase().includes(kioskInput.toLowerCase()); }).slice(0, 2) : [];
+    const kioskVisitorMatches = kioskInput.length >= 2 ? visitors.filter(v => { const today = new Date(); const exp = new Date(v.expirationDate + 'T23:59:59'); const hasPasses = v.passesRemaining !== null && v.passesRemaining !== undefined && v.passesRemaining > 0; return (exp >= today || hasPasses) && !v.convertedToMember && v.orientationComplete && v.passActivated && (v.firstName + ' ' + v.lastName).toLowerCase().includes(kioskInput.toLowerCase()); }).slice(0, 2) : [];
     const allKioskMatches = [...kioskMemberMatches.map(m => ({...m, _type: 'member'})), ...kioskVisitorMatches.map(v => ({...v, _type: 'visitor'}))];
     const isHarper = viewingCenter === 'harper';
     const centerColor = isHarper ? '#dd6d22' : '#1080ad';
