@@ -116,7 +116,54 @@ const [cardRequestNote, setCardRequestNote] = useState('');
   const [requestCardNoteOnAdd, setRequestCardNoteOnAdd] = useState('');
   const [cardQueue, setCardQueue] = useState([]);   
 const [editPaymentModal, setEditPaymentModal] = useState(null);
-  const [showDuplicatesModal, setShowDuplicatesModal] = useState(false);
+  const [savingOnboarding, setSavingOnboarding] = useState(false);
+  
+  const saveOnboardingField = async (member, fields) => {
+    setSavingOnboarding(true);
+    try {
+      const res = await fetch('/api/update-onboarding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ airtableId: member.airtableId, fields })
+      });
+      const result = await res.json();
+      if (result.success) {
+        setMembers(prev => prev.map(m => {
+          if (m.airtableId !== member.airtableId) return m;
+          const updated = { ...m };
+          if ('Basic Orientation' in fields) updated.basicOrientation = fields['Basic Orientation'];
+          if ('Basic Orientation Date' in fields) updated.basicOrientationDate = fields['Basic Orientation Date'] || '';
+          if ('Paperwork Completed' in fields) updated.paperworkCompleted = fields['Paperwork Completed'];
+          if ('Paperwork Completed Date' in fields) updated.paperworkCompletedDate = fields['Paperwork Completed Date'] || '';
+          if ('24/7 Access Orientation' in fields) updated.accessOrientation24 = fields['24/7 Access Orientation'];
+          if ('24/7 Access Orientation Date' in fields) updated.accessOrientationDate24 = fields['24/7 Access Orientation Date'] || '';
+          if ('First Day Free' in fields) updated.firstDayFree = fields['First Day Free'];
+          if ('First Day Free Date' in fields) updated.firstDayFreeDate = fields['First Day Free Date'] || '';
+          if ('Onboarding Notes' in fields) updated.onboardingNotes = fields['Onboarding Notes'] || '';
+          return updated;
+        }));
+        setSelectedMember(prev => {
+          if (!prev || prev.airtableId !== member.airtableId) return prev;
+          const updated = { ...prev };
+          if ('Basic Orientation' in fields) updated.basicOrientation = fields['Basic Orientation'];
+          if ('Basic Orientation Date' in fields) updated.basicOrientationDate = fields['Basic Orientation Date'] || '';
+          if ('Paperwork Completed' in fields) updated.paperworkCompleted = fields['Paperwork Completed'];
+          if ('Paperwork Completed Date' in fields) updated.paperworkCompletedDate = fields['Paperwork Completed Date'] || '';
+          if ('24/7 Access Orientation' in fields) updated.accessOrientation24 = fields['24/7 Access Orientation'];
+          if ('24/7 Access Orientation Date' in fields) updated.accessOrientationDate24 = fields['24/7 Access Orientation Date'] || '';
+          if ('First Day Free' in fields) updated.firstDayFree = fields['First Day Free'];
+          if ('First Day Free Date' in fields) updated.firstDayFreeDate = fields['First Day Free Date'] || '';
+          if ('Onboarding Notes' in fields) updated.onboardingNotes = fields['Onboarding Notes'] || '';
+          return updated;
+        });
+      } else {
+        alert('Save failed: ' + (result.error || 'Unknown error'));
+      }
+    } catch (err) {
+      alert('Network error saving onboarding.');
+    }
+    setSavingOnboarding(false);
+  };  const [showDuplicatesModal, setShowDuplicatesModal] = useState(false);
   const [dismissedDuplicatePairs, setDismissedDuplicatePairs] = useState(() => { try { return JSON.parse(localStorage.getItem('wellnessDismissedDupes')) || []; } catch (e) { return []; } });
   const [mergingPair, setMergingPair] = useState(null);  const [refundModal, setRefundModal] = useState(null);
   const [refundAmount, setRefundAmount] = useState('');
@@ -3202,6 +3249,41 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
                  </>)}
 
                  {user?.role !== 'business' && (<div className="mt-14 space-y-6">
+                    {(() => {
+                      const today = new Date().toLocaleDateString('en-CA');
+                      const items = [
+                        { key: 'basicOrientation', dateKey: 'basicOrientationDate', label: 'Basic Orientation', apiField: 'Basic Orientation', apiDateField: 'Basic Orientation Date' },
+                        { key: 'paperworkCompleted', dateKey: 'paperworkCompletedDate', label: 'Paperwork Completed', apiField: 'Paperwork Completed', apiDateField: 'Paperwork Completed Date' },
+                        { key: 'accessOrientation24', dateKey: 'accessOrientationDate24', label: '24/7 Access Orientation', apiField: '24/7 Access Orientation', apiDateField: '24/7 Access Orientation Date' },
+                        { key: 'firstDayFree', dateKey: 'firstDayFreeDate', label: 'First Day Free Used', apiField: 'First Day Free', apiDateField: 'First Day Free Date' }
+                      ];
+                      const completedCount = items.filter(it => selectedMember[it.key]).length;
+                      const requiredMissing = !selectedMember.basicOrientation || !selectedMember.paperworkCompleted;
+                      return (
+                        <div className={`mb-4 rounded-2xl border-2 p-4 ${requiredMissing ? 'bg-amber-50 border-amber-300' : 'bg-emerald-50 border-emerald-200'}`}>
+                          <div className="flex items-center justify-between mb-3">
+                            <p className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2" style={{color: requiredMissing ? '#92400e' : '#166534'}}>{requiredMissing ? '⚠' : '✓'} Onboarding <span className="text-slate-400">({completedCount}/4)</span></p>
+                          </div>
+                          <div className="space-y-2">
+                            {items.map(it => {
+                              const checked = !!selectedMember[it.key];
+                              const dateVal = selectedMember[it.dateKey] || '';
+                              return (
+                                <div key={it.key} className="flex items-center gap-3 bg-white rounded-xl p-2 border border-slate-100">
+                                  <input type="checkbox" checked={checked} disabled={savingOnboarding} onChange={(e) => { const isNowChecked = e.target.checked; const updates = { [it.apiField]: isNowChecked }; if (isNowChecked && !dateVal) updates[it.apiDateField] = today; if (!isNowChecked) updates[it.apiDateField] = null; saveOnboardingField(selectedMember, updates); }} className="w-4 h-4 rounded border-slate-300 shrink-0 cursor-pointer" />
+                                  <span className="text-xs font-bold text-slate-700 flex-1">{it.label}</span>
+                                  <input type="date" value={dateVal} max={today} disabled={!checked || savingOnboarding} onChange={(e) => { saveOnboardingField(selectedMember, { [it.apiDateField]: e.target.value || null }); }} className={`text-xs font-bold p-1.5 rounded-md border shrink-0 outline-none ${checked ? 'bg-white border-slate-200 text-slate-700 focus:border-[#1080ad]' : 'bg-slate-50 border-slate-100 text-slate-300'}`} style={{width: '135px'}} />
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div className="mt-3">
+                            <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Onboarding Notes</label>
+                            <textarea defaultValue={selectedMember.onboardingNotes || ''} disabled={savingOnboarding} onBlur={(e) => { if (e.target.value !== (selectedMember.onboardingNotes || '')) saveOnboardingField(selectedMember, { 'Onboarding Notes': e.target.value }); }} placeholder="Any special notes about onboarding (pending items, exceptions, etc.)" className="w-full text-xs p-2 bg-white border border-slate-200 rounded-md outline-none focus:border-[#1080ad] resize-none" rows="2" />
+                          </div>
+                        </div>
+                      );
+                    })()}
                     <button onClick={async () => { await processCheckIn(selectedMember.id, "Director Override (Cooldown Bypass)", true); setSelectedMember(null); }} className="w-full bg-[#001f3f] text-white py-4 rounded-xl font-bold shadow-xl shadow-blue-900/20 active:scale-95 transition-all text-sm flex items-center justify-center gap-2"><CheckCircle size={18} /> Force Manual Check-In</button>
                     <div>
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Member Tools</p>
