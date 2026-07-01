@@ -581,17 +581,22 @@ const processCheckIn = async (memberId, method = "Manual Entry", overrideCooldow
       const scanCenter = currentLoc === 'both' ? m.center : currentLoc.charAt(0).toUpperCase() + currentLoc.slice(1);
       const currentTime = new Date().toISOString();
 
- var onboardingIncomplete = !m.basicOrientation || !m.paperworkCompleted;
+var onboardingIncomplete = !m.basicOrientation || !m.paperworkCompleted;
       if (onboardingIncomplete && !overrideCooldown) {
         var missing = [];
         if (!m.basicOrientation) missing.push('orientation');
         if (!m.paperworkCompleted) missing.push('paperwork');
+        var reasonCode = (!m.basicOrientation && !m.paperworkCompleted) ? 'Missing Both' : !m.basicOrientation ? 'Missing Basic Orientation' : 'Missing Paperwork';
+        var blockCenter = (m.center && m.center.toLowerCase().includes('harper')) ? 'Harper' : (m.center && m.center.toLowerCase().includes('anthony')) ? 'Anthony' : 'Harper';
+        fetch('/api/log-blocked-checkin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ memberAirtableId: m.airtableId, memberId: m.id, memberName: m.firstName + ' ' + m.lastName, reason: reasonCode, center: blockCenter }) }).catch(function() {});
         setKioskMessage({ text: 'Please see the front desk.', type: 'warning', subtext: m.firstName + ' still needs to complete ' + missing.join(' & ') + '.', onboardingBlocked: true, memberId: m.id, memberName: m.firstName + ' ' + m.lastName });
         setTimeout(function() { setKioskMessage({ text: '', type: '', subtext: '', onboardingBlocked: false }); }, 8000);
         return false;
       }
       var recentDupe = visits.some(function(v) { return v.name === (m.firstName + ' ' + m.lastName) && (new Date(currentTime) - new Date(v.time)) < 2 * 60 * 60 * 1000; });
       if (recentDupe && !overrideCooldown) {
+        var dupeCenter = (m.center && m.center.toLowerCase().includes('harper')) ? 'Harper' : (m.center && m.center.toLowerCase().includes('anthony')) ? 'Anthony' : 'Harper';
+        fetch('/api/log-blocked-checkin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ memberAirtableId: m.airtableId, memberId: m.id, memberName: m.firstName + ' ' + m.lastName, reason: 'Cooldown (2-hr)', center: dupeCenter }) }).catch(function() {});
         setKioskMessage({ text: 'Already checked in!', type: 'warning', subtext: m.firstName + ' was checked in within the last 2 hours.', cooldownBlocked: true, memberId: m.id, memberName: m.firstName + ' ' + m.lastName });
         setTimeout(function() { setKioskMessage({ text: '', type: '', subtext: '', cooldownBlocked: false }); }, 8000);
         return false;
