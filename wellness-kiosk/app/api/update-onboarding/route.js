@@ -15,7 +15,7 @@ export async function POST(request) {
     const token = process.env.AIRTABLE_PAT;
     
     // Whitelist of allowed field names — protects against arbitrary field updates
-    const allowedFields = [
+   const allowedFields = [
       'Basic Orientation',
       'Basic Orientation Date',
       'Paperwork Completed',
@@ -24,7 +24,9 @@ export async function POST(request) {
       '24/7 Access Orientation Date',
       'First Day Free',
       'First Day Free Date',
-      'Onboarding Notes'
+      'Onboarding Notes',
+      'Is Minor',
+      'Turns 18 Date'
     ];
     
     const cleanFields = {};
