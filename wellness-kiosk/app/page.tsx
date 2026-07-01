@@ -142,6 +142,8 @@ const [blockedCheckins, setBlockedCheckins] = useState([]);
           if ('First Day Free' in fields) updated.firstDayFree = fields['First Day Free'];
           if ('First Day Free Date' in fields) updated.firstDayFreeDate = fields['First Day Free Date'] || '';
           if ('Onboarding Notes' in fields) updated.onboardingNotes = fields['Onboarding Notes'] || '';
+          if ('Is Minor' in fields) updated.isMinor = fields['Is Minor'];
+          if ('Turns 18 Date' in fields) updated.turns18Date = fields['Turns 18 Date'] || '';
           return updated;
         }));
         setSelectedMember(prev => {
@@ -156,6 +158,8 @@ const [blockedCheckins, setBlockedCheckins] = useState([]);
           if ('First Day Free' in fields) updated.firstDayFree = fields['First Day Free'];
           if ('First Day Free Date' in fields) updated.firstDayFreeDate = fields['First Day Free Date'] || '';
           if ('Onboarding Notes' in fields) updated.onboardingNotes = fields['Onboarding Notes'] || '';
+          if ('Is Minor' in fields) updated.isMinor = fields['Is Minor'];
+          if ('Turns 18 Date' in fields) updated.turns18Date = fields['Turns 18 Date'] || '';
           return updated;
         });
       } else {
@@ -3420,6 +3424,26 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
                             <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Onboarding Notes</label>
                             <textarea defaultValue={selectedMember.onboardingNotes || ''} disabled={savingOnboarding} onBlur={(e) => { if (e.target.value !== (selectedMember.onboardingNotes || '')) saveOnboardingField(selectedMember, { 'Onboarding Notes': e.target.value }); }} placeholder="Any special notes about onboarding (pending items, exceptions, etc.)" className="w-full text-xs p-2 bg-white border border-slate-200 rounded-md outline-none focus:border-[#1080ad] resize-none" rows="2" />
                           </div>
+                        </div>
+                      );
+                    })()}
+                    {(() => {
+                      const isMinor = !!selectedMember.isMinor;
+                      const turns18 = selectedMember.turns18Date || '';
+                      const today = new Date().toLocaleDateString('en-CA');
+                      return (
+                        <div className={`mb-4 rounded-2xl border-2 p-4 ${isMinor ? 'bg-red-50 border-red-300' : 'bg-slate-50 border-slate-200'}`}>
+                          <div className="flex items-center gap-3">
+                            <input type="checkbox" checked={isMinor} disabled={savingOnboarding} onChange={(e) => { const nowMinor = e.target.checked; const updates = { 'Is Minor': nowMinor }; if (!nowMinor) updates['Turns 18 Date'] = null; saveOnboardingField(selectedMember, updates); }} className="w-4 h-4 rounded border-slate-300 shrink-0 cursor-pointer" />
+                            <span className={`text-xs font-black uppercase tracking-widest ${isMinor ? 'text-red-700' : 'text-slate-500'}`}>{isMinor ? '⚠ MINOR — Parent must be present' : 'Under age 18'}</span>
+                          </div>
+                          {isMinor && (
+                            <div className="mt-3 flex items-center gap-3">
+                              <label className="text-[10px] font-black uppercase tracking-widest text-red-700 shrink-0">Turns 18:</label>
+                              <input type="date" value={turns18} disabled={savingOnboarding} onChange={(e) => { saveOnboardingField(selectedMember, { 'Turns 18 Date': e.target.value || null }); }} className="text-xs font-bold p-2 rounded-md border border-red-200 bg-white text-slate-700 focus:border-red-500 outline-none" />
+                              {turns18 && turns18 > today && (<span className="text-[10px] font-bold text-red-600">({Math.ceil((new Date(turns18 + 'T00:00:00') - new Date()) / (1000 * 60 * 60 * 24))} days)</span>)}
+                            </div>
+                          )}
                         </div>
                       );
                     })()}
