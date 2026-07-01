@@ -117,8 +117,9 @@ const [cardRequestNote, setCardRequestNote] = useState('');
   const [cardQueue, setCardQueue] = useState([]);   
 const [editPaymentModal, setEditPaymentModal] = useState(null);
 const [savingOnboarding, setSavingOnboarding] = useState(false);
-  const [blockedCheckins, setBlockedCheckins] = useState([]);
-  
+const [blockedCheckins, setBlockedCheckins] = useState([]);
+  const [convertingVisitor, setConvertingVisitor] = useState(null);
+  const [convertingBusy, setConvertingBusy] = useState(false);
   const saveOnboardingField = async (member, fields) => {
     setSavingOnboarding(true);
     try {
@@ -299,7 +300,7 @@ const handleSelfieUpload = async (imageData, memberId) => {
       if (data.records) {
         setVisitors(data.records.map(r => ({
           airtableId: r.id, firstName: r.fields['First Name'] || '', lastName: r.fields['Last Name'] || '', email: r.fields['Email'] || '', phone: r.fields['Phone'] || '', passType: r.fields['Pass Type'] || '', amountPaid: r.fields['Amount Paid'] || 0, paymentMethod: r.fields['Payment Method'] || 'Card', referringProvider: r.fields['Referring Provider'] || '', purchaseDate: r.fields['Purchase Date'] || '', expirationDate: r.fields['Expiration Date'] || '', center: r.fields['Center'] || '', pin: r.fields['PIN'] || '', orientationComplete: !!r.fields['Orientation Complete'], totalVisits: r.fields['Total Visits'] || 0, address: r.fields['Street Address'] || '', city: r.fields['City'] || '', state: r.fields['State'] || '', zip: r.fields['Zip'] || '', notes: r.fields['Notes'] || '', passActivated: r.fields['Pass Activated'] !== false && r.fields['Pass Activated'] !== 'false', passesRemaining: r.fields['Passes Remaining'] !== undefined ? Number(r.fields['Passes Remaining']) : null,
-          legacyMemberId: r.fields['Legacy Member ID'] || '',
+          legacyMemberId: r.fields['Legacy Member ID'] || '',             convertedToMember: !!r.fields['Converted to Member'],             convertedDate: r.fields['Converted Date'] || '',             memberRecordId: r.fields['Member Record ID'] || '',
         })));
       }
     }).catch(() => {});
@@ -328,7 +329,7 @@ const handleSelfieUpload = async (imageData, memberId) => {
   const scopedMembers = members.filter(m => viewingCenter === 'both' || (m.center && m.center.toLowerCase().includes(viewingCenter)));
    const filteredVisits = visits.filter(v => viewingCenter === 'both' || (v.center && v.center.toLowerCase().includes(viewingCenter)));
   const memberMatches = kioskInput.length >= 2 ? members.filter(m => !m.inactive && ((m.firstName + ' ' + m.lastName).toLowerCase().includes(kioskInput.toLowerCase()) || m.id.toLowerCase().includes(kioskInput.toLowerCase()))).slice(0, 4) : [];
-  const visitorMatches = kioskInput.length >= 2 ? visitors.filter(v => { const today = new Date(); const exp = new Date(v.expirationDate + 'T23:59:59'); const hasPasses = v.passesRemaining !== null && v.passesRemaining !== undefined && v.passesRemaining > 0; return (exp >= today || hasPasses) && v.orientationComplete && v.passActivated && (v.firstName + ' ' + v.lastName).toLowerCase().includes(kioskInput.toLowerCase()); }).slice(0, 2) : [];
+  const visitorMatches = kioskInput.length >= 2 ? visitors.filter(v => { const today = new Date(); const exp = new Date(v.expirationDate + 'T23:59:59'); const hasPasses = v.passesRemaining !== null && v.passesRemaining !== undefined && v.passesRemaining > 0; return (exp >= today || hasPasses) && legacyMemberId: r.fields['Legacy Member ID'] || '', convertedToMember: !!r.fields['Converted to Member'], convertedDate: r.fields['Converted Date'] || '', memberRecordId: r.fields['Member Record ID'] || '' }))); && (v.firstName + ' ' + v.lastName).toLowerCase().includes(kioskInput.toLowerCase()); }).slice(0, 2) : [];
   const kioskMatches = [...memberMatches.map(m => ({...m, _type: 'member'})), ...visitorMatches.map(v => ({...v, id: 'VISITOR', _type: 'visitor'}))];
   const stats = { total: scopedMembers.length, active: scopedMembers.filter(m => !m.inactive && m.status === 'ACTIVE').length, inactive: scopedMembers.filter(m => m.inactive).length, overdue: scopedMembers.filter(m => !m.inactive && m.status === 'OVERDUE').length, expiring: scopedMembers.filter(m => !m.inactive && m.status === 'EXPIRING').length, today: filteredVisits.filter(v => new Date(v.time).toDateString() === new Date().toDateString()).length };
   
@@ -431,7 +432,7 @@ const handleAddMemberSubmit = async (e) => {
       const result = await res.json();
       if (result.success) {
         alert(`Pass Renewed!\n\nNew PIN: ${result.pin}\nExpires: ${result.expirationDate}`);
-        fetch('/api/get-visitors').then(r => r.json()).then(data => { if (data.records) setVisitors(data.records.map(r => ({ airtableId: r.id, firstName: r.fields['First Name'] || '', lastName: r.fields['Last Name'] || '', email: r.fields['Email'] || '', phone: r.fields['Phone'] || '', passType: r.fields['Pass Type'] || '', amountPaid: r.fields['Amount Paid'] || 0, referringProvider: r.fields['Referring Provider'] || '', purchaseDate: r.fields['Purchase Date'] || '', expirationDate: r.fields['Expiration Date'] || '', center: r.fields['Center'] || '', pin: r.fields['PIN'] || '', orientationComplete: !!r.fields['Orientation Complete'], totalVisits: r.fields['Total Visits'] || 0, address: r.fields['Street Address'] || '', city: r.fields['City'] || '', state: r.fields['State'] || '', zip: r.fields['Zip'] || '', notes: r.fields['Notes'] || '', passActivated: r.fields['Pass Activated'] !== false && r.fields['Pass Activated'] !== 'false', passesRemaining: r.fields['Passes Remaining'] !== undefined ? Number(r.fields['Passes Remaining']) : null, legacyMemberId: r.fields['Legacy Member ID'] || '' }))); });
+        fetch('/api/get-visitors').then(r => r.json()).then(data => { if (data.records) setVisitors(data.records.map(r => ({ airtableId: r.id, firstName: r.fields['First Name'] || '', lastName: r.fields['Last Name'] || '', email: r.fields['Email'] || '', phone: r.fields['Phone'] || '', passType: r.fields['Pass Type'] || '', amountPaid: r.fields['Amount Paid'] || 0, referringProvider: r.fields['Referring Provider'] || '', purchaseDate: r.fields['Purchase Date'] || '', expirationDate: r.fields['Expiration Date'] || '', center: r.fields['Center'] || '', pin: r.fields['PIN'] || '', orientationComplete: !!r.fields['Orientation Complete'], totalVisits: r.fields['Total Visits'] || 0, address: r.fields['Street Address'] || '', city: r.fields['City'] || '', state: r.fields['State'] || '', zip: r.fields['Zip'] || '', notes: r.fields['Notes'] || '', passActivated: r.fields['Pass Activated'] !== false && r.fields['Pass Activated'] !== 'false', passesRemaining: r.fields['Passes Remaining'] !== undefined ? Number(r.fields['Passes Remaining']) : null, legacyMemberId: r.fields['Legacy Member ID'] || '', convertedToMember: !!r.fields['Converted to Member'], convertedDate: r.fields['Converted Date'] || '', memberRecordId: r.fields['Member Record ID'] || '' }))); });
       }
     } catch (err) { alert('Renewal failed.'); }
   };
@@ -512,7 +513,7 @@ const handleAddMemberSubmit = async (e) => {
         if (data.records) {
           setVisitors(data.records.map(r => ({
             airtableId: r.id, firstName: r.fields['First Name'] || '', lastName: r.fields['Last Name'] || '', email: r.fields['Email'] || '', phone: r.fields['Phone'] || '', passType: r.fields['Pass Type'] || '', amountPaid: r.fields['Amount Paid'] || 0, paymentMethod: r.fields['Payment Method'] || 'Card', referringProvider: r.fields['Referring Provider'] || '', purchaseDate: r.fields['Purchase Date'] || '', expirationDate: r.fields['Expiration Date'] || '', center: r.fields['Center'] || '', pin: r.fields['PIN'] || '', orientationComplete: !!r.fields['Orientation Complete'], totalVisits: r.fields['Total Visits'] || 0, address: r.fields['Street Address'] || '', city: r.fields['City'] || '', state: r.fields['State'] || '', zip: r.fields['Zip'] || '', notes: r.fields['Notes'] || '', passActivated: r.fields['Pass Activated'] !== false && r.fields['Pass Activated'] !== 'false', passesRemaining: r.fields['Passes Remaining'] !== undefined ? Number(r.fields['Passes Remaining']) : null,
-            legacyMemberId: r.fields['Legacy Member ID'] || '',
+            legacyMemberId: r.fields['Legacy Member ID'] || '',             convertedToMember: !!r.fields['Converted to Member'],             convertedDate: r.fields['Converted Date'] || '',             memberRecordId: r.fields['Member Record ID'] || '',
           })));
         }
       });
@@ -543,7 +544,7 @@ const processCheckIn = async (memberId, method = "Manual Entry", overrideCooldow
         if (v.legacyMemberId.toUpperCase() !== id) return false;
         const today = new Date();
         const exp = new Date(v.expirationDate + 'T23:59:59');
-        return exp >= today && v.orientationComplete && v.passActivated;
+        return exp >= today && legacyMemberId: r.fields['Legacy Member ID'] || '', convertedToMember: !!r.fields['Converted to Member'], convertedDate: r.fields['Converted Date'] || '', memberRecordId: r.fields['Member Record ID'] || '' })));;
       });
       if (legacyVisitor) {
         await processVisitorCheckIn(legacyVisitor);
@@ -1083,7 +1084,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
   /* --- PUBLIC KIOSK VIEW --- */
   if (view === 'kiosk') {
     const kioskMemberMatches = kioskInput.length >= 2 ? members.filter(m => !m.inactive && ((m.firstName + ' ' + m.lastName).toLowerCase().includes(kioskInput.toLowerCase()) || m.id.toLowerCase().includes(kioskInput.toLowerCase()))).slice(0, 4) : [];
-    const kioskVisitorMatches = kioskInput.length >= 2 ? visitors.filter(v => { const today = new Date(); const exp = new Date(v.expirationDate + 'T23:59:59'); const hasPasses = v.passesRemaining !== null && v.passesRemaining !== undefined && v.passesRemaining > 0; return (exp >= today || hasPasses) && v.orientationComplete && v.passActivated && (v.firstName + ' ' + v.lastName).toLowerCase().includes(kioskInput.toLowerCase()); }).slice(0, 2) : [];
+    const kioskVisitorMatches = kioskInput.length >= 2 ? visitors.filter(v => { const today = new Date(); const exp = new Date(v.expirationDate + 'T23:59:59'); const hasPasses = v.passesRemaining !== null && v.passesRemaining !== undefined && v.passesRemaining > 0; return (exp >= today || hasPasses) && legacyMemberId: r.fields['Legacy Member ID'] || '', convertedToMember: !!r.fields['Converted to Member'], convertedDate: r.fields['Converted Date'] || '', memberRecordId: r.fields['Member Record ID'] || '' }))); && (v.firstName + ' ' + v.lastName).toLowerCase().includes(kioskInput.toLowerCase()); }).slice(0, 2) : [];
     const allKioskMatches = [...kioskMemberMatches.map(m => ({...m, _type: 'member'})), ...kioskVisitorMatches.map(v => ({...v, _type: 'visitor'}))];
     const isHarper = viewingCenter === 'harper';
     const centerColor = isHarper ? '#dd6d22' : '#1080ad';
@@ -1742,7 +1743,7 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
           {visitors.filter(v => { const dateExp = new Date(v.expirationDate + 'T23:59:59') < new Date(); const noPasses = !(v.passesRemaining !== null && v.passesRemaining !== undefined && v.passesRemaining > 0); return dateExp && noPasses && (v.email || v.phone); }).length > 0 && (
             <ProListCard title="Conversion Leads — Expired Passes with Contact Info">
               <p className="text-sm text-slate-400 mb-4">These visitors had passes that expired. They have contact info and could be converted to full members.</p>
-              <div className="space-y-3">{visitors.filter(v => { const dateExp = new Date(v.expirationDate + 'T23:59:59') < new Date(); const noPasses = !(v.passesRemaining !== null && v.passesRemaining !== undefined && v.passesRemaining > 0); return dateExp && noPasses && (v.email || v.phone); }).map(v => (<div key={v.airtableId} className="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-100"><div><p className="font-bold text-slate-800">{v.firstName} {v.lastName}</p><p className="text-[11px] text-slate-400">{v.email} {v.phone ? `· ${v.phone}` : ''}</p><p className="text-[10px] text-purple-500 font-bold">{v.passType} · Referred by {v.referringProvider || 'N/A'} · {v.totalVisits} visit{v.totalVisits !== 1 ? 's' : ''}</p></div><div className="flex gap-2"><button className="p-2 bg-[#1080ad] text-white rounded-lg shadow-md" title="Email"><Mail size={16}/></button><button className="p-2 bg-[#dd6d22] text-white rounded-lg shadow-md" title="Call"><Phone size={16}/></button></div></div>))}</div>
+              <div className="space-y-3">{visitors.filter(v => { if (v.convertedToMember) return false; const dateExp = new Date(v.expirationDate + 'T23:59:59') < new Date(); const noPasses = !(v.passesRemaining !== null && v.passesRemaining !== undefined && v.passesRemaining > 0); return dateExp && noPasses && (v.email || v.phone); }).map(v => (<div key={v.airtableId} className="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-100"><div><p className="font-bold text-slate-800">{v.firstName} {v.lastName}</p><p className="text-[11px] text-slate-400">{v.email} {v.phone ? `· ${v.phone}` : ''}</p><p className="text-[10px] text-purple-500 font-bold">{v.passType} · Referred by {v.referringProvider || 'N/A'} · {v.totalVisits} visit{v.totalVisits !== 1 ? 's' : ''}</p></div><div className="flex gap-2"><button onClick={() => setConvertingVisitor(v)} className="p-2 bg-[#8b5cf6] text-white rounded-lg shadow-md hover:bg-purple-700 transition-colors" title="Convert to Member"><Users size={16}/></button><button className="p-2 bg-[#1080ad] text-white rounded-lg shadow-md" title="Email"><Mail size={16}/></button><button className="p-2 bg-[#dd6d22] text-white rounded-lg shadow-md" title="Call"><Phone size={16}/></button></div></div>))}</div>
             </ProListCard>
           )}
         </div>)}
@@ -2950,7 +2951,7 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
                   setShowAddVisitorModal(false); 
                  fetch('/api/get-visitors').then(r => r.json()).then(data => { 
                     if (data.records) { 
-                      setVisitors(data.records.map(r => ({ airtableId: r.id, firstName: r.fields['First Name'] || '', lastName: r.fields['Last Name'] || '', email: r.fields['Email'] || '', phone: r.fields['Phone'] || '', passType: r.fields['Pass Type'] || '', amountPaid: r.fields['Amount Paid'] || 0, referringProvider: r.fields['Referring Provider'] || '', purchaseDate: r.fields['Purchase Date'] || '', expirationDate: r.fields['Expiration Date'] || '', center: r.fields['Center'] || '', pin: r.fields['PIN'] || '', orientationComplete: !!r.fields['Orientation Complete'], totalVisits: r.fields['Total Visits'] || 0, address: r.fields['Street Address'] || '', city: r.fields['City'] || '', state: r.fields['State'] || '', zip: r.fields['Zip'] || '', notes: r.fields['Notes'] || '', passActivated: r.fields['Pass Activated'] !== false && r.fields['Pass Activated'] !== 'false', passesRemaining: r.fields['Passes Remaining'] !== undefined ? Number(r.fields['Passes Remaining']) : null, legacyMemberId: r.fields['Legacy Member ID'] || '' }))); 
+                      setVisitors(data.records.map(r => ({ airtableId: r.id, firstName: r.fields['First Name'] || '', lastName: r.fields['Last Name'] || '', email: r.fields['Email'] || '', phone: r.fields['Phone'] || '', passType: r.fields['Pass Type'] || '', amountPaid: r.fields['Amount Paid'] || 0, referringProvider: r.fields['Referring Provider'] || '', purchaseDate: r.fields['Purchase Date'] || '', expirationDate: r.fields['Expiration Date'] || '', center: r.fields['Center'] || '', pin: r.fields['PIN'] || '', orientationComplete: !!r.fields['Orientation Complete'], totalVisits: r.fields['Total Visits'] || 0, address: r.fields['Street Address'] || '', city: r.fields['City'] || '', state: r.fields['State'] || '', zip: r.fields['Zip'] || '', notes: r.fields['Notes'] || '', passActivated: r.fields['Pass Activated'] !== false && r.fields['Pass Activated'] !== 'false', passesRemaining: r.fields['Passes Remaining'] !== undefined ? Number(r.fields['Passes Remaining']) : null, legacyMemberId: r.fields['Legacy Member ID'] || '', convertedToMember: !!r.fields['Converted to Member'], convertedDate: r.fields['Converted Date'] || '', memberRecordId: r.fields['Member Record ID'] || '' }))); 
                     } 
                   });
                 } else { 
@@ -3048,6 +3049,126 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
       )}
 
       {/* ADD MEMBER MODAL */}
+      {convertingVisitor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#001f3f]/90 backdrop-blur-md">
+          <div className="bg-white rounded-3xl w-full max-w-xl p-10 relative shadow-2xl max-h-[90vh] overflow-y-auto">
+            <button onClick={() => setConvertingVisitor(null)} className="absolute top-6 right-6 text-slate-300 hover:text-red-500 transition-all z-10"><X size={24}/></button>
+            <h3 className="text-2xl font-black text-[#001f3f] mb-2">Convert Visitor to Member</h3>
+            <p className="text-slate-500 mb-6 text-sm">Turning <strong>{convertingVisitor.firstName} {convertingVisitor.lastName}</strong> into a full member. Their PIN and contact info will carry over.</p>
+            
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-6 text-xs space-y-1">
+              <div><strong className="text-slate-500">Email:</strong> <span className="text-slate-700">{convertingVisitor.email || '—'}</span></div>
+              <div><strong className="text-slate-500">Phone:</strong> <span className="text-slate-700">{convertingVisitor.phone || '—'}</span></div>
+              <div><strong className="text-slate-500">Address:</strong> <span className="text-slate-700">{convertingVisitor.address ? `${convertingVisitor.address}, ${convertingVisitor.city}, ${convertingVisitor.state} ${convertingVisitor.zip}` : '—'}</span></div>
+              <div><strong className="text-slate-500">Center:</strong> <span className="text-slate-700">{convertingVisitor.center}</span></div>
+              <div><strong className="text-slate-500">PIN:</strong> <span className="text-slate-700 font-mono">{convertingVisitor.pin}</span></div>
+            </div>
+            
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              if (convertingBusy) return;
+              setConvertingBusy(true);
+              const plan = e.target.cv_plan.value;
+              const monthlyRate = e.target.cv_rate.value;
+              const sponsor = e.target.cv_sponsor.value;
+              const startDate = e.target.cv_start.value;
+              const conversionNotes = e.target.cv_notes.value;
+              try {
+                const addRes = await fetch('/api/add-member', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    firstName: convertingVisitor.firstName,
+                    lastName: convertingVisitor.lastName,
+                    email: convertingVisitor.email || '',
+                    phone: convertingVisitor.phone || '',
+                    plan,
+                    center: convertingVisitor.center || 'Anthony',
+                    corporateSponsor: sponsor || '',
+                    needsOrientation: !convertingVisitor.orientationComplete,
+                    address: convertingVisitor.address || '',
+                    city: convertingVisitor.city || '',
+                    state: convertingVisitor.state || 'KS',
+                    zip: convertingVisitor.zip || '',
+                    billingMethod: '',
+                    access247: false,
+                    badgeNumber: '',
+                    startDate: startDate || new Date().toISOString().slice(0, 10),
+                    discountCode: '',
+                    discountExpiration: null,
+                    monthlyRate: monthlyRate,
+                    pin: convertingVisitor.pin
+                  })
+                });
+                const addResult = await addRes.json();
+                if (!addResult.success && !addResult.recordId) {
+                  alert('Failed to create member: ' + (addResult.error || 'Unknown error'));
+                  setConvertingBusy(false);
+                  return;
+                }
+                const newMemberAirtableId = addResult.recordId || addResult.airtableId;
+                const convertRes = await fetch('/api/convert-visitor-to-member', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    visitorAirtableId: convertingVisitor.airtableId,
+                    memberAirtableId: newMemberAirtableId,
+                    conversionNotes: conversionNotes
+                  })
+                });
+                const convertResult = await convertRes.json();
+                if (!convertResult.success) {
+                  alert('Member was created but visitor flag failed: ' + (convertResult.error || 'Unknown error'));
+                }
+                setVisitors(prev => prev.map(v => v.airtableId === convertingVisitor.airtableId ? { ...v, convertedToMember: true, convertedDate: new Date().toISOString().slice(0, 10), memberRecordId: newMemberAirtableId } : v));
+                showToast(convertingVisitor.firstName + ' converted to member! PIN stays the same.', 'success', 6000);
+                setConvertingVisitor(null);
+                setTimeout(() => window.location.reload(), 1500);
+              } catch (err) {
+                alert('Network error during conversion: ' + err.message);
+                setConvertingBusy(false);
+              }
+            }}>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Plan Type</label>
+                  <select id="cv_plan" name="cv_plan" required defaultValue="SINGLE" className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#8b5cf6]">
+                    <option value="SINGLE">Single</option>
+                    <option value="FAMILY">Family</option>
+                    <option value="SENIOR">Senior</option>
+                    <option value="SENIOR FAMILY">Senior Family</option>
+                    <option value="STUDENT">Student</option>
+                    <option value="CORPORATE">Corporate</option>
+                    <option value="CORPORATE FAMILY">Corporate Family</option>
+                    <option value="HD6">HD6</option>
+                    <option value="HD6 FAMILY">HD6 Family</option>
+                    <option value="HCHF">HCHF</option>
+                    <option value="MILITARY">Military</option>
+                    <option value="LIFETIME">Lifetime</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Monthly Rate</label>
+                  <input id="cv_rate" name="cv_rate" type="number" step="0.01" placeholder="30.00" className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#8b5cf6]" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Corporate Sponsor (optional)</label>
+                  <input id="cv_sponsor" name="cv_sponsor" placeholder="e.g. Harper Industries" className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#8b5cf6]" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Start Date</label>
+                  <input id="cv_start" name="cv_start" type="date" defaultValue={new Date().toISOString().slice(0, 10)} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#8b5cf6]" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Conversion Notes (optional)</label>
+                  <textarea id="cv_notes" name="cv_notes" rows="2" placeholder="Any context about the conversion (referral, promo, etc.)" className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#8b5cf6] resize-none"></textarea>
+                </div>
+              </div>
+              <button type="submit" disabled={convertingBusy} className="w-full mt-6 bg-[#8b5cf6] text-white py-4 rounded-xl font-bold shadow-xl hover:bg-purple-700 transition-colors disabled:opacity-50">{convertingBusy ? 'Converting...' : 'Convert to Member'}</button>
+            </form>
+          </div>
+        </div>
+      )}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#001f3f]/90 backdrop-blur-md">
            <div className="bg-white rounded-3xl w-full max-w-xl p-10 relative shadow-2xl max-h-[90vh] overflow-y-auto">
