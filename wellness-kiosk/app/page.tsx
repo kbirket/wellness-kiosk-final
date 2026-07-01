@@ -520,7 +520,7 @@ const processCheckIn = async (memberId, method = "Manual Entry", overrideCooldow
       const scanCenter = currentLoc === 'both' ? m.center : currentLoc.charAt(0).toUpperCase() + currentLoc.slice(1);
       const currentTime = new Date().toISOString();
 
-      var recentDupe = visits.some(function(v) { return v.name === (m.firstName + ' ' + m.lastName) && (new Date(currentTime) - new Date(v.time)) < 2 * 60 * 60 * 1000; });
+ var recentDupe = visits.some(function(v) { return v.name === (m.firstName + ' ' + m.lastName) && (new Date(currentTime) - new Date(v.time)) < 2 * 60 * 60 * 1000; });
       if (recentDupe && !overrideCooldown) {
         setKioskMessage({ text: 'Already checked in!', type: 'warning', subtext: m.firstName + ' was checked in within the last 2 hours.', cooldownBlocked: true, memberId: m.id, memberName: m.firstName + ' ' + m.lastName });
         setTimeout(function() { setKioskMessage({ text: '', type: '', subtext: '', cooldownBlocked: false }); }, 8000);
