@@ -2060,9 +2060,7 @@ const memberRefundsTotal = payments.filter(p => { if (!p.date || !p.isRefund || 
             
         // Payments-based revenue for the board period — pulls both from Payments table and Visitor purchase records, mirroring the Payments tab
             const boardStandardPayments = payments.filter(p => {
-              if (!p.date) return false;
-              const d = new Date(p.date);
-              if (d.getFullYear() !== y || !targetMonths.includes(d.getMonth())) return false;
+              if (!p.date || !isInPeriod(p.date)) return false;
               if (viewingCenter === 'both') return true;
               const mem = members.find(mm => mm.airtableId === p.memberRecId);
               if (mem) return mem.center && mem.center.toLowerCase().includes(viewingCenter);
@@ -2072,8 +2070,7 @@ const memberRefundsTotal = payments.filter(p => { if (!p.date || !p.isRefund || 
             });
             const boardVisitorPayments = visitors.filter(v => {
               if (!v.purchaseDate || !v.amountPaid || v.amountPaid <= 0) return false;
-              const d = new Date(v.purchaseDate);
-              if (d.getFullYear() !== y || !targetMonths.includes(d.getMonth())) return false;
+              if (!isInPeriod(v.purchaseDate)) return false;
               if (viewingCenter === 'both') return true;
               return v.center && v.center.toLowerCase().includes(viewingCenter);
             }).map(v => ({
@@ -2143,7 +2140,35 @@ const boardRevRows = Object.entries(boardRevByCategory).filter(([label, v]) => v
                   }} className="px-4 py-2 bg-[#1080ad] text-white rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-blue-800"><Download size={16}/> Visits CSV</button>
 
                   <button onClick={() => {
-                    const activePaidMembers = scopedMembers.filter(m => { if (m.status !== 'ACTIVE') return false; if (m.type.includes('HD6') || m.type.includes('HCHF') || m.type.includes('MILITARY') || m.type === 'FIRST DAY FREE') return false; if (m.type.includes('CORPORATE') || m.sponsorName) { const sponsor = corporatePartners.find(cp => cp.sponsorMatch === m.sponsorName); if (!sponsor) return false; const isMemHarper = m.center && m.center.toLowerCase().includes('harper'); const isMemAnthony = m.center && m.center.toLowerCase().includes('anthony'); if (sponsor.paidMonths && sponsor.paidMonths.includes(reportMonth)) return true; if (isMemHarper && sponsor.paidMonthsHarper && sponsor.paidMonthsHarper.includes(reportMonth)) return true; if (isMemAnthony && sponsor.paidMonthsAnthony && sponsor.paidMonthsAnthony.includes(reportMonth)) return true; return false; } return !!m.paymentMethod; });
+                    const isCustomRange = reportMonth === 'custom';
+                    let rangeStart = null, rangeEnd = null, rangeMonthKeys = [];
+                    if (isCustomRange) {
+                      rangeStart = new Date(customRangeStart + 'T00:00:00');
+                      rangeEnd = new Date(customRangeEnd + 'T23:59:59');
+                      const monthSet = new Set();
+                      for (let d = new Date(rangeStart); d <= rangeEnd; d.setDate(d.getDate() + 1)) {
+                        monthSet.add(String(d.getMonth() + 1).padStart(2, '0') + '-' + d.getFullYear());
+                      }
+                      rangeMonthKeys = Array.from(monthSet);
+                    }
+                    const isInPeriod = (dateValue) => {
+                      if (!dateValue) return false;
+                      const d = (dateValue instanceof Date) ? dateValue : new Date(typeof dateValue === 'string' && dateValue.length === 10 ? dateValue + 'T12:00:00' : dateValue);
+                      if (isNaN(d.getTime())) return false;
+                      if (isCustomRange) return d >= rangeStart && d <= rangeEnd;
+                      const [pStr, yStr] = reportMonth.split('-');
+                      const yr = parseInt(yStr);
+                      let targetMonths = [];
+                      if (pStr.startsWith('Q')) { const q = parseInt(pStr.replace('Q', '')); targetMonths = [(q-1)*3, (q-1)*3+1, (q-1)*3+2]; } else { targetMonths = [parseInt(pStr) - 1]; }
+                      return d.getFullYear() === yr && targetMonths.includes(d.getMonth());
+                    };
+                    const corporatePaidForPeriod = (sponsor, fieldName) => {
+                      if (!sponsor || !sponsor[fieldName]) return false;
+                      const entries = sponsor[fieldName].split(',');
+                      if (isCustomRange) return rangeMonthKeys.some(k => entries.some(e => e.startsWith(k)));
+                      return entries.some(e => e.startsWith(reportMonth));
+                    };
+                    const activePaidMembers = scopedMembers.filter(m => { if (m.status !== 'ACTIVE') return false; if (m.type.includes('HD6') || m.type.includes('HCHF') || m.type.includes('MILITARY') || m.type === 'FIRST DAY FREE') return false; if (m.type.includes('CORPORATE') || m.sponsorName) { const sponsor = corporatePartners.find(cp => cp.sponsorMatch === m.sponsorName); if (!sponsor) return false; const isMemHarper = m.center && m.center.toLowerCase().includes('harper'); const isMemAnthony = m.center && m.center.toLowerCase().includes('anthony'); if (corporatePaidForPeriod(sponsor, 'paidMonths')) return true; if (isMemHarper && corporatePaidForPeriod(sponsor, 'paidMonthsHarper')) return true; if (isMemAnthony && corporatePaidForPeriod(sponsor, 'paidMonthsAnthony')) return true; return false; } return !!m.paymentMethod; });
                     if (activePaidMembers.length === 0) { alert('No completed payments found to report.'); return; }
                     const centerName = viewingCenter === 'both' ? 'All Centers' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1) + ' Wellness Center';
                     const standardMembers = activePaidMembers.filter(m => !m.type.includes('CORPORATE') && !m.sponsorName);
@@ -2165,7 +2190,7 @@ const boardRevRows = Object.entries(boardRevByCategory).filter(([label, v]) => v
                     const noteworthyPayments = activePaidMembers.map(m => { const pay = getPaymentForMember(m); if (!pay) return null; const n = cleanNote(pay.notes); if (!n) return null; return { member: m, note: n, amount: parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0, date: pay.date, method: getPayMethod(m) }; }).filter(Boolean);
                     const noteworthyBlock = noteworthyPayments.length === 0 ? '' : `<div style="margin-top: 20px; background: #fffbeb; border: 2px solid #f59e0b; border-radius: 8px; padding: 16px 20px;"><h3 style="color:#92400e; margin: 0 0 10px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 6px;">⚠ Noteworthy Payments (${noteworthyPayments.length})</h3><p style="font-size:10px; color:#a16207; margin: 0 0 12px 0; font-style: italic;">Payments with special notes or context that require attention</p><table style="width: 100%; font-size: 11px;"><thead><tr><th style="background: #f59e0b; color: white; text-align: left; padding: 8px 10px; font-size: 9px; text-transform: uppercase;">Member</th><th style="background: #f59e0b; color: white; text-align: left; padding: 8px 10px; font-size: 9px; text-transform: uppercase;">Date</th><th style="background: #f59e0b; color: white; text-align: left; padding: 8px 10px; font-size: 9px; text-transform: uppercase;">Method</th><th style="background: #f59e0b; color: white; text-align: left; padding: 8px 10px; font-size: 9px; text-transform: uppercase;">Amount</th><th style="background: #f59e0b; color: white; text-align: left; padding: 8px 10px; font-size: 9px; text-transform: uppercase;">Note</th></tr></thead><tbody>${noteworthyPayments.map(np => `<tr><td style="padding: 8px 10px; border-bottom: 1px solid #fde68a; font-weight: bold;">${np.member.firstName} ${np.member.lastName}</td><td style="padding: 8px 10px; border-bottom: 1px solid #fde68a; color: #64748b;">${np.date ? new Date(np.date + 'T00:00:00').toLocaleDateString('en-US', {month: 'short', day: 'numeric'}) : '—'}</td><td style="padding: 8px 10px; border-bottom: 1px solid #fde68a;">${np.method}</td><td style="padding: 8px 10px; border-bottom: 1px solid #fde68a; color: #16a34a; font-weight: bold;">$${np.amount.toFixed(2)}</td><td style="padding: 8px 10px; border-bottom: 1px solid #fde68a; color: #475569;">${np.note}</td></tr>`).join('')}</tbody></table></div>`;
                     
-                    const periodRefunds = payments.filter(p => { if (!p.date || !p.isRefund) return false; const d = new Date(p.date); if (d.getFullYear() !== parseInt(reportMonth.split('-')[1]) || d.getMonth() !== parseInt(reportMonth.split('-')[0]) - 1) return false; if (viewingCenter === 'both') return true; const mem = members.find(mm => mm.airtableId === p.memberRecId); if (mem) return mem.center && mem.center.toLowerCase().includes(viewingCenter); const vis = visitors.find(vv => vv.airtableId === p.memberRecId); if (vis) return vis.center && vis.center.toLowerCase().includes(viewingCenter); return false; });
+const periodRefunds = payments.filter(p => { if (!p.date || !p.isRefund || !isInPeriod(p.date)) return false; if (viewingCenter === 'both') return true; const mem = members.find(mm => mm.airtableId === p.memberRecId); if (mem) return mem.center && mem.center.toLowerCase().includes(viewingCenter); const vis = visitors.find(vv => vv.airtableId === p.memberRecId); if (vis) return vis.center && vis.center.toLowerCase().includes(viewingCenter); return false; });
                     const refundsTotal = periodRefunds.reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
                     const refundsBlock = periodRefunds.length === 0 ? '' : `<div style="margin-top: 20px; background: #fef2f2; border: 2px solid #ef4444; border-radius: 8px; padding: 16px 20px;"><h3 style="color:#991b1b; margin: 0 0 10px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">↩ Refunds Issued (${periodRefunds.length})</h3><p style="font-size:10px; color:#b91c1c; margin: 0 0 12px 0; font-style: italic;">These are subtracted from total collected revenue below.</p><table style="width: 100%; font-size: 11px;"><thead><tr><th style="background: #ef4444; color: white; text-align: left; padding: 8px 10px; font-size: 9px; text-transform: uppercase;">Member / Visitor</th><th style="background: #ef4444; color: white; text-align: left; padding: 8px 10px; font-size: 9px; text-transform: uppercase;">Refund Date</th><th style="background: #ef4444; color: white; text-align: left; padding: 8px 10px; font-size: 9px; text-transform: uppercase;">Method</th><th style="background: #ef4444; color: white; text-align: right; padding: 8px 10px; font-size: 9px; text-transform: uppercase;">Amount</th><th style="background: #ef4444; color: white; text-align: left; padding: 8px 10px; font-size: 9px; text-transform: uppercase;">Reason</th></tr></thead><tbody>${periodRefunds.map(rp => { const mem = members.find(mm => mm.airtableId === rp.memberRecId); const vis = !mem ? visitors.find(vv => vv.airtableId === rp.memberRecId) : null; const name = mem ? `${mem.firstName} ${mem.lastName}` : vis ? `${vis.firstName} ${vis.lastName} (Visitor)` : 'Unknown'; const note = cleanNote(rp.notes).replace(/REFUND - Issued by staff via Wellness Hub/gi, '').replace(/\|/g, '').trim() || '—'; return `<tr><td style="padding: 8px 10px; border-bottom: 1px solid #fecaca; font-weight: bold;">${name}</td><td style="padding: 8px 10px; border-bottom: 1px solid #fecaca; color: #64748b;">${rp.date ? new Date(rp.date + 'T00:00:00').toLocaleDateString('en-US', {month: 'short', day: 'numeric'}) : '—'}</td><td style="padding: 8px 10px; border-bottom: 1px solid #fecaca;">${rp.method}${rp.checkNumber ? ' #' + rp.checkNumber : ''}</td><td style="padding: 8px 10px; border-bottom: 1px solid #fecaca; color: #ef4444; font-weight: bold; text-align: right;">-$${(parseFloat(rp.amount) || 0).toFixed(2)}</td><td style="padding: 8px 10px; border-bottom: 1px solid #fecaca; color: #475569;">${note}</td></tr>`; }).join('')}</tbody><tfoot><tr><td colspan="3" style="padding: 12px 10px; text-align: right; font-weight: 900; color: #991b1b; text-transform: uppercase; font-size: 11px;">Total Refunds:</td><td style="padding: 12px 10px; text-align: right; font-weight: 900; color: #ef4444; font-size: 14px;">-$${refundsTotal.toFixed(2)}</td><td></td></tr></tfoot></table></div>`;
                     const netCollected = grandTotal - refundsTotal;
@@ -2178,15 +2203,35 @@ const boardRevRows = Object.entries(boardRevByCategory).filter(([label, v]) => v
 
                   <button onClick={() => {
                     const centerName = viewingCenter === 'both' ? 'All Centers' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1) + ' Wellness Center';
-                    const [pStr, yStr] = reportMonth.split('-');
-                    const yr = parseInt(yStr);
-                    const mo = parseInt(pStr) - 1;
-                    const monthName = new Date(yr, mo).toLocaleDateString('en-US', { month: 'long' });
+                    const isCustomRange = reportMonth === 'custom';
+                    let yr, mo, monthName, rangeStart = null, rangeEnd = null, daysInMonth;
+                    if (isCustomRange) {
+                      rangeStart = new Date(customRangeStart + 'T00:00:00');
+                      rangeEnd = new Date(customRangeEnd + 'T23:59:59');
+                      yr = rangeStart.getFullYear();
+                      mo = rangeStart.getMonth();
+                      const fmt = (dt) => dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                      monthName = fmt(rangeStart) + ' — ' + fmt(rangeEnd);
+                      daysInMonth = Math.max(1, Math.round((rangeEnd - rangeStart) / (1000 * 60 * 60 * 24)) + 1);
+                    } else {
+                      const [pStr, yStr] = reportMonth.split('-');
+                      if (pStr.startsWith('Q')) { alert('Monthly Summary needs a specific month or custom range, not a quarter.'); return; }
+                      yr = parseInt(yStr);
+                      mo = parseInt(pStr) - 1;
+                      monthName = new Date(yr, mo).toLocaleDateString('en-US', { month: 'long' });
+                      daysInMonth = new Date(yr, mo + 1, 0).getDate();
+                    }
+                    const isInPeriod = (dateValue) => {
+                      if (!dateValue) return false;
+                      const d = (dateValue instanceof Date) ? dateValue : new Date(typeof dateValue === 'string' && dateValue.length === 10 ? dateValue + 'T12:00:00' : dateValue);
+                      if (isNaN(d.getTime())) return false;
+                      if (isCustomRange) return d >= rangeStart && d <= rangeEnd;
+                      return d.getFullYear() === yr && d.getMonth() === mo;
+                    };
                     
-                    // Visit data for the selected month
-                    const monthVisits = visits.filter(v => { if (!v.time) return false; const d = new Date(v.time); if (d.getFullYear() !== yr || d.getMonth() !== mo) return false; if (viewingCenter === 'both') return true; return v.center && v.center.toLowerCase().includes(viewingCenter); });
+                    // Visit data for the selected period
+                    const monthVisits = visits.filter(v => { if (!v.time || !isInPeriod(v.time)) return false; if (viewingCenter === 'both') return true; return v.center && v.center.toLowerCase().includes(viewingCenter); });
                     const monthDayPasses = monthVisits.filter(v => v.type && v.type.includes('VISITOR')).length;
-                    const daysInMonth = new Date(yr, mo + 1, 0).getDate();
                     const avgPerDay = daysInMonth > 0 ? Math.round(monthVisits.length / daysInMonth) : 0;
                     
                     // Employee + family visits
@@ -2216,10 +2261,8 @@ const boardRevRows = Object.entries(boardRevByCategory).filter(([label, v]) => v
                     const totalDayPasses = dayPassVisitors + memberDayPasses;
                     
                   // Revenue calculations based on actual payments — pulls from Payments table AND Visitor purchase records
-                    const monthStandardPayments = payments.filter(p => {
-                      if (!p.date) return false;
-                      const d = new Date(p.date);
-                      if (d.getFullYear() !== yr || d.getMonth() !== mo) return false;
+                   const monthStandardPayments = payments.filter(p => {
+                      if (!p.date || !isInPeriod(p.date)) return false;
                       if (viewingCenter === 'both') return true;
                       const mem = members.find(mm => mm.airtableId === p.memberRecId);
                       if (mem) return mem.center && mem.center.toLowerCase().includes(viewingCenter);
@@ -2229,8 +2272,7 @@ const boardRevRows = Object.entries(boardRevByCategory).filter(([label, v]) => v
                     });
                     const monthVisitorPayments = visitors.filter(v => {
                       if (!v.purchaseDate || !v.amountPaid || v.amountPaid <= 0) return false;
-                      const d = new Date(v.purchaseDate);
-                      if (d.getFullYear() !== yr || d.getMonth() !== mo) return false;
+                      if (!isInPeriod(v.purchaseDate)) return false;
                       if (viewingCenter === 'both') return true;
                       return v.center && v.center.toLowerCase().includes(viewingCenter);
                     }).map(v => ({
