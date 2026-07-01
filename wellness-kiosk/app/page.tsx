@@ -1683,12 +1683,34 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
           )}
         </div>)}
 
-        {activeTab === 'corporate' && (() => {
-          const [periodStr, yearStr] = reportMonth.split('-');
-          const y = parseInt(yearStr);
-          let targetMonths = [];
-          let displayPeriod = '';
-          if (periodStr.startsWith('Q')) { const q = parseInt(periodStr.replace('Q', '')); targetMonths = [ (q-1)*3, (q-1)*3 + 1, (q-1)*3 + 2 ]; displayPeriod = `Q${q} ${y}`; } else { targetMonths = [ parseInt(periodStr) - 1 ]; displayPeriod = new Date(y, targetMonths[0]).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }); }
+        {activeTab === 'reports' && (() => {
+          const isCustomRange = reportMonth === 'custom';
+          let periodStr, yearStr, y, targetMonths = [], displayPeriod = '';
+          let rangeStart = null, rangeEnd = null;
+          if (isCustomRange) {
+            rangeStart = new Date(customRangeStart + 'T00:00:00');
+            rangeEnd = new Date(customRangeEnd + 'T23:59:59');
+            y = rangeStart.getFullYear();
+            const monthSet = new Set();
+            for (let d = new Date(rangeStart); d <= rangeEnd; d.setDate(d.getDate() + 1)) {
+              monthSet.add(d.getFullYear() + '-' + d.getMonth());
+            }
+            targetMonths = Array.from(monthSet).filter(k => k.startsWith(y + '-')).map(k => parseInt(k.split('-')[1])).sort((a, b) => a - b);
+            const fmt = (dt) => dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            displayPeriod = fmt(rangeStart) + ' — ' + fmt(rangeEnd);
+          } else {
+            [periodStr, yearStr] = reportMonth.split('-');
+            y = parseInt(yearStr);
+            if (periodStr.startsWith('Q')) { const q = parseInt(periodStr.replace('Q', '')); targetMonths = [ (q-1)*3, (q-1)*3 + 1, (q-1)*3 + 2 ]; displayPeriod = `Q${q} ${y}`; } else { targetMonths = [ parseInt(periodStr) - 1 ]; displayPeriod = new Date(y, targetMonths[0]).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }); }
+          }
+          
+          const isInPeriod = (dateValue) => {
+            if (!dateValue) return false;
+            const d = (dateValue instanceof Date) ? dateValue : new Date(typeof dateValue === 'string' && dateValue.length === 10 ? dateValue + 'T12:00:00' : dateValue);
+            if (isNaN(d.getTime())) return false;
+            if (isCustomRange) return d >= rangeStart && d <= rangeEnd;
+            return d.getFullYear() === y && targetMonths.includes(d.getMonth());
+          };
           const currentPeriodVisits = visits.filter(v => { if (!v.time) return false; const d = new Date(v.time); return d.getFullYear() === y && targetMonths.includes(d.getMonth()); });
           return (
           <div className="space-y-6">
