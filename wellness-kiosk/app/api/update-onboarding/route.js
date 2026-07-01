@@ -53,4 +53,11 @@ export async function POST(request) {
     const data = await res.json();
     
     if (!res.ok || data.error) {
-      return NextResponse.json({ success: false, error: data.error?.message || 'Failed to update onboarding' }, { status: 500
+      return NextResponse.json({ success: false, error: data.error?.message || 'Failed to update onboarding' }, { status: 500 });
+    }
+    
+    return NextResponse.json({ success: true, fields: data.fields });
+  } catch (err) {
+    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  }
+}
