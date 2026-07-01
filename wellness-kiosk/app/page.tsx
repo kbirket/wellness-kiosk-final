@@ -14,7 +14,8 @@ const MemberPhoto = ({ src, name, size = 40, className = '' }) => {
 
 const LOGO_URL = 'https://pattersonhc.org/sites/default/files/wellness_white.png';
 
-const PeriodSelector = ({ value, onChange }) => (
+const PeriodSelector = ({ value, onChange, customStart, customEnd, onCustomStartChange, onCustomEndChange }) => (
+    <div className="flex flex-wrap items-center gap-2">
     <select value={value} onChange={onChange} className="p-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] font-bold text-slate-700 cursor-pointer shadow-sm">
       <optgroup label="Monthly">
         {['01-2026','02-2026','03-2026','04-2026','05-2026','06-2026','07-2026','08-2026','09-2026','10-2026','11-2026','12-2026'].map(v => { const [m, y] = v.split('-'); return <option key={v} value={v}>{new Date(y, m - 1).toLocaleDateString('en-US', {month: 'long', year: 'numeric'})}</option>; })}
@@ -25,7 +26,18 @@ const PeriodSelector = ({ value, onChange }) => (
         <option value="Q3-2026">Q3 2026 (Jul - Sep)</option>
         <option value="Q4-2026">Q4 2026 (Oct - Dec)</option>
       </optgroup>
+      <optgroup label="Custom">
+        <option value="custom">Custom Range...</option>
+      </optgroup>
     </select>
+    {value === 'custom' && customStart !== undefined && (
+      <>
+        <input type="date" value={customStart} max={customEnd} onChange={onCustomStartChange} className="p-3 bg-white border border-[#1080ad] rounded-xl outline-none font-bold text-slate-700 cursor-pointer shadow-sm" title="Start date" />
+        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">to</span>
+        <input type="date" value={customEnd} min={customStart} onChange={onCustomEndChange} className="p-3 bg-white border border-[#1080ad] rounded-xl outline-none font-bold text-slate-700 cursor-pointer shadow-sm" title="End date" />
+      </>
+    )}
+    </div>
   );
 
 export default function WellnessHub() {
@@ -42,7 +54,9 @@ export default function WellnessHub() {
   const [members, setMembers] = useState([]);
   const [visits, setVisits] = useState([]);
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [searchQuery, setSearchQuery] = useState('');   const [memberFilter, setMemberFilter] = useState('all');   const [recentCutoffDate, setRecentCutoffDate] = useState(() => { var d = new Date(); d.setDate(d.getDate() - 30); return d.toISOString().split('T')[0]; });
+const [searchQuery, setSearchQuery] = useState('');       const [memberFilter, setMemberFilter] = useState('all');     const [recentCutoffDate, setRecentCutoffDate] = useState(() => { var d = new Date(); d.setDate(d.getDate() - 30); return d.toISOString().split('T')[0]; });
+  const [customRangeStart, setCustomRangeStart] = useState(() => { const d = new Date(); d.setDate(d.getDate() - 30); return d.toLocaleDateString('en-CA'); });
+  const [customRangeEnd, setCustomRangeEnd] = useState(() => new Date().toLocaleDateString('en-CA'));
   const [quickSearch, setQuickSearch] = useState('');
   const [viewingCenter, setViewingCenter] = useState('both');
   const [selectedMember, setSelectedMember] = useState(null);
@@ -1678,7 +1692,7 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
           const currentPeriodVisits = visits.filter(v => { if (!v.time) return false; const d = new Date(v.time); return d.getFullYear() === y && targetMonths.includes(d.getMonth()); });
           return (
           <div className="space-y-6">
-            <div className="flex justify-between items-center mb-4"><div><h2 className="text-3xl font-bold text-[#001f3f] tracking-tight">Corporate Partners</h2><p className="text-slate-400 font-medium">Manage corporate sponsorships and billing rosters.</p></div><div className="bg-white p-2 rounded-xl shadow-sm border border-slate-200"><PeriodSelector value={reportMonth} onChange={(e) => setReportMonth(e.target.value)} /></div></div>
+            <div className="flex justify-between items-center mb-4"><div><h2 className="text-3xl font-bold text-[#001f3f] tracking-tight">Corporate Partners</h2><p className="text-slate-400 font-medium">Manage corporate sponsorships and billing rosters.</p></div><div className="bg-white p-2 rounded-xl shadow-sm border border-slate-200"><PeriodSelector value={reportMonth} onChange={(e) => setReportMonth(e.target.value)} customStart={customRangeStart} customEnd={customRangeEnd} onCustomStartChange={(e) => setCustomRangeStart(e.target.value)} onCustomEndChange={(e) => setCustomRangeEnd(e.target.value)} /></div></div>
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4">
               <Search className="text-slate-300 shrink-0" size={18} />
               <input className="flex-1 outline-none text-sm font-medium text-[#001f3f] placeholder-slate-300" placeholder="Search corporate partners..." value={corpSearch} onChange={e => setCorpSearch(e.target.value)} />
@@ -1850,7 +1864,7 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-200">
-                    <PeriodSelector value={reportMonth} onChange={function(e) { setReportMonth(e.target.value); }} />
+                    <PeriodSelector value={reportMonth} onChange={function(e) { setReportMonth(e.target.value); }} customStart={customRangeStart} customEnd={customRangeEnd} onCustomStartChange={function(e) { setCustomRangeStart(e.target.value); }} onCustomEndChange={function(e) { setCustomRangeEnd(e.target.value); }} />
                   </div>
                 </div>
               </div>
@@ -1924,15 +1938,37 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
           );
         })()}
        {/* ======================== ENHANCED REPORTS TAB ======================== */}
-        {activeTab === 'reports' && (() => {
-          const [periodStr, yearStr] = reportMonth.split('-');
-          const y = parseInt(yearStr);
-          let targetMonths = [];
-          let displayPeriod = '';
-          if (periodStr.startsWith('Q')) { const q = parseInt(periodStr.replace('Q', '')); targetMonths = [ (q-1)*3, (q-1)*3 + 1, (q-1)*3 + 2 ]; displayPeriod = `Q${q} ${y}`; } else { targetMonths = [ parseInt(periodStr) - 1 ]; displayPeriod = new Date(y, targetMonths[0]).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }); }
+     {activeTab === 'reports' && (() => {
+          const isCustomRange = reportMonth === 'custom';
+          let periodStr, yearStr, y, targetMonths = [], displayPeriod = '';
+          let rangeStart = null, rangeEnd = null;
+          if (isCustomRange) {
+            rangeStart = new Date(customRangeStart + 'T00:00:00');
+            rangeEnd = new Date(customRangeEnd + 'T23:59:59');
+            y = rangeStart.getFullYear();
+            const monthSet = new Set();
+            for (let d = new Date(rangeStart); d <= rangeEnd; d.setDate(d.getDate() + 1)) {
+              monthSet.add(d.getFullYear() + '-' + d.getMonth());
+            }
+            targetMonths = Array.from(monthSet).filter(k => k.startsWith(y + '-')).map(k => parseInt(k.split('-')[1])).sort((a, b) => a - b);
+            const fmt = (dt) => dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            displayPeriod = fmt(rangeStart) + ' — ' + fmt(rangeEnd);
+          } else {
+            [periodStr, yearStr] = reportMonth.split('-');
+            y = parseInt(yearStr);
+            if (periodStr.startsWith('Q')) { const q = parseInt(periodStr.replace('Q', '')); targetMonths = [ (q-1)*3, (q-1)*3 + 1, (q-1)*3 + 2 ]; displayPeriod = `Q${q} ${y}`; } else { targetMonths = [ parseInt(periodStr) - 1 ]; displayPeriod = new Date(y, targetMonths[0]).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }); }
+          }
+          
+          const isInPeriod = (dateValue) => {
+            if (!dateValue) return false;
+            const d = (dateValue instanceof Date) ? dateValue : new Date(typeof dateValue === 'string' && dateValue.length === 10 ? dateValue + 'T12:00:00' : dateValue);
+            if (isNaN(d.getTime())) return false;
+            if (isCustomRange) return d >= rangeStart && d <= rangeEnd;
+            return d.getFullYear() === y && targetMonths.includes(d.getMonth());
+          };
 
-          const currentPeriodVisits = visits.filter(v => { if (!v.time) return false; const d = new Date(v.time); if (d.getFullYear() !== y || !targetMonths.includes(d.getMonth())) return false; if (viewingCenter === 'both') return true; return v.center && v.center.toLowerCase().includes(viewingCenter); });
-          const newMembersThisPeriod = scopedMembers.filter(mem => { if (!mem.startDate) return false; const d = new Date(mem.startDate); return d.getFullYear() === y && targetMonths.includes(d.getMonth()); });
+          const currentPeriodVisits = visits.filter(v => { if (!v.time || !isInPeriod(v.time)) return false; if (viewingCenter === 'both') return true; return v.center && v.center.toLowerCase().includes(viewingCenter); });
+          const newMembersThisPeriod = scopedMembers.filter(mem => mem.startDate && isInPeriod(mem.startDate));
           const visitCounts = currentPeriodVisits.reduce((acc, v) => { const name = v.name; acc[name] = (acc[name] || 0) + 1; return acc; }, {});
           const topMembers = Object.entries(visitCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
@@ -1978,19 +2014,18 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
               const sponsorPaidAnthony = sponsor && sponsor.paidMonthsAnthony && sponsor.paidMonthsAnthony.split(',').some(str => str.startsWith(reportMonth));
               isCollected = sponsorPaidUnified || (isMemHarper && sponsorPaidHarper) || (isMemAnthony && sponsorPaidAnthony);
             } else {
-              isCollected = payments.some(p => { if (!p.date || p.memberRecId !== m.airtableId) return false; const d = new Date(p.date); return d.getFullYear() === y && targetMonths.includes(d.getMonth()); });
+              isCollected = payments.some(p => p.date && p.memberRecId === m.airtableId && isInPeriod(p.date));
             }
            if (isCollected) { collectedRevenueByPlan[planLabel] = (collectedRevenueByPlan[planLabel] || 0) + rate; }
-            var memRefundTotal = payments.filter(p => { if (!p.date || !p.isRefund || p.memberRecId !== m.airtableId) return false; const d = new Date(p.date); return d.getFullYear() === y && targetMonths.includes(d.getMonth()); }).reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
+            var memRefundTotal = payments.filter(p => p.date && p.isRefund && p.memberRecId === m.airtableId && isInPeriod(p.date)).reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
             if (memRefundTotal > 0) { collectedRevenueByPlan[planLabel] = (collectedRevenueByPlan[planLabel] || 0) - memRefundTotal; }
           });
 
           // ADD VISITOR REVENUE
           const visitorRevenue = visitors.filter(v => {
             if (!v.purchaseDate || !v.amountPaid || v.amountPaid <= 0) return false;
-            const d = new Date(v.purchaseDate);
-            return d.getFullYear() === y && targetMonths.includes(d.getMonth()) && (viewingCenter === 'both' || (v.center && v.center.toLowerCase().includes(viewingCenter)));
-          }).reduce((sum, v) => sum + Number(v.amountPaid), 0) - payments.filter(p => { if (!p.date || !p.isRefund) return false; const vis = visitors.find(vv => vv.airtableId === p.memberRecId); if (!vis) return false; const d = new Date(p.date); if (d.getFullYear() !== y || !targetMonths.includes(d.getMonth())) return false; if (viewingCenter !== 'both' && (!vis.center || !vis.center.toLowerCase().includes(viewingCenter))) return false; return true; }).reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
+            return isInPeriod(v.purchaseDate) && (viewingCenter === 'both' || (v.center && v.center.toLowerCase().includes(viewingCenter)));
+          }).reduce((sum, v) => sum + Number(v.amountPaid), 0) - payments.filter(p => { if (!p.date || !p.isRefund || !isInPeriod(p.date)) return false; const vis = visitors.find(vv => vv.airtableId === p.memberRecId); if (!vis) return false; if (viewingCenter !== 'both' && (!vis.center || !vis.center.toLowerCase().includes(viewingCenter))) return false; return true; }).reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
 
           if (visitorRevenue > 0) {
             collectedRevenueByPlan['Visitor Passes'] = visitorRevenue;
@@ -2001,7 +2036,7 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
             return { label, value: Math.round(value), color: colorMap[label] || '#64748b' };
           });
 
-const memberRefundsTotal = payments.filter(p => { if (!p.date || !p.isRefund) return false; const mem = members.find(mm => mm.airtableId === p.memberRecId); if (!mem) return false; if (mem.type.includes('CORPORATE') || mem.sponsorName) return false; const d = new Date(p.date); if (d.getFullYear() !== y || !targetMonths.includes(d.getMonth())) return false; if (viewingCenter !== 'both' && (!mem.center || !mem.center.toLowerCase().includes(viewingCenter))) return false; return true; }).reduce((s, p) => s + (parseFloat(p.amount) || 0), 0); const actualRevenue = paidMembers.filter(m => payments.some(p => { if (!p.date || p.memberRecId !== m.airtableId || p.isRefund) return false; const d = new Date(p.date); return d.getFullYear() === y && targetMonths.includes(d.getMonth()); })).reduce((sum, m) => sum + (parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0), 0) - memberRefundsTotal;          const corpCollected = corporatePartners.reduce((sum, cp) => {
+const memberRefundsTotal = payments.filter(p => { if (!p.date || !p.isRefund || !isInPeriod(p.date)) return false; const mem = members.find(mm => mm.airtableId === p.memberRecId); if (!mem) return false; if (mem.type.includes('CORPORATE') || mem.sponsorName) return false; if (viewingCenter !== 'both' && (!mem.center || !mem.center.toLowerCase().includes(viewingCenter))) return false; return true; }).reduce((s, p) => s + (parseFloat(p.amount) || 0), 0); const actualRevenue = paidMembers.filter(m => payments.some(p => p.date && p.memberRecId === m.airtableId && !p.isRefund && isInPeriod(p.date))).reduce((sum, m) => sum + (parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0), 0) - memberRefundsTotal;          const corpCollected = corporatePartners.reduce((sum, cp) => {
             const isPaid = cp.paidMonths && cp.paidMonths.split(',').some(str => str.startsWith(reportMonth));
             if (!isPaid) return sum;
             const corpMems = paidMembers.filter(m => m.sponsorName === cp.sponsorMatch);
@@ -2100,7 +2135,7 @@ const boardRevRows = Object.entries(boardRevByCategory).filter(([label, v]) => v
                   <p className="text-sm text-slate-500">Filter your facility data by month or quarter.</p>
                 </div>
                 <div className="flex gap-3 flex-wrap">
-                  <PeriodSelector value={reportMonth} onChange={(e) => setReportMonth(e.target.value)} />
+                  <PeriodSelector value={reportMonth} onChange={(e) => setReportMonth(e.target.value)} customStart={customRangeStart} customEnd={customRangeEnd} onCustomStartChange={(e) => setCustomRangeStart(e.target.value)} onCustomEndChange={(e) => setCustomRangeEnd(e.target.value)} />
                   <button onClick={() => {
                     if (currentPeriodVisits.length === 0) { alert('No visits to export for this period.'); return; }
                     const csv = ["Date,Time,Name,Center,Plan Type,Check-In Method",...currentPeriodVisits.map(v => `"${new Date(v.time).toLocaleDateString()}","${new Date(v.time).toLocaleTimeString()}","${v.name}","${v.center}","${v.type}","${v.method || 'General Workout'}"`)].join('\n');
