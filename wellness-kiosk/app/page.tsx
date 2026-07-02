@@ -2555,14 +2555,36 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
                   )) : <p className="text-sm text-slate-400">No visits recorded yet.</p>}
                 </div>
 
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                  <h3 className="text-md font-black text-[#001f3f] mb-4 flex items-center gap-2">⚠️ Slipping Away (21+ Days)</h3>
-                  {slippingAway.length > 0 ? slippingAway.map(m => (
-                    <div key={m.airtableId} className="flex justify-between items-center bg-red-50 p-3 rounded-xl mb-2 cursor-pointer hover:bg-red-100 transition-colors" onClick={() => setSelectedMember(m)}>
-                      <span className="font-bold text-slate-700">{m.firstName} {m.lastName}</span>
-                      <span className="text-xs font-bold text-red-600 uppercase">Needs Check-in</span>
-                    </div>
-                  )) : <p className="text-sm text-slate-400">All active members have visited recently!</p>}
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                  <h3 className="text-md font-black text-[#001f3f] mb-4 flex items-center gap-2">👥 Unique Visitors by Category</h3>
+                  <p className="text-[10px] text-slate-400 mb-3">Distinct members per plan type who visited at least once during {displayPeriod}.</p>
+                  {(() => {
+                    const uniqueNamesByCategory = {};
+                    const catForType = (t) => {
+                      if (!t) return 'Other';
+                      if (t.includes('HD6') || t === 'HCHF') return 'HD6 / HCHF';
+                      if (t.includes('CORPORATE')) return 'Paying Corporate';
+                      if (t === 'SINGLE') return 'Single';
+                      if (t === 'FAMILY') return 'Family';
+                      if (t === 'SENIOR' || t === 'SENIOR CITIZEN') return 'Senior';
+                      if (t === 'SENIOR FAMILY') return 'Senior Family';
+                      if (t.includes('STUDENT')) return 'Student';
+                      if (t.includes('MILITARY')) return 'Military';
+                      if (t.includes('VISITOR') || t.includes('DAY PASS')) return 'Visitor Passes';
+                      return 'Other';
+                    };
+                    currentPeriodVisits.forEach(v => {
+                      const cat = catForType(v.type);
+                      if (!uniqueNamesByCategory[cat]) uniqueNamesByCategory[cat] = new Set();
+                      uniqueNamesByCategory[cat].add((v.name || '').toLowerCase().trim());
+                    });
+                    const ordered = ['Single', 'Family', 'Senior', 'Senior Family', 'Student', 'Paying Corporate', 'HD6 / HCHF', 'Military', 'Visitor Passes', 'Other'];
+                    const rows = ordered.filter(cat => uniqueNamesByCategory[cat] && uniqueNamesByCategory[cat].size > 0);
+                    if (rows.length === 0) return <p className="text-sm text-slate-400">No visits recorded in this period.</p>;
+                    const catColors = { 'Single': '#1080ad', 'Family': '#f59e0b', 'Senior': '#16a34a', 'Senior Family': '#16a34a', 'Student': '#8b5cf6', 'Paying Corporate': '#ef4444', 'HD6 / HCHF': '#dba51f', 'Military': '#64748b', 'Visitor Passes': '#14b8a6', 'Other': '#94a3b8' };
+                    const total = rows.reduce((s, cat) => s + uniqueNamesByCategory[cat].size, 0);
+                    return (<div className="space-y-2">{rows.map(cat => { const count = uniqueNamesByCategory[cat].size; const pct = total > 0 ? Math.round((count / total) * 100) : 0; return (<div key={cat} className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50"><div className="flex items-center gap-3 flex-1"><div className="w-2 h-8 rounded" style={{background: catColors[cat] || '#94a3b8'}}></div><span className="font-bold text-slate-700 text-sm">{cat}</span></div><div className="flex items-center gap-3"><span className="text-xs text-slate-400">{pct}%</span><span className="font-black text-slate-800 text-lg w-10 text-right">{count}</span></div></div>); })}<div className="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center"><span className="text-xs font-black uppercase tracking-widest text-slate-500">Total Unique</span><span className="font-black text-slate-800 text-xl">{total}</span></div></div>);
+                  })()}
                 </div>
               </div>
 
