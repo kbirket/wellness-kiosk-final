@@ -2199,6 +2199,33 @@ const boardNet = boardGross - boardRefundsTotal;
             
             // Add HD6/HCHF count to show member roster even when revenue is $0
             const hd6hchfMemberCount = scopedMembers.filter(m => m.type.includes('HD6') || m.type === 'HCHF').length;
+// Unique members by category for the board period
+            const boardUniqueByCategory = {};
+            const boardCatForType = (t) => {
+              if (!t) return 'Other';
+              if (t.includes('HD6') || t === 'HCHF') return 'HD6 / HCHF';
+              if (t.includes('CORPORATE')) return 'Paying Corporate';
+              if (t === 'SINGLE') return 'Single';
+              if (t === 'FAMILY') return 'Family';
+              if (t === 'SENIOR' || t === 'SENIOR CITIZEN') return 'Senior';
+              if (t === 'SENIOR FAMILY') return 'Senior Family';
+              if (t.includes('STUDENT')) return 'Student';
+              if (t.includes('MILITARY')) return 'Military';
+              if (t.includes('VISITOR') || t.includes('DAY PASS')) return 'Visitor Passes';
+              return 'Other';
+            };
+            currentPeriodVisits.forEach(v => {
+              const cat = boardCatForType(v.type);
+              if (!boardUniqueByCategory[cat]) boardUniqueByCategory[cat] = new Set();
+              boardUniqueByCategory[cat].add((v.name || '').toLowerCase().trim());
+            });
+            const boardCategoryOrder = ['Single', 'Family', 'Senior', 'Senior Family', 'Student', 'Paying Corporate', 'HD6 / HCHF', 'Military', 'Visitor Passes', 'Other'];
+            const boardUniqueRows = boardCategoryOrder
+              .filter(cat => boardUniqueByCategory[cat] && boardUniqueByCategory[cat].size > 0)
+              .map(cat => `<tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-weight:600;">${cat}</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:900;color:#1080ad;">${boardUniqueByCategory[cat].size}</td></tr>`)
+              .join('');
+            const boardUniqueTotal = Object.values(boardUniqueByCategory).reduce((s, set) => s + set.size, 0);
+
 const boardRevRows = Object.entries(boardRevByCategory).filter(([label, v]) => v !== 0 || label === 'HD6 / HCHF').map(([label, val]) => { if (label === 'HD6 / HCHF') { return `<tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-weight:600;color:#64748b;">${label} <span style="font-size:9px;color:#94a3b8;font-weight:500;">(${hd6hchfMemberCount} member${hd6hchfMemberCount !== 1 ? 's' : ''}, comped — no revenue)</span></td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:900;color:#94a3b8;">$0</td></tr>`; } return `<tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-weight:600;">${label}</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:900;color:${val < 0 ? '#ef4444' : '#16a34a'};">${val < 0 ? '-' : ''}$${Math.abs(val).toLocaleString()}</td></tr>`; }).join('') + (boardRefundsTotal > 0 ? `<tr><td colspan="2" style="padding:6px 12px;font-size:9px;font-style:italic;color:#94a3b8;text-align:center;border-bottom:1px solid #e2e8f0;">Category totals are net of ${boardPayments.filter(p => p.isRefund).length} refund${boardPayments.filter(p => p.isRefund).length !== 1 ? 's' : ''} totaling $${boardRefundsTotal.toLocaleString()}</td></tr>` : '');
 
             const planRows = planChartData.filter(d => d.value > 0).map(d => `<tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-weight:600;">${d.label}</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:900;color:#003d6b;">${d.value}</td></tr>`).join('');
@@ -2208,7 +2235,7 @@ const boardRevRows = Object.entries(boardRevByCategory).filter(([label, v]) => v
             const html = `<!DOCTYPE html><html><head><title>Board Report - ${displayPeriod}</title><style>@media print{body{margin:0;padding:20px}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:30px;max-width:800px;margin:0 auto}.hdr{background:#003d6b;padding:16px 28px;display:flex;justify-content:space-between;align-items:center;border-radius:8px 8px 0 0}.hdr img{height:32px}.hdr-text{text-align:right;color:white}.hdr-title{font-size:20px;font-weight:900;margin:0}.hdr-sub{font-size:10px;color:#8bb8d9;letter-spacing:1px;margin-top:2px}.accent{height:3px;background:linear-gradient(to right,#dba51f,#dd6d22);margin-bottom:24px}.section{margin-bottom:20px}.section-title{font-size:11px;font-weight:900;color:#64748b;text-transform:uppercase;letter-spacing:2px;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #003d6b}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}.card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px}.card-val{font-size:28px;font-weight:900;color:#003d6b;margin-bottom:2px}.card-lbl{font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.5px}.card-accent{border-left:4px solid}.tbl{width:100%;border-collapse:collapse;font-size:12px}th{background:#003d6b;color:white;text-align:left;padding:8px 12px;font-size:9px;text-transform:uppercase;letter-spacing:1px}th.right{text-align:right}.footer{margin-top:30px;padding-top:12px;border-top:2px solid #003d6b;font-size:11px;color:#94a3b8;display:flex;justify-content:space-between}</style></head><body>
             <div class="hdr"><img src="${LOGO_URL}" /><div class="hdr-text"><h1 class="hdr-title">Facility Summary — Board Report</h1><div class="hdr-sub">${centerName} · ${displayPeriod}</div></div></div><div class="accent"></div>
             <div class="section"><div class="section-title">Key Performance Indicators</div><div class="grid" style="grid-template-columns:repeat(3,1fr)"><div class="card card-accent" style="border-color:#1080ad"><div class="card-val" style="color:#1080ad">${currentPeriodVisits.length}</div><div class="card-lbl">Total Visits</div></div><div class="card card-accent" style="border-color:#16a34a"><div class="card-val" style="color:#16a34a">${newMembersThisPeriod.length}</div><div class="card-lbl">New Sign-ups</div></div><div class="card card-accent" style="border-color:#f59e0b"><div class="card-val" style="color:#f59e0b">${avgVisitsPerMember}</div><div class="card-lbl">Avg Visits / Member</div></div></div></div>
-            <div class="grid"><div class="section"><div class="section-title">Membership Breakdown</div><table class="tbl"><thead><tr><th>Plan Type</th><th class="right">Members</th></tr></thead><tbody>${planRows}</tbody><tfoot><tr><td style="padding:10px 12px;border-top:2px solid #003d6b;font-weight:900;text-transform:uppercase;font-size:11px;">Total</td><td style="padding:10px 12px;border-top:2px solid #003d6b;text-align:right;font-weight:900;font-size:16px;color:#003d6b;">${scopedMembers.length}</td></tr></tfoot></table></div><div class="section"><div class="section-title">Monthly Revenue by Category</div><table class="tbl"><thead><tr><th>Category</th><th class="right">Amount</th></tr></thead><tbody>${revRows}</tbody><tfoot><tr><td style="padding:10px 12px;border-top:2px solid #003d6b;font-weight:900;text-transform:uppercase;font-size:11px;">Net Collected${boardRefundsTotal > 0 ? ' (after refunds)' : ''}</td><td style="padding:10px 12px;border-top:2px solid #003d6b;text-align:right;font-weight:900;font-size:16px;color:#16a34a;">$${Math.round(boardNet).toLocaleString()}</td></tr></tfoot></table></div></div>
+            <div class="grid"><div class="section"><div class="section-title">Membership Breakdown</div><table class="tbl"><thead><tr><th>Plan Type</th><th class="right">Members</th></tr></thead><tbody>${planRows}</tbody><tfoot><tr><td style="padding:10px 12px;border-top:2px solid #003d6b;font-weight:900;text-transform:uppercase;font-size:11px;">Total</td><td style="padding:10px 12px;border-top:2px solid #003d6b;text-align:right;font-weight:900;font-size:16px;color:#003d6b;">${scopedMembers.length}</td></tr></tfoot></table></div><div class="section"><div class="section-title">Monthly Revenue by Category</div><table class="tbl"><thead><tr><th>Category</th><th class="right">Amount</th></tr></thead><tbody>${revRows}</tbody><tfoot><tr><td style="padding:10px 12px;border-top:2px solid #003d6b;font-weight:900;text-transform:uppercase;font-size:11px;">Net Collected${boardRefundsTotal > 0 ? ' (after refunds)' : ''}</td><td style="padding:10px 12px;border-top:2px solid #003d6b;text-align:right;font-weight:900;font-size:16px;color:#16a34a;">$${Math.round(boardNet).toLocaleString()}</td></tr></tfoot></table></div></div> <div class="section"><div class="section-title">Unique Members by Category — Who Actually Visited</div><p style="font-size:9px;color:#94a3b8;margin:0 0 8px 0;font-style:italic">Distinct members per plan type who visited at least once during this period. This measures engagement, not roster size.</p><table class="tbl"><thead><tr><th>Category</th><th class="right">Unique Visitors</th></tr></thead><tbody>${boardUniqueRows || '<tr><td colspan="2" style="padding:12px;text-align:center;color:#94a3b8;font-style:italic">No visits recorded this period</td></tr>'}</tbody><tfoot><tr><td style="padding:10px 12px;border-top:2px solid #003d6b;font-weight:900;text-transform:uppercase;font-size:11px;">Total Unique</td><td style="padding:10px 12px;border-top:2px solid #003d6b;text-align:right;font-weight:900;font-size:16px;color:#1080ad;">${boardUniqueTotal}</td></tr></tfoot></table></div>
             <div class="grid"><div class="section"><div class="section-title">Collection Progress</div><div style="margin-top:8px"><div style="background:#e2e8f0;border-radius:6px;height:18px;overflow:hidden;position:relative"><div style="background:linear-gradient(to right,#16a34a,#1080ad);height:100%;width:${(function() { var g = viewingCenter === 'harper' ? 1000 : viewingCenter === 'anthony' ? 4000 : 5000; return g > 0 ? Math.min(100, Math.round((boardNet / g) * 100)) : 0; })()}%;border-radius:6px;transition:width 0.5s"></div></div><div style="display:flex;justify-content:space-between;margin-top:4px;font-size:10px;color:#94a3b8;font-weight:700"><span>Collection Rate</span><span style="color:#003d6b;font-weight:900">${(function() { var g = viewingCenter === 'harper' ? 1000 : viewingCenter === 'anthony' ? 4000 : 5000; return g > 0 ? Math.round((boardNet / g) * 100) : 0; })()}% ($${Math.round(boardNet).toLocaleString()} of $${(viewingCenter === 'harper' ? 1000 : viewingCenter === 'anthony' ? 4000 : 5000).toLocaleString()})</span></div></div></div><div class="section"><div class="section-title">Top 5 Most Active Members</div><table class="tbl"><thead><tr><th>Member</th><th class="right">Visits</th></tr></thead><tbody>${topVisitorRows || '<tr><td colspan="2" style="padding:12px;text-align:center;color:#94a3b8;font-style:italic">No data</td></tr>'}</tbody></table></div></div>
                        ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modified Sit & Get Fit', 'Low Impact Aerobics', 'Chair Class', 'Water Aerobics']; var classStats = classNames.map(function(cn) { var classVisits = currentPeriodVisits.filter(function(v) { return v.method === 'Class: ' + cn; }); if (classVisits.length === 0) return null; var uniqueDays = {}; classVisits.forEach(function(v) { uniqueDays[new Date(v.time).toDateString()] = true; }); var sessions = Object.keys(uniqueDays).length; return { name: cn, total: classVisits.length, sessions: sessions, avg: sessions > 0 ? Math.round(classVisits.length / sessions) : 0 }; }).filter(Boolean); if (classStats.length === 0) return ''; var rows = classStats.map(function(c) { return '<tr><td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;font-weight:600;">' + c.name + '</td><td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:center;font-weight:900;color:#1080ad;">' + c.total + '</td><td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:center;">' + c.sessions + '</td><td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:center;font-weight:700;color:#f59e0b;">' + c.avg + '</td></tr>'; }).join(''); return '<div class="section"><div class="section-title">Class Attendance</div><table class="tbl"><thead><tr><th>Class</th><th class="right">Total Attendees</th><th class="right">Sessions</th><th class="right">Avg / Session</th></tr></thead><tbody>' + rows + '</tbody></table></div>'; })()}
             <div class="footer"><span>Prepared by ${directorName} · Patterson Health Center</span><span>${new Date().toLocaleDateString('en-US', {month:'long',day:'numeric',year:'numeric'})}</span></div></body></html>`;
@@ -2335,6 +2362,33 @@ const periodRefunds = payments.filter(p => { if (!p.date || !p.isRefund || !isIn
                     
                     // Employee + family visits
                     const corpVisits = monthVisits.filter(v => v.type && v.type.includes('CORPORATE'));                     const hd6hchfVisits = monthVisits.filter(v => v.type && (v.type.includes('HD6') || v.type === 'HCHF'));
+                    
+                    // Unique members by category (distinct names, not visit counts)
+                    const monthlyUniqueByCategory = {};
+                    const catForType = (t) => {
+                      if (!t) return 'Other';
+                      if (t.includes('HD6') || t === 'HCHF') return 'HD6 / HCHF';
+                      if (t.includes('CORPORATE')) return 'Paying Corporate';
+                      if (t === 'SINGLE') return 'Single';
+                      if (t === 'FAMILY') return 'Family';
+                      if (t === 'SENIOR' || t === 'SENIOR CITIZEN') return 'Senior';
+                      if (t === 'SENIOR FAMILY') return 'Senior Family';
+                      if (t.includes('STUDENT')) return 'Student';
+                      if (t.includes('MILITARY')) return 'Military';
+                      if (t.includes('VISITOR') || t.includes('DAY PASS')) return 'Visitor Passes';
+                      return 'Other';
+                    };
+                    monthVisits.forEach(v => {
+                      const cat = catForType(v.type);
+                      if (!monthlyUniqueByCategory[cat]) monthlyUniqueByCategory[cat] = new Set();
+                      monthlyUniqueByCategory[cat].add((v.name || '').toLowerCase().trim());
+                    });
+                    const monthlyCategoryOrder = ['Single', 'Family', 'Senior', 'Senior Family', 'Student', 'Paying Corporate', 'HD6 / HCHF', 'Military', 'Visitor Passes', 'Other'];
+                    const monthlyUniqueRows = monthlyCategoryOrder
+                      .filter(cat => monthlyUniqueByCategory[cat] && monthlyUniqueByCategory[cat].size > 0)
+                      .map(cat => `<tr><td class="stat-label">${cat}</td><td class="stat-value">${monthlyUniqueByCategory[cat].size}</td></tr>`)
+                      .join('');
+                    const monthlyUniqueTotal = Object.values(monthlyUniqueByCategory).reduce((s, set) => s + set.size, 0);
                     const empVisits = monthVisits.filter(v => (!v.type || !v.type.includes('VISITOR')) && !(v.type && (v.type.includes('CORPORATE') || v.type.includes('HD6'))));
                     
                     // Membership stats
@@ -2438,6 +2492,13 @@ const periodRefunds = payments.filter(p => { if (!p.date || !p.isRefund || !isIn
 <tr><td class="stat-label">Employee & Family Visits</td><td class="stat-value">${empVisits.length}</td></tr>
 <tr><td class="stat-label">Paying Corporate Visits</td><td class="stat-value">${corpVisits.length}</td></tr>
 <tr><td class="stat-label">HD6 / HCHF Visits</td><td class="stat-value">${hd6hchfVisits.length}</td></tr></tbody></table>
+
+<div class="section-title">Unique Members by Category</div>
+<p style="font-size:9px;color:#94a3b8;margin:0 0 8px 0;font-style:italic">Distinct members per plan type who visited at least once during this period.</p>
+<table><thead><tr><th>Category</th><th style="text-align:right">Unique Members</th></tr></thead><tbody>
+${monthlyUniqueRows}
+<tr style="background:#f0fdf4"><td class="stat-label" style="font-weight:900;color:#003d6b;text-transform:uppercase;letter-spacing:0.5px;font-size:10px">Total Unique Members</td><td class="stat-value" style="color:#16a34a;font-size:14px">${monthlyUniqueTotal}</td></tr>
+</tbody></table>
 
 <div class="section-title">Revenue Collected</div>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
