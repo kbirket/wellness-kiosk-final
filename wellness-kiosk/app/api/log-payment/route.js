@@ -4,23 +4,25 @@ export async function POST(request) {
 const { airtableId, method, currentDueDate, amount, paymentDate, note } = await request.json();    const baseId = process.env.AIRTABLE_BASE_ID;
     const token = process.env.AIRTABLE_PAT;
     
-    // 1. Look up the member's Home Center for center-specific billing rules
+    // 1. Look up the member's Home Center + Family Group for center-specific & family billing
     let memberCenter = '';
+    let familyGroupId = '';
     try {
       const lookupRes = await fetch(`https://api.airtable.com/v0/${baseId}/Members/${airtableId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const lookupData = await lookupRes.json();
       memberCenter = (lookupData.fields && lookupData.fields['Home Center']) || '';
+      const famField = lookupData.fields && lookupData.fields['Family Group'];
+      if (Array.isArray(famField) && famField.length > 0) familyGroupId = famField[0];
+      else if (typeof famField === 'string') familyGroupId = famField;
     } catch (e) {
-      // If lookup fails, fall back to default behavior
       memberCenter = '';
+      familyGroupId = '';
     }
     const isAnthony = memberCenter.toLowerCase().includes('anthony');
     
     // 2. Calculate the NEW due date
-    // Anthony: always the 1st of the next calendar month after payment
-    // Harper (and others): one month from the payment date
     let nextDate;
     if (paymentDate) {
         nextDate = new Date(paymentDate + 'T00:00:00');
@@ -28,7 +30,6 @@ const { airtableId, method, currentDueDate, amount, paymentDate, note } = await 
         nextDate = new Date();
     }
     if (isAnthony) {
-      // Move to the 1st of the month AFTER the payment month
       nextDate = new Date(nextDate.getFullYear(), nextDate.getMonth() + 1, 1);
     } else {
       nextDate.setMonth(nextDate.getMonth() + 1);
@@ -52,7 +53,6 @@ const { airtableId, method, currentDueDate, amount, paymentDate, note } = await 
       "Notes": noteText
     };
     
-    // Only append Check Number if it exists
     if (checkNum) payFields["Check Number"] = checkNum;
     const payRes = await fetch(`https://api.airtable.com/v0/${baseId}/Payments`, {
       method: 'POST',
@@ -64,7 +64,6 @@ const { airtableId, method, currentDueDate, amount, paymentDate, note } = await 
     
     const payData = await payRes.json();
     
-    // Trap HTTP errors from Airtable immediately
     if (!payRes.ok || payData.error) {
       console.error('Payment record error:', payData.error || payData);
       return NextResponse.json({ success: false, error: 'Failed to save payment in Airtable' }, { status: 400 });
@@ -76,7 +75,6 @@ const { airtableId, method, currentDueDate, amount, paymentDate, note } = await 
       "Membership Status": "Active",
     };
     
-    // Safely apply or clear the Check Number in Airtable (use null, not "")
     if (checkNum) {
       memberFields["Check Number"] = checkNum;
     } else {
@@ -92,13 +90,52 @@ const { airtableId, method, currentDueDate, amount, paymentDate, note } = await 
     
     const memData = await memRes.json();
     
-    // Trap HTTP errors from Airtable immediately
     if (!memRes.ok || memData.error) {
       console.error('Member update error:', memData.error || memData);
       return NextResponse.json({ success: false, error: 'Failed to update member in Airtable' }, { status: 400 });
     }
     
-    return NextResponse.json({ success: true, nextPaymentDue, paymentSaved: true, memberUpdated: true });
+    // 5. If the payer is part of a family, advance Next Payment Due for all other family members too
+    let familyMembersUpdated = 0;
+    if (familyGroupId) {
+      try {
+        const filterFormula = encodeURIComponent(`AND(FIND('${familyGroupId}', ARRAYJOIN({Family Group})), RECORD_ID()!='${airtableId}')`);
+        const famRes = await fetch(
+          `https://api.airtable.com/v0/${baseId}/Members?filterByFormula=${filterFormula}&maxRecords=20`,
+          { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+        const famData = await famRes.json();
+        if (famData.records && famData.records.length > 0) {
+          const updates = famData.records.map(rec => ({
+            id: rec.id,
+            fields: {
+              "Next Payment Due": nextPaymentDue,
+              "Membership Status": "Active"
+            }
+          }));
+          // Airtable batch update — up to 10 records per call
+          for (let i = 0; i < updates.length; i += 10) {
+            const batch = updates.slice(i, i + 10);
+            await fetch(`https://api.airtable.com/v0/${baseId}/Members`, {
+              method: 'PATCH',
+              headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ records: batch })
+            });
+          }
+          familyMembersUpdated = updates.length;
+        }
+      } catch (famErr) {
+        console.error('Family update failed:', famErr);
+      }
+    }
+    
+    return NextResponse.json({ 
+      success: true, 
+      nextPaymentDue, 
+      paymentSaved: true, 
+      memberUpdated: true,
+      familyMembersUpdated
+    });
     
   } catch (error) {
     console.error('Server error:', error);
