@@ -1663,7 +1663,48 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
           const todayIdx = selectedClassDate.getDay();
           const dayMap = {0:'Sun',1:'Mon',2:'Tue',3:'Wed',4:'Thu',5:'Fri',6:'Sat'};
           const todayName = dayMap[todayIdx];
-          const displayedClasses = allClasses.filter(c => { const isRightCenter = viewingCenter === 'both' || c.center === viewingCenter; const selectedDateStr = checkinDate; const isMakeup = c.makeupDates && c.makeupDates.includes(selectedDateStr); const isRightDay = isMakeup || (c.days === 'Mon - Fri' ? (todayIdx >= 1 && todayIdx <= 5) : c.days.includes(todayName)); const afterStart = !c.startDate || selectedDateStr >= c.startDate; const beforeEnd = !c.endDate || selectedDateStr <= c.endDate; return isRightCenter && isRightDay && afterStart && beforeEnd; });
+          const colorAccentToClass = { 'Navy': 'border-[#003d6b]', 'Gold': 'border-[#dba51f]', 'Blue': 'border-[#1080ad]', 'Orange': 'border-[#dd6d22]' };
+          const dayIdxToName = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+          const selectedDayName = dayIdxToName[todayIdx];
+          const airtableClassesForDisplay = airtableClasses.filter(c => !c.archived).map(c => ({
+            airtableId: c.airtableId,
+            name: c.name,
+            center: c.center,
+            days: Array.isArray(c.days) && c.days.length > 0 ? c.days.join(', ') : '',
+            daysArray: Array.isArray(c.days) ? c.days : [],
+            time: c.time,
+            capacity: 50,
+            color: colorAccentToClass[c.colorAccent] || 'border-[#003d6b]',
+            startDate: c.startDate,
+            endDate: c.endDate,
+            instructor: c.instructor,
+            fromAirtable: true
+          }));
+          const combinedClasses = [...allClasses, ...airtableClassesForDisplay];
+          const displayedClasses = combinedClasses.filter(c => {
+            const isRightCenter = viewingCenter === 'both' || c.center === viewingCenter;
+            const selectedDateStr = checkinDate;
+            const overridesForClass = c.fromAirtable ? classOverrides.filter(o => o.classId === c.airtableId && o.overrideDate === selectedDateStr) : [];
+            const isCancelled = overridesForClass.some(o => o.overrideType === 'Cancelled');
+            const isAddedMakeup = overridesForClass.some(o => o.overrideType === 'Added');
+            const isHardcodedMakeup = c.makeupDates && c.makeupDates.includes(selectedDateStr);
+            let isRightDay;
+            if (c.daysArray && c.daysArray.length > 0) {
+              isRightDay = c.daysArray.includes(selectedDayName);
+            } else {
+              isRightDay = c.days === 'Mon - Fri' ? (todayIdx >= 1 && todayIdx <= 5) : c.days.includes(selectedDayName);
+            }
+            const scheduleAllowed = isRightDay || isHardcodedMakeup || isAddedMakeup;
+            const afterStart = !c.startDate || selectedDateStr >= c.startDate;
+            const beforeEnd = !c.endDate || selectedDateStr <= c.endDate;
+            const shouldShow = isRightCenter && scheduleAllowed && afterStart && beforeEnd;
+            if (!shouldShow) return false;
+            // Attach cancellation info for display
+            c._cancelReason = isCancelled ? (overridesForClass.find(o => o.overrideType === 'Cancelled')?.reason || 'Cancelled') : null;
+            c._isCancelled = isCancelled;
+            c._overrideTime = overridesForClass.find(o => o.overrideTime)?.overrideTime || null;
+            return true;
+          });
           const todayStr = selectedClassDate.toDateString();
           const isViewingToday = todayStr === new Date().toDateString();
           return (
@@ -1675,7 +1716,7 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
                   return (
                     <div key={i} className={`bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 ${c.color} flex flex-col justify-between`}>
                       <div>
-                        <div className="flex justify-between items-start mb-4"><div><h3 className="font-black text-[#001f3f] text-lg leading-tight">{c.name}</h3><p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">{c.center === 'anthony' ? 'Anthony Center' : 'Harper Center'}</p><p className="text-sm font-medium text-slate-500 mt-1">{c.days}</p></div><span className="bg-slate-50 text-slate-600 px-3 py-1 rounded-lg text-xs font-black whitespace-nowrap">{c.time}</span></div>
+                        <div className="flex justify-between items-start mb-4"><div><h3 className={`font-black text-lg leading-tight ${c._isCancelled ? 'text-red-500 line-through' : 'text-[#001f3f]'}`}>{c.name}</h3><p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">{c.center === 'anthony' ? 'Anthony Center' : 'Harper Center'}</p><p className="text-sm font-medium text-slate-500 mt-1">{c.days}</p></div><span className={`px-3 py-1 rounded-lg text-xs font-black whitespace-nowrap ${c._isCancelled ? 'bg-red-100 text-red-600' : 'bg-slate-50 text-slate-600'}`}>{c._overrideTime || c.time}</span></div>{c._isCancelled && (<div className="mb-4 bg-red-50 border-2 border-red-200 rounded-xl p-3"><p className="text-[10px] font-black text-red-700 uppercase tracking-widest mb-1">⚠ Cancelled</p><p className="text-xs text-red-600 font-medium">{c._cancelReason}</p></div>)}
                         {classVisits.length > 0 && (<div className="mt-4 bg-slate-50 rounded-xl p-3 border border-slate-100"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Current Roster</p><div className="flex flex-wrap gap-1.5">{classVisits.slice(0, 6).map((v, idx) => (<span key={idx} className="bg-white border border-slate-200 text-slate-700 text-[10px] font-bold px-2 py-1 rounded-md shadow-sm">{v.name.split(' ')[0]} {v.name.split(' ')[1] ? v.name.split(' ')[1].charAt(0) + '.' : ''}</span>))}{classVisits.length > 6 && (<span className="bg-blue-50 text-blue-600 border border-blue-100 text-[10px] font-bold px-2 py-1 rounded-md shadow-sm">+{classVisits.length - 6} more</span>)}</div></div>)}
                       </div>
                       <div className="flex justify-between items-end mt-6"><div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Attendees</p><p className="text-3xl font-black text-[#1080ad] leading-none">{classVisits.length}</p></div><button onClick={() => setActiveClass(c)} className="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-5 py-3 rounded-xl text-sm font-bold transition-colors shadow-sm flex items-center justify-center gap-2"><Users size={16} /> Manage Roster</button></div>
