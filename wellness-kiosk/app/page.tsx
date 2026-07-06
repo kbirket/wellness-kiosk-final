@@ -119,7 +119,12 @@ const [editPaymentModal, setEditPaymentModal] = useState(null);
 const [savingOnboarding, setSavingOnboarding] = useState(false);
 const [blockedCheckins, setBlockedCheckins] = useState([]);
   const [airtableClasses, setAirtableClasses] = useState([]);
-  const [classOverrides, setClassOverrides] = useState([]);  const [convertingVisitor, setConvertingVisitor] = useState(null);
+const [classOverrides, setClassOverrides] = useState([]);
+  const [editingClass, setEditingClass] = useState(null);
+  const [showAddClassModal, setShowAddClassModal] = useState(false);
+  const [cancellingClass, setCancellingClass] = useState(null);
+  const [oneOffClass, setOneOffClass] = useState(null);
+  const [savingClass, setSavingClass] = useState(false);  const [convertingVisitor, setConvertingVisitor] = useState(null);
   const [convertingBusy, setConvertingBusy] = useState(false);
   const saveOnboardingField = async (member, fields) => {
     setSavingOnboarding(true);
@@ -1709,14 +1714,14 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
           const isViewingToday = todayStr === new Date().toDateString();
           return (
             <div className="space-y-6">
-              <div className="flex justify-between items-center mb-8"><div><h2 className="text-3xl font-bold text-[#001f3f] tracking-tight">Class Attendance</h2><p className="text-slate-400 font-medium">Select a class to log attendee check-ins.</p></div><div className="flex items-center gap-3"><div className="flex items-center gap-2"><button onClick={function() { var d = new Date(checkinDate + 'T00:00:00'); d.setDate(d.getDate() - 1); setCheckinDate(d.toISOString().split('T')[0]); }} className="w-9 h-9 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 flex items-center justify-center text-slate-500 font-black transition-colors shadow-sm">&lt;</button><input type="date" value={checkinDate} onChange={function(e) { setCheckinDate(e.target.value); }} className="px-4 py-2.5 bg-white border-2 border-slate-200 rounded-xl text-sm font-bold text-[#001f3f] outline-none focus:border-[#1080ad] cursor-pointer shadow-sm" /><button onClick={function() { var d = new Date(checkinDate + 'T00:00:00'); d.setDate(d.getDate() + 1); setCheckinDate(d.toISOString().split('T')[0]); }} className="w-9 h-9 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 flex items-center justify-center text-slate-500 font-black transition-colors shadow-sm">&gt;</button><button onClick={function() { setCheckinDate(new Date().toISOString().split('T')[0]); }} className="px-3 py-2.5 bg-[#1080ad] text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-colors shadow-sm">Today</button></div><button onClick={function() { var allClassesForReport = [{ name: 'Low-Impact Aerobics', center: 'anthony' },{ name: 'Sit & Get Fit', center: 'anthony' },{ name: 'Modified Sit & Get Fit', center: 'anthony' },{ name: 'Low Impact Aerobics', center: 'harper' },{ name: 'Chair Class', center: 'harper' },{ name: 'Water Aerobics', center: 'harper' }]; var classNames = allClassesForReport.filter(function(c) { return viewingCenter === 'both' || c.center === viewingCenter; }).map(function(c) { return c.name; }); var periodParts = reportMonth.split('-'); var yr = parseInt(periodParts[1]); var mo = parseInt(periodParts[0]) - 1; var monthName = new Date(yr, mo).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }); var monthVisits = visits.filter(function(v) { if (!v.time) return false; var d = new Date(v.time); return d.getFullYear() === yr && d.getMonth() === mo; }); var centerName = viewingCenter === 'both' ? 'All Centers' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1) + ' Wellness Center'; var classStats = classNames.map(function(cn) { var cv = monthVisits.filter(function(v) { return v.method === 'Class: ' + cn; }); if (cv.length === 0) return null; var dayMap = {}; cv.forEach(function(v) { var dayKey = new Date(v.time).toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric'}); if (!dayMap[dayKey]) dayMap[dayKey] = []; dayMap[dayKey].push(v.name); }); var days = {}; cv.forEach(function(v) { days[new Date(v.time).toDateString()] = true; }); var sess = Object.keys(days).length; return { name: cn, total: cv.length, sessions: sess, avg: sess > 0 ? Math.round(cv.length / sess) : 0, byDay: dayMap }; }).filter(Boolean); if (classStats.length === 0) { alert('No class attendance data for ' + monthName); return; } var classBlocks = classStats.map(function(c) { var dayRows = Object.entries(c.byDay).map(function(entry) { return '<tr><td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;font-weight:600;color:#334155;">' + entry[0] + '</td><td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:center;font-weight:900;color:#1080ad;">' + entry[1].length + '</td><td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;font-size:11px;color:#64748b;">' + entry[1].join(', ') + '</td></tr>'; }).join(''); return '<div style="margin-bottom:24px"><h3 style="font-size:16px;font-weight:900;color:#003d6b;margin-bottom:8px;padding-bottom:4px;border-bottom:3px solid #dba51f;">' + c.name + '</h3><div style="display:flex;gap:20px;margin-bottom:12px"><div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:8px 16px;text-align:center"><div style="font-size:22px;font-weight:900;color:#1080ad">' + c.total + '</div><div style="font-size:8px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1px">Total Attendees</div></div><div style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:8px 16px;text-align:center"><div style="font-size:22px;font-weight:900;color:#f59e0b">' + c.sessions + '</div><div style="font-size:8px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1px">Sessions</div></div><div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:8px 16px;text-align:center"><div style="font-size:22px;font-weight:900;color:#16a34a">' + c.avg + '</div><div style="font-size:8px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1px">Avg / Session</div></div></div><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th style="background:#003d6b;color:white;text-align:left;padding:8px 12px;font-size:9px;text-transform:uppercase;letter-spacing:1px">Date</th><th style="background:#003d6b;color:white;text-align:center;padding:8px 12px;font-size:9px;text-transform:uppercase;letter-spacing:1px">Count</th><th style="background:#003d6b;color:white;text-align:left;padding:8px 12px;font-size:9px;text-transform:uppercase;letter-spacing:1px">Attendees</th></tr></thead><tbody>' + dayRows + '</tbody></table></div>'; }).join(''); var totalAtt = classStats.reduce(function(s, c) { return s + c.total; }, 0); var totalSess = classStats.reduce(function(s, c) { return s + c.sessions; }, 0); var html = '<!DOCTYPE html><html><head><title>Class Attendance Report - ' + monthName + '</title><style>@page{margin:0.5in}@media print{body{margin:0;padding:20px}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:30px;max-width:800px;margin:0 auto}</style></head><body><div style="background:#003d6b;padding:16px 28px;display:flex;justify-content:space-between;align-items:center;border-radius:8px 8px 0 0"><img src="' + LOGO_URL + '" style="height:32px" /><div style="text-align:right;color:white"><h1 style="font-size:20px;font-weight:900;margin:0">Class Attendance Report</h1><div style="font-size:10px;color:#8bb8d9;letter-spacing:1px;margin-top:2px">' + centerName + ' · ' + monthName + '</div></div></div><div style="height:3px;background:linear-gradient(to right,#dba51f,#dd6d22);margin-bottom:24px"></div><div style="display:flex;gap:16px;margin-bottom:24px"><div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;border-left:4px solid #1080ad"><div style="font-size:28px;font-weight:900;color:#1080ad">' + totalAtt + '</div><div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.5px">Total Class Attendees</div></div><div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;border-left:4px solid #f59e0b"><div style="font-size:28px;font-weight:900;color:#f59e0b">' + totalSess + '</div><div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.5px">Total Sessions</div></div><div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;border-left:4px solid #16a34a"><div style="font-size:28px;font-weight:900;color:#16a34a">' + classStats.length + '</div><div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.5px">Active Classes</div></div></div>' + classBlocks + '<div style="margin-top:24px;padding-top:12px;border-top:2px solid #003d6b;font-size:11px;color:#94a3b8;display:flex;justify-content:space-between"><span>Prepared by Patterson Health Center · Wellness Hub</span><span>' + new Date().toLocaleDateString('en-US', {month: 'long', day: 'numeric', year: 'numeric'}) + '</span></div></body></html>'; var w = window.open('', '_blank'); w.document.write(html); w.document.close(); setTimeout(function() { w.print(); }, 500); }} className="bg-[#f59e0b] text-white px-4 py-2 rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-amber-600 transition-colors"><Printer size={16}/> Class Report</button><div className="bg-white px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-500 shadow-sm">{selectedClassDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</div></div></div>
+              <div className="flex justify-between items-center mb-8"><div><h2 className="text-3xl font-bold text-[#001f3f] tracking-tight">Class Attendance</h2><p className="text-slate-400 font-medium">Select a class to log attendee check-ins.</p></div><div className="flex items-center gap-3"><div className="flex items-center gap-2"><button onClick={function() { var d = new Date(checkinDate + 'T00:00:00'); d.setDate(d.getDate() - 1); setCheckinDate(d.toISOString().split('T')[0]); }} className="w-9 h-9 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 flex items-center justify-center text-slate-500 font-black transition-colors shadow-sm">&lt;</button><input type="date" value={checkinDate} onChange={function(e) { setCheckinDate(e.target.value); }} className="px-4 py-2.5 bg-white border-2 border-slate-200 rounded-xl text-sm font-bold text-[#001f3f] outline-none focus:border-[#1080ad] cursor-pointer shadow-sm" /><button onClick={function() { var d = new Date(checkinDate + 'T00:00:00'); d.setDate(d.getDate() + 1); setCheckinDate(d.toISOString().split('T')[0]); }} className="w-9 h-9 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 flex items-center justify-center text-slate-500 font-black transition-colors shadow-sm">&gt;</button><button onClick={function() { setCheckinDate(new Date().toISOString().split('T')[0]); }} className="px-3 py-2.5 bg-[#1080ad] text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-colors shadow-sm">Today</button><button onClick={function() { setEditingClass(null); setShowAddClassModal(true); }} className="px-4 py-2.5 bg-[#003d6b] text-white rounded-xl text-xs font-bold hover:bg-[#001f3f] transition-colors shadow-sm flex items-center gap-2"><Plus size={14}/> Add Class</button><button onClick={function() { setOneOffClass({ open: true, classId: '', date: checkinDate }); }} className="px-4 py-2.5 bg-white border border-slate-200 text-[#003d6b] rounded-xl text-xs font-bold hover:bg-slate-50 transition-colors shadow-sm">+ One-Off Session</button></div><button onClick={function() { var allClassesForReport = [{ name: 'Low-Impact Aerobics', center: 'anthony' },{ name: 'Sit & Get Fit', center: 'anthony' },{ name: 'Modified Sit & Get Fit', center: 'anthony' },{ name: 'Low Impact Aerobics', center: 'harper' },{ name: 'Chair Class', center: 'harper' },{ name: 'Water Aerobics', center: 'harper' }]; var classNames = allClassesForReport.filter(function(c) { return viewingCenter === 'both' || c.center === viewingCenter; }).map(function(c) { return c.name; }); var periodParts = reportMonth.split('-'); var yr = parseInt(periodParts[1]); var mo = parseInt(periodParts[0]) - 1; var monthName = new Date(yr, mo).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }); var monthVisits = visits.filter(function(v) { if (!v.time) return false; var d = new Date(v.time); return d.getFullYear() === yr && d.getMonth() === mo; }); var centerName = viewingCenter === 'both' ? 'All Centers' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1) + ' Wellness Center'; var classStats = classNames.map(function(cn) { var cv = monthVisits.filter(function(v) { return v.method === 'Class: ' + cn; }); if (cv.length === 0) return null; var dayMap = {}; cv.forEach(function(v) { var dayKey = new Date(v.time).toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric'}); if (!dayMap[dayKey]) dayMap[dayKey] = []; dayMap[dayKey].push(v.name); }); var days = {}; cv.forEach(function(v) { days[new Date(v.time).toDateString()] = true; }); var sess = Object.keys(days).length; return { name: cn, total: cv.length, sessions: sess, avg: sess > 0 ? Math.round(cv.length / sess) : 0, byDay: dayMap }; }).filter(Boolean); if (classStats.length === 0) { alert('No class attendance data for ' + monthName); return; } var classBlocks = classStats.map(function(c) { var dayRows = Object.entries(c.byDay).map(function(entry) { return '<tr><td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;font-weight:600;color:#334155;">' + entry[0] + '</td><td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:center;font-weight:900;color:#1080ad;">' + entry[1].length + '</td><td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;font-size:11px;color:#64748b;">' + entry[1].join(', ') + '</td></tr>'; }).join(''); return '<div style="margin-bottom:24px"><h3 style="font-size:16px;font-weight:900;color:#003d6b;margin-bottom:8px;padding-bottom:4px;border-bottom:3px solid #dba51f;">' + c.name + '</h3><div style="display:flex;gap:20px;margin-bottom:12px"><div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:8px 16px;text-align:center"><div style="font-size:22px;font-weight:900;color:#1080ad">' + c.total + '</div><div style="font-size:8px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1px">Total Attendees</div></div><div style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:8px 16px;text-align:center"><div style="font-size:22px;font-weight:900;color:#f59e0b">' + c.sessions + '</div><div style="font-size:8px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1px">Sessions</div></div><div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:8px 16px;text-align:center"><div style="font-size:22px;font-weight:900;color:#16a34a">' + c.avg + '</div><div style="font-size:8px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1px">Avg / Session</div></div></div><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th style="background:#003d6b;color:white;text-align:left;padding:8px 12px;font-size:9px;text-transform:uppercase;letter-spacing:1px">Date</th><th style="background:#003d6b;color:white;text-align:center;padding:8px 12px;font-size:9px;text-transform:uppercase;letter-spacing:1px">Count</th><th style="background:#003d6b;color:white;text-align:left;padding:8px 12px;font-size:9px;text-transform:uppercase;letter-spacing:1px">Attendees</th></tr></thead><tbody>' + dayRows + '</tbody></table></div>'; }).join(''); var totalAtt = classStats.reduce(function(s, c) { return s + c.total; }, 0); var totalSess = classStats.reduce(function(s, c) { return s + c.sessions; }, 0); var html = '<!DOCTYPE html><html><head><title>Class Attendance Report - ' + monthName + '</title><style>@page{margin:0.5in}@media print{body{margin:0;padding:20px}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:30px;max-width:800px;margin:0 auto}</style></head><body><div style="background:#003d6b;padding:16px 28px;display:flex;justify-content:space-between;align-items:center;border-radius:8px 8px 0 0"><img src="' + LOGO_URL + '" style="height:32px" /><div style="text-align:right;color:white"><h1 style="font-size:20px;font-weight:900;margin:0">Class Attendance Report</h1><div style="font-size:10px;color:#8bb8d9;letter-spacing:1px;margin-top:2px">' + centerName + ' · ' + monthName + '</div></div></div><div style="height:3px;background:linear-gradient(to right,#dba51f,#dd6d22);margin-bottom:24px"></div><div style="display:flex;gap:16px;margin-bottom:24px"><div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;border-left:4px solid #1080ad"><div style="font-size:28px;font-weight:900;color:#1080ad">' + totalAtt + '</div><div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.5px">Total Class Attendees</div></div><div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;border-left:4px solid #f59e0b"><div style="font-size:28px;font-weight:900;color:#f59e0b">' + totalSess + '</div><div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.5px">Total Sessions</div></div><div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;border-left:4px solid #16a34a"><div style="font-size:28px;font-weight:900;color:#16a34a">' + classStats.length + '</div><div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.5px">Active Classes</div></div></div>' + classBlocks + '<div style="margin-top:24px;padding-top:12px;border-top:2px solid #003d6b;font-size:11px;color:#94a3b8;display:flex;justify-content:space-between"><span>Prepared by Patterson Health Center · Wellness Hub</span><span>' + new Date().toLocaleDateString('en-US', {month: 'long', day: 'numeric', year: 'numeric'}) + '</span></div></body></html>'; var w = window.open('', '_blank'); w.document.write(html); w.document.close(); setTimeout(function() { w.print(); }, 500); }} className="bg-[#f59e0b] text-white px-4 py-2 rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-amber-600 transition-colors"><Printer size={16}/> Class Report</button><div className="bg-white px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-500 shadow-sm">{selectedClassDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</div></div></div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {displayedClasses.map((c, i) => {
                   var classVisits = filteredVisits.filter(function(v) { return new Date(v.time).toDateString() === todayStr && v.method === 'Class: ' + c.name; });
                   return (
                     <div key={i} className={`bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 ${c.color} flex flex-col justify-between`}>
                       <div>
-                        <div className="flex justify-between items-start mb-4"><div><h3 className={`font-black text-lg leading-tight ${c._isCancelled ? 'text-red-500 line-through' : 'text-[#001f3f]'}`}>{c.name}</h3><p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">{c.center === 'anthony' ? 'Anthony Center' : 'Harper Center'}</p><p className="text-sm font-medium text-slate-500 mt-1">{c.days}</p></div><span className={`px-3 py-1 rounded-lg text-xs font-black whitespace-nowrap ${c._isCancelled ? 'bg-red-100 text-red-600' : 'bg-slate-50 text-slate-600'}`}>{c._overrideTime || c.time}</span></div>{c._isCancelled && (<div className="mb-4 bg-red-50 border-2 border-red-200 rounded-xl p-3"><p className="text-[10px] font-black text-red-700 uppercase tracking-widest mb-1">⚠ Cancelled</p><p className="text-xs text-red-600 font-medium">{c._cancelReason}</p></div>)}
+                        <div className="flex justify-between items-start mb-4"><div><h3 className={`font-black text-lg leading-tight ${c._isCancelled ? 'text-red-500 line-through' : 'text-[#001f3f]'}`}>{c.name}</h3><p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">{c.center === 'anthony' ? 'Anthony Center' : 'Harper Center'}</p><p className="text-sm font-medium text-slate-500 mt-1">{c.days}</p></div><span className={`px-3 py-1 rounded-lg text-xs font-black whitespace-nowrap ${c._isCancelled ? 'bg-red-100 text-red-600' : 'bg-slate-50 text-slate-600'}`}>{c._overrideTime || c.time}</span></div>{c._isCancelled && (<div className="mb-4 bg-red-50 border-2 border-red-200 rounded-xl p-3"><div className="flex justify-between items-start"><div><p className="text-[10px] font-black text-red-700 uppercase tracking-widest mb-1">⚠ Cancelled</p><p className="text-xs text-red-600 font-medium">{c._cancelReason}</p></div>{c.fromAirtable && (<button onClick={async (e) => { e.stopPropagation(); const cancelOverride = classOverrides.find(o => o.classId === c.airtableId && o.overrideDate === checkinDate && o.overrideType === 'Cancelled'); if (!cancelOverride) return; if (!window.confirm('Restore this cancelled session?')) return; try { const res = await fetch('/api/save-class-override', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ recordId: cancelOverride.airtableId, deleteRecord: true }) }); const result = await res.json(); if (result.success) { setClassOverrides(prev => prev.filter(o => o.airtableId !== cancelOverride.airtableId)); showToast('Session restored.', 'success', 3000); } else { alert('Failed to restore: ' + result.error); } } catch (err) { alert('Network error.'); } }} className="text-[10px] font-bold text-red-700 underline hover:text-red-900">Undo</button>)}</div></div>)}                         {c.fromAirtable && !c._isCancelled && (<div className="flex gap-2 mb-3"><button onClick={(e) => { e.stopPropagation(); setEditingClass(c); setShowAddClassModal(true); }} className="text-[10px] font-bold text-slate-500 hover:text-[#003d6b] px-2 py-1 rounded hover:bg-slate-50 transition-colors">✎ Edit</button><button onClick={(e) => { e.stopPropagation(); setCancellingClass({ classId: c.airtableId, className: c.name, date: checkinDate }); }} className="text-[10px] font-bold text-red-500 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50 transition-colors">✕ Cancel This Session</button></div>)}
                         {classVisits.length > 0 && (<div className="mt-4 bg-slate-50 rounded-xl p-3 border border-slate-100"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Current Roster</p><div className="flex flex-wrap gap-1.5">{classVisits.slice(0, 6).map((v, idx) => (<span key={idx} className="bg-white border border-slate-200 text-slate-700 text-[10px] font-bold px-2 py-1 rounded-md shadow-sm">{v.name.split(' ')[0]} {v.name.split(' ')[1] ? v.name.split(' ')[1].charAt(0) + '.' : ''}</span>))}{classVisits.length > 6 && (<span className="bg-blue-50 text-blue-600 border border-blue-100 text-[10px] font-bold px-2 py-1 rounded-md shadow-sm">+{classVisits.length - 6} more</span>)}</div></div>)}
                       </div>
                       <div className="flex justify-between items-end mt-6"><div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Attendees</p><p className="text-3xl font-black text-[#1080ad] leading-none">{classVisits.length}</p></div><button onClick={() => setActiveClass(c)} className="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-5 py-3 rounded-xl text-sm font-bold transition-colors shadow-sm flex items-center justify-center gap-2"><Users size={16} /> Manage Roster</button></div>
@@ -3179,6 +3184,194 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
       )}
 
       {/* ADD MEMBER MODAL */}
+     {showAddClassModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#001f3f]/90 backdrop-blur-md">
+          <div className="bg-white rounded-3xl w-full max-w-2xl p-10 relative shadow-2xl max-h-[90vh] overflow-y-auto">
+            <button onClick={() => { setShowAddClassModal(false); setEditingClass(null); }} className="absolute top-6 right-6 text-slate-300 hover:text-red-500 transition-all z-10"><X size={24}/></button>
+            <h3 className="text-2xl font-black text-[#003d6b] mb-2">{editingClass ? 'Edit Class' : 'Add New Class'}</h3>
+            <p className="text-slate-500 mb-6 text-sm">{editingClass ? 'Update details or archive to stop the class from appearing.' : 'Create a new recurring class. Cancellations and one-off sessions can be added later.'}</p>
+            
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              if (savingClass) return;
+              setSavingClass(true);
+              const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+              const selectedDays = dayNames.filter(d => e.target['day_' + d] && e.target['day_' + d].checked);
+              const fields = {
+                'Name': e.target.cls_name.value,
+                'Center': e.target.cls_center.value,
+                'Days': selectedDays,
+                'Start Time': e.target.cls_time.value,
+                'Start Date': e.target.cls_start.value || null,
+                'End Date': e.target.cls_end.value || null,
+                'Instructor': e.target.cls_instructor.value || '',
+                'Color Accent': e.target.cls_color.value,
+                'Notes': e.target.cls_notes.value || ''
+              };
+              try {
+                const res = await fetch('/api/save-class', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ recordId: editingClass ? editingClass.airtableId : null, fields }) });
+                const result = await res.json();
+                if (result.success) {
+                  const newCls = { airtableId: result.record.id, name: result.record.fields['Name'] || '', center: (result.record.fields['Center'] || 'Anthony').toLowerCase(), days: Array.isArray(result.record.fields['Days']) ? result.record.fields['Days'] : [], time: result.record.fields['Start Time'] || '', startDate: result.record.fields['Start Date'] || '', endDate: result.record.fields['End Date'] || '', instructor: result.record.fields['Instructor'] || '', colorAccent: result.record.fields['Color Accent'] || 'Navy', archived: !!result.record.fields['Archived'], notes: result.record.fields['Notes'] || '' };
+                  if (editingClass) {
+                    setAirtableClasses(prev => prev.map(c => c.airtableId === editingClass.airtableId ? newCls : c));
+                    showToast('Class updated.', 'success', 3000);
+                  } else {
+                    setAirtableClasses(prev => [...prev, newCls]);
+                    showToast('Class added.', 'success', 3000);
+                  }
+                  setShowAddClassModal(false);
+                  setEditingClass(null);
+                } else {
+                  alert('Save failed: ' + (result.error || 'Unknown error'));
+                }
+              } catch (err) {
+                alert('Network error: ' + err.message);
+              }
+              setSavingClass(false);
+            }}>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase mb-1 block tracking-widest">Class Name</label>
+                  <input name="cls_name" required defaultValue={editingClass?.name || ''} placeholder="e.g. Water Aerobics" className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-bold text-slate-400 uppercase mb-1 block tracking-widest">Center</label>
+                    <select name="cls_center" required defaultValue={editingClass ? (editingClass.center === 'harper' ? 'Harper' : 'Anthony') : 'Anthony'} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]">
+                      <option value="Anthony">Anthony</option>
+                      <option value="Harper">Harper</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-400 uppercase mb-1 block tracking-widest">Start Time</label>
+                    <input name="cls_time" required defaultValue={editingClass?.time || ''} placeholder="e.g. 12:15 PM" className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]" />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase mb-2 block tracking-widest">Days</label>
+                  <div className="flex flex-wrap gap-2">
+                    {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => (<label key={d} className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 cursor-pointer hover:bg-slate-100"><input type="checkbox" name={'day_' + d} defaultChecked={editingClass?.days?.includes(d)} className="w-4 h-4 rounded" /><span className="text-xs font-bold text-slate-700">{d}</span></label>))}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-bold text-slate-400 uppercase mb-1 block tracking-widest">Start Date (optional)</label>
+                    <input name="cls_start" type="date" defaultValue={editingClass?.startDate || ''} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-400 uppercase mb-1 block tracking-widest">End Date (blank = continuous)</label>
+                    <input name="cls_end" type="date" defaultValue={editingClass?.endDate || ''} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-bold text-slate-400 uppercase mb-1 block tracking-widest">Instructor (optional)</label>
+                    <input name="cls_instructor" defaultValue={editingClass?.instructor || ''} placeholder="e.g. Loretta" className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-400 uppercase mb-1 block tracking-widest">Color Accent</label>
+                    <select name="cls_color" defaultValue={editingClass?.colorAccent || 'Navy'} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]">
+                      <option value="Navy">Navy</option>
+                      <option value="Gold">Gold</option>
+                      <option value="Blue">Blue</option>
+                      <option value="Orange">Orange</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase mb-1 block tracking-widest">Notes (optional)</label>
+                  <textarea name="cls_notes" rows="2" defaultValue={editingClass?.notes || ''} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad] resize-none"></textarea>
+                </div>
+              </div>
+              <div className="flex gap-3 mt-6">
+                {editingClass && (<button type="button" onClick={async () => { if (!window.confirm('Archive ' + editingClass.name + '? It will stop appearing on the schedule immediately. Historical attendance stays intact.')) return; try { const res = await fetch('/api/save-class', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ recordId: editingClass.airtableId, fields: { 'Archived': true } }) }); const result = await res.json(); if (result.success) { setAirtableClasses(prev => prev.map(c => c.airtableId === editingClass.airtableId ? { ...c, archived: true } : c)); showToast('Class archived.', 'success', 3000); setShowAddClassModal(false); setEditingClass(null); } else { alert('Archive failed: ' + result.error); } } catch (err) { alert('Network error.'); } }} className="flex-1 bg-red-100 text-red-700 py-3 rounded-xl font-bold text-sm hover:bg-red-200 transition-colors">Archive</button>)}
+                <button type="submit" disabled={savingClass} className="flex-1 bg-[#003d6b] text-white py-3 rounded-xl font-bold shadow-lg hover:bg-[#001f3f] transition-colors disabled:opacity-50">{savingClass ? 'Saving...' : editingClass ? 'Save Changes' : 'Add Class'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      
+      {cancellingClass && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#001f3f]/90 backdrop-blur-md">
+          <div className="bg-white rounded-3xl w-full max-w-md p-8 relative shadow-2xl">
+            <button onClick={() => setCancellingClass(null)} className="absolute top-6 right-6 text-slate-300 hover:text-red-500"><X size={24}/></button>
+            <h3 className="text-xl font-black text-red-600 mb-2">Cancel Session</h3>
+            <p className="text-slate-500 mb-6 text-sm">Cancelling <strong>{cancellingClass.className}</strong> on <strong>{new Date(cancellingClass.date + 'T00:00:00').toLocaleDateString('en-US', {weekday: 'long', month: 'long', day: 'numeric'})}</strong>.</p>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              const reason = e.target.cancel_reason.value;
+              if (!reason.trim()) { alert('Please provide a reason.'); return; }
+              try {
+                const res = await fetch('/api/save-class-override', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ classAirtableId: cancellingClass.classId, overrideDate: cancellingClass.date, overrideType: 'Cancelled', reason }) });
+                const result = await res.json();
+                if (result.success) {
+                  const rec = result.record;
+                  setClassOverrides(prev => [...prev, { airtableId: rec.id, classId: cancellingClass.classId, overrideDate: cancellingClass.date, overrideType: 'Cancelled', reason, overrideTime: '' }]);
+                  showToast('Session cancelled.', 'success', 3000);
+                  setCancellingClass(null);
+                } else { alert('Failed to cancel: ' + result.error); }
+              } catch (err) { alert('Network error.'); }
+            }}>
+              <label className="text-xs font-bold text-slate-400 uppercase mb-2 block tracking-widest">Reason (visible on the class card)</label>
+              <textarea name="cancel_reason" required rows="3" placeholder="e.g. Instructor illness, snow day, holiday" className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-red-400 resize-none"></textarea>
+              <button type="submit" className="w-full mt-4 bg-red-500 text-white py-3 rounded-xl font-bold hover:bg-red-600 transition-colors">Cancel This Session</button>
+            </form>
+          </div>
+        </div>
+      )}
+      
+      {oneOffClass && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#001f3f]/90 backdrop-blur-md">
+          <div className="bg-white rounded-3xl w-full max-w-md p-8 relative shadow-2xl">
+            <button onClick={() => setOneOffClass(null)} className="absolute top-6 right-6 text-slate-300 hover:text-red-500"><X size={24}/></button>
+            <h3 className="text-xl font-black text-[#003d6b] mb-2">Add One-Off Session</h3>
+            <p className="text-slate-500 mb-6 text-sm">Adds a class on a date it wouldn't normally run — for makeups or special events.</p>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              const classId = e.target.oneoff_class.value;
+              const date = e.target.oneoff_date.value;
+              const time = e.target.oneoff_time.value;
+              const reason = e.target.oneoff_reason.value;
+              if (!classId) { alert('Please pick a class.'); return; }
+              try {
+                const res = await fetch('/api/save-class-override', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ classAirtableId: classId, overrideDate: date, overrideType: 'Added', reason, overrideTime: time }) });
+                const result = await res.json();
+                if (result.success) {
+                  const rec = result.record;
+                  setClassOverrides(prev => [...prev, { airtableId: rec.id, classId, overrideDate: date, overrideType: 'Added', reason, overrideTime: time }]);
+                  showToast('One-off session added.', 'success', 3000);
+                  setOneOffClass(null);
+                } else { alert('Failed: ' + result.error); }
+              } catch (err) { alert('Network error.'); }
+            }}>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase mb-1 block tracking-widest">Class</label>
+                  <select name="oneoff_class" required defaultValue={oneOffClass.classId || ''} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]">
+                    <option value="">-- Select a class --</option>
+                    {airtableClasses.filter(c => !c.archived).map(c => (<option key={c.airtableId} value={c.airtableId}>{c.name} ({c.center === 'harper' ? 'Harper' : 'Anthony'})</option>))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase mb-1 block tracking-widest">Date</label>
+                  <input name="oneoff_date" type="date" required defaultValue={oneOffClass.date} className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase mb-1 block tracking-widest">Time (optional — overrides regular time)</label>
+                  <input name="oneoff_time" placeholder="e.g. 2:00 PM" className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad]" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase mb-1 block tracking-widest">Reason / Notes (optional)</label>
+                  <textarea name="oneoff_reason" rows="2" placeholder="e.g. Makeup for last week's cancellation" className="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-[#1080ad] resize-none"></textarea>
+                </div>
+              </div>
+              <button type="submit" className="w-full mt-4 bg-[#003d6b] text-white py-3 rounded-xl font-bold hover:bg-[#001f3f] transition-colors">Add Session</button>
+            </form>
+          </div>
+        </div>
+      )}
       {convertingVisitor && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#001f3f]/90 backdrop-blur-md">
           <div className="bg-white rounded-3xl w-full max-w-xl p-10 relative shadow-2xl max-h-[90vh] overflow-y-auto">
