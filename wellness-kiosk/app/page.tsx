@@ -1655,8 +1655,51 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
 >
   💳 Print Active Member VIP Cards
 </button>
-        {activeTab === 'classes' && (() => {
-         const allClasses = [
+</button>
+            <button onClick={() => {
+              let membersToPrint = filteredMembers.filter(m => !m.inactive);
+              const twoMonthsAgo = new Date();
+              twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+              const lastVisitByName = {};
+              visits.forEach(v => {
+                const vt = new Date(v.time);
+                if (isNaN(vt.getTime())) return;
+                const ex = lastVisitByName[v.name];
+                if (!ex || vt > ex) { lastVisitByName[v.name] = vt; }
+              });
+              membersToPrint = membersToPrint.filter(m => {
+                const fn = m.firstName + ' ' + m.lastName;
+                const lv = lastVisitByName[fn];
+                return lv && lv >= twoMonthsAgo;
+              });
+              if (membersToPrint.length === 0) { alert('No active members with a check-in in the last 2 months were found.'); return; }
+              const pageCount = Math.ceil(membersToPrint.length / 3);
+              if (!window.confirm('Found ' + membersToPrint.length + ' active members from the last 2 months.\n\nPrint them as 3-up fob keytags? This produces ' + pageCount + ' keytag card(s).')) return;
+              const renderKeytag = (m) => {
+                if (!m) { return '<div class="keytag empty"><div class="empty-msg">Blank</div></div>'; }
+                const isHarper = m.center && m.center.toLowerCase().includes('harper');
+                const accentColor = isHarper ? '#dba51f' : '#003d6b';
+                const centerLabel = isHarper ? 'HARPER' : 'ANTHONY';
+                const qrColor = isHarper ? 'dba51f' : '003d6b';
+                const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(m.id) + '&color=' + qrColor + '&bgcolor=ffffff';
+                const photoHtml = m.photoUrl ? '<img class="photo" src="' + m.photoUrl + '" />' : '<div class="photo initials" style="background:' + accentColor + '">' + (m.firstName[0] || '').toUpperCase() + (m.lastName[0] || '').toUpperCase() + '</div>';
+                return '<div class="keytag"><div class="accent-bar" style="background:' + accentColor + '"></div>' + photoHtml + '<div class="info"><div class="name">' + m.firstName + ' ' + m.lastName + '</div><div class="id">ID: ' + m.id + '</div><div class="center" style="color:' + accentColor + '">' + centerLabel + ' WELLNESS</div></div><img class="qr" src="' + qrUrl + '" /></div>';
+              };
+              let cards = '';
+              for (let i = 0; i < membersToPrint.length; i += 3) {
+                const trio = [membersToPrint[i], membersToPrint[i + 1], membersToPrint[i + 2]];
+                cards += '<div class="card">' + trio.map(renderKeytag).join('') + '</div>';
+              }
+              const html = '<!DOCTYPE html><html><head><title>Active Member Fobs (' + membersToPrint.length + ')</title><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet"><style>@page{size:3.375in 2.125in;margin:0}@media print{*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}.card{page-break-after:always}}body{font-family:Montserrat,Arial,sans-serif;margin:0;padding:0;background:#fff}.card{width:3.375in;height:2.125in;display:flex;flex-direction:column;box-sizing:border-box}.keytag{flex:1;display:flex;flex-direction:row;align-items:center;padding:0.04in 0.06in 0.04in 0.14in;box-sizing:border-box;position:relative;border-bottom:1px dashed #cbd5e1;overflow:hidden}.keytag:last-child{border-bottom:none}.keytag.empty{background:#f8fafc;justify-content:center;align-items:center}.empty-msg{font-size:8px;color:#cbd5e1;text-transform:uppercase;letter-spacing:2px;font-weight:700}.accent-bar{position:absolute;left:0;top:0.05in;bottom:0.05in;width:0.06in;border-radius:2px}.photo{width:0.55in;height:0.55in;object-fit:cover;border-radius:4px;flex-shrink:0;margin-right:0.08in}.photo.initials{display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:16px;letter-spacing:1px}.info{flex:1;display:flex;flex-direction:column;justify-content:center;overflow:hidden;padding-right:0.05in}.name{font-size:11px;font-weight:900;color:#001f3f;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-0.2px}.id{font-family:monospace;font-size:8px;font-weight:700;color:#64748b;margin-top:2px;letter-spacing:0.5px}.center{font-size:7px;font-weight:900;letter-spacing:1.5px;margin-top:3px}.qr{width:0.55in;height:0.55in;flex-shrink:0}</style></head><body>' + cards + '</body></html>';
+              const w = window.open('', '_blank');
+              w.document.write(html);
+              w.document.close();
+              setTimeout(() => w.print(), 1500);
+            }} className="bg-[#dba51f] text-white px-6 py-2 rounded-xl font-bold shadow-xl shadow-[#dba51f]/20 hover:bg-amber-600 transition-all"
+            >
+              &#128273; Print Active Member Fobs
+            </button>
+        {activeTab === 'classes' && (() => {         const allClasses = [
             { name: 'Low-Impact Aerobics', center: 'anthony', days: 'Mon - Fri', time: '9:30 AM', capacity: 25, color: 'border-[#1080ad]' },
             { name: 'Sit & Get Fit', center: 'anthony', days: 'Mon - Fri', time: '11:00 AM', capacity: 20, color: 'border-[#1080ad]' },
             { name: 'Modified Sit & Get Fit', center: 'anthony', days: 'Mon, Wed, Fri', time: '2:00 PM', capacity: 20, color: 'border-[#1080ad]' },
