@@ -1655,7 +1655,6 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
 >
   💳 Print Active Member VIP Cards
 </button>
-</button>
             <button onClick={() => {
               let membersToPrint = filteredMembers.filter(m => !m.inactive);
               const twoMonthsAgo = new Date();
@@ -1699,7 +1698,8 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
             >
               &#128273; Print Active Member Fobs
             </button>
-        {activeTab === 'classes' && (() => {         const allClasses = [
+        {activeTab === 'classes' && (() => {
+         const allClasses = [
             { name: 'Low-Impact Aerobics', center: 'anthony', days: 'Mon - Fri', time: '9:30 AM', capacity: 25, color: 'border-[#1080ad]' },
             { name: 'Sit & Get Fit', center: 'anthony', days: 'Mon - Fri', time: '11:00 AM', capacity: 20, color: 'border-[#1080ad]' },
             { name: 'Modified Sit & Get Fit', center: 'anthony', days: 'Mon, Wed, Fri', time: '2:00 PM', capacity: 20, color: 'border-[#1080ad]' },
