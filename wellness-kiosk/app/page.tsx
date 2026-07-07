@@ -2135,7 +2135,7 @@ body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}
             </div>
           );
         })()}
-       {/* ======================== ENHANCED REPORTS TAB ======================== */}
+       {/* ======================== ENHANCED REPORT TAB ======================== */}
      {activeTab === 'reports' && (() => {
           const isCustomRange = reportMonth === 'custom';
           let periodStr, yearStr, y, targetMonths = [], displayPeriod = '';
