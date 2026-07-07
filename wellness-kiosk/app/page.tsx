@@ -587,7 +587,7 @@ return exp >= today && !v.convertedToMember && v.orientationComplete && v.passAc
 
       const light = getStoplight(m);
       if (light === 'red') {
-        setKioskMessage({ text: 'Please see front desk.', type: 'error', subtext: 'We need to quickly update your account.' });
+        setKioskMessage({ text: 'Please see front desk.', type: 'error', subtext: 'We need to update your account.' });
         setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 4500);
         return false;
       }
