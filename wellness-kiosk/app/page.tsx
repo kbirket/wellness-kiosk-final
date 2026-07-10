@@ -3727,6 +3727,7 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
                       ];
                       const completedCount = items.filter(it => selectedMember[it.key]).length;
                       const requiredMissing = !selectedMember.basicOrientation || !selectedMember.paperworkCompleted;
+                      const datePending = items.filter(it => selectedMember[it.key] && !selectedMember[it.dateKey]).length;
                       return (
                         <div className={`mb-4 rounded-2xl border-2 p-4 ${requiredMissing ? 'bg-amber-50 border-amber-300' : 'bg-emerald-50 border-emerald-200'}`}>
                           <div className="flex items-center justify-between mb-3">
@@ -3738,13 +3739,14 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
                               const dateVal = selectedMember[it.dateKey] || '';
                               return (
                                 <div key={it.key} className="flex items-center gap-3 bg-white rounded-xl p-2 border border-slate-100">
-                                  <input type="checkbox" checked={checked} disabled={savingOnboarding} onChange={(e) => { const isNowChecked = e.target.checked; const updates = { [it.apiField]: isNowChecked }; if (isNowChecked && !dateVal) updates[it.apiDateField] = today; if (!isNowChecked) updates[it.apiDateField] = null; saveOnboardingField(selectedMember, updates); }} className="w-4 h-4 rounded border-slate-300 shrink-0 cursor-pointer" />
+                                  <input type="checkbox" checked={checked} disabled={savingOnboarding} onChange={(e) => { const isNowChecked = e.target.checked; const updates = { [it.apiField]: isNowChecked }; if (!isNowChecked) updates[it.apiDateField] = null; saveOnboardingField(selectedMember, updates); }} className="w-4 h-4 rounded border-slate-300 shrink-0 cursor-pointer" />
                                   <span className="text-xs font-bold text-slate-700 flex-1">{it.label}</span>
-                                  <input type="date" value={dateVal} max={today} disabled={!checked || savingOnboarding} onChange={(e) => { saveOnboardingField(selectedMember, { [it.apiDateField]: e.target.value || null }); }} className={`text-xs font-bold p-1.5 rounded-md border shrink-0 outline-none ${checked ? 'bg-white border-slate-200 text-slate-700 focus:border-[#1080ad]' : 'bg-slate-50 border-slate-100 text-slate-300'}`} style={{width: '135px'}} />
+                                  <input type="date" value={dateVal} max={today} disabled={!checked || savingOnboarding} onChange={(e) => { saveOnboardingField(selectedMember, { [it.apiDateField]: e.target.value || null }); }} className={`text-xs font-bold p-1.5 rounded-md border shrink-0 outline-none ${checked && !dateVal ? 'bg-amber-50 border-amber-300 text-amber-700 focus:border-amber-500' : checked ? 'bg-white border-slate-200 text-slate-700 focus:border-[#1080ad]' : 'bg-slate-50 border-slate-100 text-slate-300'}`} style={{width: '135px'}} />
                                 </div>
                               );
                             })}
                           </div>
+                          {datePending > 0 && (<p className="text-[10px] font-bold text-amber-700 mt-2 flex items-center gap-1">⏱ {datePending} item{datePending > 1 ? 's' : ''} marked done — a director can add the date later.</p>)}
                           <div className="mt-3">
                             <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Onboarding Notes</label>
                             <textarea defaultValue={selectedMember.onboardingNotes || ''} disabled={savingOnboarding} onBlur={(e) => { if (e.target.value !== (selectedMember.onboardingNotes || '')) saveOnboardingField(selectedMember, { 'Onboarding Notes': e.target.value }); }} placeholder="Any special notes about onboarding (pending items, exceptions, etc.)" className="w-full text-xs p-2 bg-white border border-slate-200 rounded-md outline-none focus:border-[#1080ad] resize-none" rows="2" />
