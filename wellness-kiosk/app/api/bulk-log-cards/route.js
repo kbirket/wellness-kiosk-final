@@ -10,10 +10,10 @@ export async function POST(request) {
     const st = status === 'Issued' ? 'Issued' : 'Printed';
 
     const records = memberIds.filter(function (id) { return !!id; }).map(function (id) {
+      // Note: 'Requested Date' is a computed field in Airtable, so we do NOT set it here.
       const fields = {
         'Member': [id],
         'Requested By': requestedBy || 'Bulk Print',
-        'Requested Date': today,
         'Status': st,
         'Print Type': printType || 'Fob',
         'Printed Date': today
@@ -47,7 +47,6 @@ export async function POST(request) {
         return Response.json({ success: false, error: data.error.message || JSON.stringify(data.error), created: created }, { status: 500 });
       }
       created += (data.records ? data.records.length : 0);
-      // small pause to stay under Airtable's rate limit
       await new Promise(function (r) { setTimeout(r, 220); });
     }
 
