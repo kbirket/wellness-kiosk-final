@@ -1637,21 +1637,15 @@ var showToast = function(message, type, duration) { setToast({ message: message,
   💳 Print Active Member VIP Cards
 </button>
             <button onClick={() => {
-              let membersToPrint = filteredMembers.filter(m => !m.inactive);
-              const twoMonthsAgo = new Date();
-              twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
-              const lastVisitByName = {};
-              visits.forEach(v => {
-                const vt = new Date(v.time);
-                if (isNaN(vt.getTime())) return;
-                const ex = lastVisitByName[v.name];
-                if (!ex || vt > ex) { lastVisitByName[v.name] = vt; }
-              });
-              membersToPrint = membersToPrint.filter(m => {
-                const fn = m.firstName + ' ' + m.lastName;
-                const lv = lastVisitByName[fn];
-                return lv && lv >= twoMonthsAgo;
-              });
+              let membersToPrint = members.filter(m => !m.inactive);
+              const allActive = window.confirm('Print fobs for ALL ' + membersToPrint.length + ' active members?     OK = all active members (use this for the initial rollout).     Cancel = only members who checked in within the last 2 months.');
+              if (!allActive) {
+                const twoMonthsAgo = new Date();
+                twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+                const lastVisitByName = {};
+                visits.forEach(v => { const vt = new Date(v.time); if (isNaN(vt.getTime())) return; const ex = lastVisitByName[v.name]; if (!ex || vt > ex) { lastVisitByName[v.name] = vt; } });
+                membersToPrint = membersToPrint.filter(m => { const fn = m.firstName + ' ' + m.lastName; const lv = lastVisitByName[fn]; return lv && lv >= twoMonthsAgo; });
+              }
               if (membersToPrint.length === 0) { alert('No active members with a check-in in the last 2 months were found.'); return; }
               const pageCount = Math.ceil(membersToPrint.length / 3);
               if (!window.confirm('Found ' + membersToPrint.length + ' active members from the last 2 months.\n\nPrint them as 3-up fob keytags? This produces ' + pageCount + ' keytag card(s).')) return;
@@ -3790,7 +3784,7 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
                                 <div key={it.key} className="flex items-center gap-3 bg-white rounded-xl p-2 border border-slate-100">
                                   <input type="checkbox" checked={checked} disabled={savingOnboarding} onChange={(e) => { const isNowChecked = e.target.checked; const updates = { [it.apiField]: isNowChecked }; if (!isNowChecked) updates[it.apiDateField] = null; saveOnboardingField(selectedMember, updates); }} className="w-4 h-4 rounded border-slate-300 shrink-0 cursor-pointer" />
                                   <span className="text-xs font-bold text-slate-700 flex-1">{it.label}</span>
-                                  <input type="text" inputMode="numeric" placeholder="MM/DD/YYYY" title="Type the date as MM/DD/YYYY" key={dateVal || 'empty'} defaultValue={formatMDY(dateVal)} disabled={!checked || savingOnboarding} onBlur={(e) => { const v = e.target.value.trim(); if (!v) { if (dateVal) saveOnboardingField(selectedMember, { [it.apiDateField]: null }); return; } const iso = parseMDY(v); if (iso) { if (iso !== dateVal) saveOnboardingField(selectedMember, { [it.apiDateField]: iso }); } else { alert('Please type the date as MM/DD/YYYY, for example 03/15/2026.'); e.target.value = formatMDY(dateVal); } }} className={`text-xs font-bold p-1.5 rounded-md border shrink-0 outline-none ${checked && !dateVal ? 'bg-amber-50 border-amber-300 text-amber-700 focus:border-amber-500' : checked ? 'bg-white border-slate-200 text-slate-700 focus:border-[#1080ad]' : 'bg-slate-50 border-slate-100 text-slate-300'}`} style={{width: '135px'}} />
+                                  <input type="text" inputMode="numeric" placeholder="MM/DD/YYYY" title="Type the date as MM/DD/YYYY" key={selectedMember.airtableId + '_' + it.apiDateField} defaultValue={formatMDY(dateVal)} disabled={!checked || savingOnboarding} onBlur={(e) => { const v = e.target.value.trim(); if (!v) { if (dateVal) saveOnboardingField(selectedMember, { [it.apiDateField]: null }); return; } const iso = parseMDY(v); if (iso) { if (iso !== dateVal) saveOnboardingField(selectedMember, { [it.apiDateField]: iso }); } else { alert('Please type the date as MM/DD/YYYY, for example 03/15/2026.'); e.target.value = formatMDY(dateVal); } }} className={`text-xs font-bold p-1.5 rounded-md border shrink-0 outline-none ${checked && !dateVal ? 'bg-amber-50 border-amber-300 text-amber-700 focus:border-amber-500' : checked ? 'bg-white border-slate-200 text-slate-700 focus:border-[#1080ad]' : 'bg-slate-50 border-slate-100 text-slate-300'}`} style={{width: '135px'}} />
                                 </div>
                               );
                             })}
@@ -3816,7 +3810,7 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
                           {isMinor && (
                             <div className="mt-3 flex items-center gap-3">
                               <label className="text-[10px] font-black uppercase tracking-widest text-red-700 shrink-0">Turns 18:</label>
-                              <input type="text" inputMode="numeric" placeholder="MM/DD/YYYY" title="Type the date as MM/DD/YYYY" key={turns18 || 'empty'} defaultValue={formatMDY(turns18)} disabled={savingOnboarding} onBlur={(e) => { const v = e.target.value.trim(); if (!v) { if (turns18) saveOnboardingField(selectedMember, { 'Turns 18 Date': null }); return; } const iso = parseMDY(v); if (iso) { if (iso !== turns18) saveOnboardingField(selectedMember, { 'Turns 18 Date': iso }); } else { alert('Please type the date as MM/DD/YYYY, for example 06/01/2027.'); e.target.value = formatMDY(turns18); } }} className="text-xs font-bold p-2 rounded-md border border-red-200 bg-white text-slate-700 focus:border-red-500 outline-none" />
+                              <input type="text" inputMode="numeric" placeholder="MM/DD/YYYY" title="Type the date as MM/DD/YYYY" key={selectedMember.airtableId + '_turns18'} defaultValue={formatMDY(turns18)} disabled={savingOnboarding} onBlur={(e) => { const v = e.target.value.trim(); if (!v) { if (turns18) saveOnboardingField(selectedMember, { 'Turns 18 Date': null }); return; } const iso = parseMDY(v); if (iso) { if (iso !== turns18) saveOnboardingField(selectedMember, { 'Turns 18 Date': iso }); } else { alert('Please type the date as MM/DD/YYYY, for example 06/01/2027.'); e.target.value = formatMDY(turns18); } }} className="text-xs font-bold p-2 rounded-md border border-red-200 bg-white text-slate-700 focus:border-red-500 outline-none" />
                               {turns18 && turns18 > today && (<span className="text-[10px] font-bold text-red-600">({Math.ceil((new Date(turns18 + 'T00:00:00') - new Date()) / (1000 * 60 * 60 * 24))} days)</span>)}
                             </div>
                           )}
