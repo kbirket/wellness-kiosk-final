@@ -83,7 +83,8 @@ export async function POST(request) {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        records: [{ fields: payFields }]
+        records: [{ fields: payFields }],
+        typecast: true
       })
     });
 
@@ -91,7 +92,8 @@ export async function POST(request) {
 
     if (!payRes.ok || payData.error) {
       console.error('Payment record error:', payData.error || payData);
-      return NextResponse.json({ success: false, error: 'Failed to save payment in Airtable' }, { status: 400 });
+      const detail = (payData.error && (payData.error.message || payData.error.type)) || 'Failed to save payment in Airtable';
+      return NextResponse.json({ success: false, error: detail }, { status: 400 });
     }
 
     // 4. Update the Member record
@@ -117,7 +119,8 @@ export async function POST(request) {
 
     if (!memRes.ok || memData.error) {
       console.error('Member update error:', memData.error || memData);
-      return NextResponse.json({ success: false, error: 'Failed to update member in Airtable' }, { status: 400 });
+      const mdetail = (memData.error && (memData.error.message || memData.error.type)) || 'Failed to update member in Airtable';
+      return NextResponse.json({ success: false, error: mdetail }, { status: 400 });
     }
 
     // 5. If the payer is part of a family, advance Next Payment Due for all other family members too
