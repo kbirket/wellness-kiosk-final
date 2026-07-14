@@ -553,6 +553,30 @@ const handleAddMemberSubmit = async (e) => {
     reps.forEach(function(p){ out = out.split(p[0]).join(p[1]); });
     return out;
   };
+  const parseMDY = (str) => {
+    if (!str) return null;
+    const digits = String(str).replace(/[^0-9]/g, '');
+    const slashed = String(str).replace(/[^0-9]/g, '/').replace(/\/+/g, '/').replace(/^\/|\/$/g, '');
+    const parts = slashed.split('/').filter(Boolean);
+    let mm, dd, yy;
+    if (parts.length === 3) { mm = parseInt(parts[0], 10); dd = parseInt(parts[1], 10); yy = parseInt(parts[2], 10); }
+    else if (digits.length === 8) { mm = parseInt(digits.slice(0, 2), 10); dd = parseInt(digits.slice(2, 4), 10); yy = parseInt(digits.slice(4, 8), 10); }
+    else if (digits.length === 6) { mm = parseInt(digits.slice(0, 2), 10); dd = parseInt(digits.slice(2, 4), 10); yy = parseInt(digits.slice(4, 6), 10); }
+    else return null;
+    if (isNaN(mm) || isNaN(dd) || isNaN(yy)) return null;
+    if (yy < 100) yy += 2000;
+    if (mm < 1 || mm > 12 || dd < 1 || dd > 31 || yy < 1900 || yy > 2100) return null;
+    const d = new Date(yy, mm - 1, dd);
+    if (d.getFullYear() !== yy || d.getMonth() !== mm - 1 || d.getDate() !== dd) return null;
+    const pad = (n) => (n < 10 ? '0' + n : '' + n);
+    return yy + '-' + pad(mm) + '-' + pad(dd);
+  };
+  const formatMDY = (iso) => {
+    if (!iso) return '';
+    const p = String(iso).split('-');
+    if (p.length !== 3) return '';
+    return p[1] + '/' + p[2] + '/' + p[0];
+  };
  const getStoplight = (member) => { if (!member || !member.nextPayment) return 'green'; const comped = ['HD6', 'HD6 FAMILY', 'HCHF', 'MILITARY', 'MILITARY FAMILY', 'FIRST DAY FREE', 'LIFETIME', 'LIFETIME FAMILY']; if (comped.includes(member.type)) return 'green'; if (member.inactive) return 'red'; const due = new Date(member.nextPayment + 'T00:00:00'); const today = new Date(); const diffMs = today - due; const daysPastDue = Math.ceil(diffMs / (1000*60*60*24)); const daysUntilDue = Math.ceil((due - today) / (1000*60*60*24)); if (daysPastDue > 2) return 'red'; if (daysUntilDue <= 5) return 'yellow'; return 'green'; };
 const filteredMembers = scopedMembers.filter(m => { if (!(m.firstName + ' ' + m.lastName + ' ' + m.id).toLowerCase().includes(searchQuery.toLowerCase())) return false; const today = new Date(); const firstOfNextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1); const paidThisPeriod = m.nextPayment && new Date(m.nextPayment + 'T00:00:00') >= firstOfNextMonth; const isComped = ['HD6', 'HD6 FAMILY', 'HCHF', 'MILITARY', 'MILITARY FAMILY', 'FIRST DAY FREE', 'LIFETIME', 'LIFETIME FAMILY', 'HERITAGE ESTATES'].includes(m.type); if (memberFilter === 'paid') return paidThisPeriod || isComped; if (memberFilter === 'unpaid') return !paidThisPeriod && !isComped; if (memberFilter === 'overdue') return getStoplight(m) === 'red'; if (memberFilter === '247') return m.access247; if (memberFilter === 'orientation') return m.needsOrientation; if (memberFilter === 'onboarding') return !m.basicOrientation || !m.paperworkCompleted; if (memberFilter === 'inactive') return m.inactive; if (memberFilter === 'corporate') return m.type.includes('CORPORATE') || m.sponsorName; if (memberFilter === 'family') return m.type.includes('FAMILY') || m.familyName; if (memberFilter === 'notes') return m.notes && m.notes.trim() !== ''; if (memberFilter === 'recent') { if (!m.startDate) return false; return new Date(m.startDate + 'T00:00:00') >= new Date(recentCutoffDate + 'T00:00:00'); } return true; }).sort((a, b) => a.lastName.localeCompare(b.lastName));
 const processCheckIn = async (memberId, method = "Manual Entry", overrideCooldown = false) => {
@@ -3766,7 +3790,7 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
                                 <div key={it.key} className="flex items-center gap-3 bg-white rounded-xl p-2 border border-slate-100">
                                   <input type="checkbox" checked={checked} disabled={savingOnboarding} onChange={(e) => { const isNowChecked = e.target.checked; const updates = { [it.apiField]: isNowChecked }; if (!isNowChecked) updates[it.apiDateField] = null; saveOnboardingField(selectedMember, updates); }} className="w-4 h-4 rounded border-slate-300 shrink-0 cursor-pointer" />
                                   <span className="text-xs font-bold text-slate-700 flex-1">{it.label}</span>
-                                  <input type="date" value={dateVal} max={today} disabled={!checked || savingOnboarding} onChange={(e) => { saveOnboardingField(selectedMember, { [it.apiDateField]: e.target.value || null }); }} className={`text-xs font-bold p-1.5 rounded-md border shrink-0 outline-none ${checked && !dateVal ? 'bg-amber-50 border-amber-300 text-amber-700 focus:border-amber-500' : checked ? 'bg-white border-slate-200 text-slate-700 focus:border-[#1080ad]' : 'bg-slate-50 border-slate-100 text-slate-300'}`} style={{width: '135px'}} />
+                                  <input type="text" inputMode="numeric" placeholder="MM/DD/YYYY" title="Type the date as MM/DD/YYYY" key={dateVal || 'empty'} defaultValue={formatMDY(dateVal)} disabled={!checked || savingOnboarding} onBlur={(e) => { const v = e.target.value.trim(); if (!v) { if (dateVal) saveOnboardingField(selectedMember, { [it.apiDateField]: null }); return; } const iso = parseMDY(v); if (iso) { if (iso !== dateVal) saveOnboardingField(selectedMember, { [it.apiDateField]: iso }); } else { alert('Please type the date as MM/DD/YYYY, for example 03/15/2026.'); e.target.value = formatMDY(dateVal); } }} className={`text-xs font-bold p-1.5 rounded-md border shrink-0 outline-none ${checked && !dateVal ? 'bg-amber-50 border-amber-300 text-amber-700 focus:border-amber-500' : checked ? 'bg-white border-slate-200 text-slate-700 focus:border-[#1080ad]' : 'bg-slate-50 border-slate-100 text-slate-300'}`} style={{width: '135px'}} />
                                 </div>
                               );
                             })}
@@ -3792,7 +3816,7 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
                           {isMinor && (
                             <div className="mt-3 flex items-center gap-3">
                               <label className="text-[10px] font-black uppercase tracking-widest text-red-700 shrink-0">Turns 18:</label>
-                              <input type="date" value={turns18} disabled={savingOnboarding} onChange={(e) => { saveOnboardingField(selectedMember, { 'Turns 18 Date': e.target.value || null }); }} className="text-xs font-bold p-2 rounded-md border border-red-200 bg-white text-slate-700 focus:border-red-500 outline-none" />
+                              <input type="text" inputMode="numeric" placeholder="MM/DD/YYYY" title="Type the date as MM/DD/YYYY" key={turns18 || 'empty'} defaultValue={formatMDY(turns18)} disabled={savingOnboarding} onBlur={(e) => { const v = e.target.value.trim(); if (!v) { if (turns18) saveOnboardingField(selectedMember, { 'Turns 18 Date': null }); return; } const iso = parseMDY(v); if (iso) { if (iso !== turns18) saveOnboardingField(selectedMember, { 'Turns 18 Date': iso }); } else { alert('Please type the date as MM/DD/YYYY, for example 06/01/2027.'); e.target.value = formatMDY(turns18); } }} className="text-xs font-bold p-2 rounded-md border border-red-200 bg-white text-slate-700 focus:border-red-500 outline-none" />
                               {turns18 && turns18 > today && (<span className="text-[10px] font-bold text-red-600">({Math.ceil((new Date(turns18 + 'T00:00:00') - new Date()) / (1000 * 60 * 60 * 24))} days)</span>)}
                             </div>
                           )}
