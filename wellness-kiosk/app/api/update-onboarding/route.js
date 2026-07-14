@@ -27,7 +27,9 @@ export async function POST(request) {
       'Is Minor',
       'Turns 18 Date',
       'Parent Permission Form',
-      'Parent Permission Form Date'
+      'Parent Permission Form Date',
+      'Auto-Pay ACH',
+      'ACH Draft Day'
     ];
 
     const cleanFields = {};
