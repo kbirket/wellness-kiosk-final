@@ -24,6 +24,18 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: famData.error.message || 'Family record not found' }, { status: 400 });
     }
     const existing = (famData.fields && famData.fields.Members) || [];
+
+    // Grab the family's current due date (from the Primary Member) so the newly linked
+    // member is immediately current instead of showing blank/unpaid.
+    let familyDue = null;
+    const primaryLink = (famData.fields && famData.fields['Primary Member']) || [];
+    if (primaryLink.length > 0) {
+      try {
+        const pRes = await fetch(`https://api.airtable.com/v0/${baseId}/${membersTable}/${primaryLink[0]}`, { headers: { 'Authorization': `Bearer ${token}` } });
+        const pData = await pRes.json();
+        familyDue = (pData.fields && pData.fields['Next Payment Due']) || null;
+      } catch (e) {}
+    }
     if (!existing.includes(body.memberAirtableId)) {
       await fetch(`https://api.airtable.com/v0/${baseId}/${familiesTable}/${body.familyRecordId}`, {
         method: 'PATCH',
@@ -38,6 +50,7 @@ export async function POST(request) {
       "Family Group": [body.familyRecordId],
       "Billing Method": null
     };
+    if (familyDue) { memberFields["Next Payment Due"] = familyDue; memberFields["Membership Status"] = "Active"; }
 
     if (body.plan) {
       try {
@@ -69,7 +82,7 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: (e.error && e.error.message) || 'Could not link member to family' }, { status: 400 });
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, nextPayment: familyDue });
 
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
