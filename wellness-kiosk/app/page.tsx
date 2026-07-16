@@ -1999,19 +1999,21 @@ var showToast = function(message, type, duration) { setToast({ message: message,
         )})()}
         
 {activeTab === 'payments' && (() => {
+          var isCustomP = reportMonth === 'custom';
           var periodParts = reportMonth.split('-');
           var yr = parseInt(periodParts[1]);
           var mo = parseInt(periodParts[0]) - 1;
-          var monthName = new Date(yr, mo).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+          var rStartP = null, rEndP = null, monthName;
+          if (isCustomP) { rStartP = new Date(customRangeStart + 'T00:00:00'); rEndP = new Date(customRangeEnd + 'T23:59:59'); var fmtP = function(dd) { return dd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }; monthName = fmtP(rStartP) + ' \u2014 ' + fmtP(rEndP); } else { monthName = new Date(yr, mo).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }); }
+          var inPeriodP = function(ds) { if (!ds) return false; var d = new Date(ds); if (isNaN(d.getTime())) return false; if (isCustomP) return d >= rStartP && d <= rEndP; return d.getFullYear() === yr && d.getMonth() === mo; };
           
           // 1. Get standard member payments
-          var standardPayments = payments.filter(function(p) { if (!p.date) return false; var d = new Date(p.date); return d.getFullYear() === yr && d.getMonth() === mo; });
+          var standardPayments = payments.filter(function(p) { return inPeriodP(p.date); });
           
           // 2. Extract visitor payments and format them for the ledger
          var visitorPayments = visitors.filter(function(v) { 
             if (!v.purchaseDate || !v.amountPaid || v.amountPaid <= 0) return false; 
-            var d = new Date(v.purchaseDate); 
-            return d.getFullYear() === yr && d.getMonth() === mo; 
+            return inPeriodP(v.purchaseDate); 
           }).map(function(v) {
             return {
               airtableId: 'vis_' + v.airtableId,
