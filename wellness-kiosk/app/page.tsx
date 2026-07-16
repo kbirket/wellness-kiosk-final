@@ -424,14 +424,20 @@ const handleAddMemberSubmit = async (e) => {
           setNewMemberPin({ name: `${firstName} ${lastName}`, pin: result.pin || '1111' });
           if (requestCardOnAdd && result.airtableId) {
             try {
-              await fetch('/api/request-card', {
+              const cardRes = await fetch('/api/request-card', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ memberAirtableId: result.airtableId, requestedBy: user ? user.name : 'Unknown', note: requestCardNoteOnAdd || 'New member sign-up' })
               });
-              showToast('Card request added to Kristen\'s queue.', 'success', 4000);
+              const cardData = await cardRes.json().catch(function(){ return {}; });
+              if (cardRes.ok && cardData.success !== false) {
+                showToast('Card request added to Kristen\'s queue.', 'success', 4000);
+                fetch('/api/get-card-queue').then(res => res.json()).then(data => { if (data.records) { setCardQueue(data.records.map(function(r) { var memberLink = r.fields['Member'] || []; var memberRecId = Array.isArray(memberLink) ? memberLink[0] || '' : memberLink; return { airtableId: r.id, memberRecId: String(memberRecId).trim(), requestedBy: r.fields['Requested By'] || '', requestedDate: r.fields['Requested Date'] || '', note: r.fields['Note'] || '', status: r.fields['Status'] || 'Pending', printedDate: r.fields['Printed Date'] || '', issuedDate: r.fields['Issued Date'] || '', printType: r.fields['Print Type'] || 'Card' }; })); } });
+              } else {
+                showToast('Card request FAILED: ' + (cardData.error || 'Airtable rejected it') + '. Try from their profile.', 'warning', 8000);
+              }
             } catch (cardErr) {
-              showToast('Member created, but card request failed. Try again from their profile.', 'warning', 5000);
+              showToast('Member created, but card request failed (network). Try again from their profile.', 'warning', 5000);
             }
             setRequestCardOnAdd(false);
             setRequestCardNoteOnAdd('');
