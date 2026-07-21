@@ -1263,13 +1263,21 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                 )}
               </div>
 
-              {/* Success/Error message */}
-              {kioskMessage.text && (
+              {/* Non-success (warnings/errors) shown inline; success is full-screen below */}
+              {kioskMessage.text && kioskMessage.type !== 'success' && (
                 <div className={`mt-8 px-10 py-7 rounded-2xl text-4xl font-black flex items-center gap-5 ${kioskMessage.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : kioskMessage.type === 'warning' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
                   {kioskMessage.photoUrl && <MemberPhoto src={kioskMessage.photoUrl} name="" size={80} className="border-2 border-white shadow-md" />}
                   <div>{tKiosk(kioskMessage.text)}
                   {kioskMessage.subtext && <span className="block text-xl font-bold mt-2 opacity-70">{tKiosk(kioskMessage.subtext)}</span>}
                 </div></div>
+              )}
+              {kioskMessage.text && kioskMessage.type === 'success' && (
+                <div onClick={() => setKioskMessage({ text: '', type: '', subtext: '' })} className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-gradient-to-br from-green-500 to-green-700 text-white cursor-pointer p-8">
+                  {kioskMessage.photoUrl && <MemberPhoto src={kioskMessage.photoUrl} name="" size={220} className="border-8 border-white/80 shadow-2xl mb-10" />}
+                  <div className="text-8xl font-black text-center leading-tight">{tKiosk(kioskMessage.text)}</div>
+                  {kioskMessage.subtext && <div className="text-3xl font-bold mt-8 opacity-90 text-center max-w-4xl">{tKiosk(kioskMessage.subtext)}</div>}
+                  <div className="mt-12 text-xl font-bold uppercase tracking-widest opacity-60">Tap to continue</div>
+                </div>
               )}
             </div>
           </div>
@@ -2622,12 +2630,13 @@ ${(function() { var classNames = ['Low-Impact Aerobics', 'Sit & Get Fit', 'Modif
                     };
                     const keytags = [0, 1, 2].map(i => renderKeytag(memberBatch[i])).join('');
                     const html = '<!DOCTYPE html><html><head><title>3-Up Keytags Batch</title><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet"><style>@page{size:2.125in 3.375in;margin:0}@media print{*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}body{font-family:Montserrat,Arial,sans-serif;margin:0;padding:0;background:#fff}.card{width:2.125in;height:3.375in;display:flex;flex-direction:column;box-sizing:border-box}.keytag{flex:1;display:flex;flex-direction:row;align-items:center;padding:0.04in 0.06in 0.04in 0.40in;box-sizing:border-box;position:relative;overflow:hidden}.keytag:last-child{border-bottom:none}.keytag.empty{background:#f8fafc;justify-content:center;align-items:center}.empty-msg{font-size:8px;color:#cbd5e1;text-transform:uppercase;letter-spacing:2px;font-weight:700}.accent-bar{position:absolute;left:0.32in;top:0.05in;bottom:0.05in;width:0.05in;border-radius:2px}.photo{width:0.55in;height:0.55in;object-fit:cover;border-radius:4px;flex-shrink:0;margin-right:0.08in}.photo.initials{display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:16px;letter-spacing:1px}.info{flex:1;display:flex;flex-direction:column;justify-content:center;overflow:hidden;padding-right:0.05in}.name{font-size:11px;font-weight:900;color:#001f3f;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-0.2px}.id{font-family:monospace;font-size:15px;font-weight:900;color:#001f3f;letter-spacing:0.5px}.center{font-size:6px;font-weight:900;letter-spacing:0.2px;margin-top:3px;white-space:nowrap}.qr{width:0.7in;height:0.7in;flex-shrink:0;margin-left:0.1in}</style></head><body><div class="card">' + keytags + '</div></body></html>';
-                    const printFrame = document.createElement('iframe');
-                    printFrame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
-                    document.body.appendChild(printFrame);
-                    const pdoc = printFrame.contentWindow.document;
-                    pdoc.open(); pdoc.write(html); pdoc.close();
-                    setTimeout(() => { try { printFrame.contentWindow.focus(); printFrame.contentWindow.print(); } catch (e) {} setTimeout(() => { try { document.body.removeChild(printFrame); } catch (e) {} }, 3000); }, 1200);
+                    const w = window.open('', 'phcPrint');
+                    if (!w) { alert('Your browser blocked the print window. Please allow pop-ups for this site (look for the pop-up blocked icon in the address bar), then click print again.'); return; }
+                    w.document.open();
+                    w.document.write(html);
+                    w.document.close();
+                    w.focus();
+                    setTimeout(() => { try { w.print(); } catch (e) {} }, 1000);
                     if (!window.confirm('Mark these ' + memberBatch.length + ' fob request(s) as Printed?')) return;
                     for (const item of memberBatch) {
                       try {
