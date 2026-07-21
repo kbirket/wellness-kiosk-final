@@ -1408,8 +1408,8 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                 const flagged = Array.from(uniqueByMember.values());
                 const forCenter = (c) => flagged.filter(b => (b.center || '').toLowerCase() === c).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
                 const reasonCls = (r) => r === 'Past Due Payment' ? 'bg-red-100 text-red-700' : r === 'Inactive Membership' ? 'bg-slate-200 text-slate-700' : ((r || '').indexOf('No Passes') !== -1 ? 'bg-orange-100 text-orange-700' : 'bg-amber-100 text-amber-700');
-                const cols = [{ name: 'Anthony', list: forCenter('anthony'), color: '#1080ad' }, { name: 'Harper', list: forCenter('harper'), color: '#dd6d22' }];
-                return (<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                const cols = [{ name: 'Anthony', list: forCenter('anthony'), color: '#1080ad' }, { name: 'Harper', list: forCenter('harper'), color: '#dd6d22' }].filter(col => viewingCenter === 'both' || String(viewingCenter).toLowerCase() === col.name.toLowerCase());
+                return (<div className={'grid gap-6 mb-8 ' + (cols.length === 1 ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2')}>
                   {cols.map(col => (
                     <div key={col.name} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                       <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Bell size={14} style={{ color: col.color }}/> {col.name} \u2014 Blocked at Kiosk ({col.list.length})</h3>
