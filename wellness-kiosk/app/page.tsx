@@ -1211,11 +1211,11 @@ var showToast = function(message, type, duration) { setToast({ message: message,
           /* CHECK-IN SCREEN — SPLIT LAYOUT */
           <div className="flex-1 flex">
             {/* Left panel — center branding */}
-            <div className="w-[42%] flex flex-col items-center justify-between p-10" style={{ background: 'linear-gradient(180deg, #0a3158, #001f3f)', borderRight: `4px solid ${centerColor}` }}>
+            <div className="w-[22%] flex flex-col items-center justify-between p-6" style={{ background: 'linear-gradient(180deg, #0a3158, #001f3f)', borderRight: `4px solid ${centerColor}` }}>
               <img src={LOGO_URL} alt="Logo" className="h-8 opacity-40" />
               <div className="text-center">
                 <p className="text-xs font-bold uppercase tracking-[0.4em] mb-3" style={{ color: centerColor }}>{kioskLang === 'es' ? 'Bienvenido a' : 'Welcome to'}</p>
-                <h1 className="text-5xl font-black text-white tracking-tight leading-[1.05]">{centerName}<br/>Wellness<br/>Center</h1>
+                <h1 className="text-3xl font-black text-white tracking-tight leading-[1.1]">{centerName}<br/>Wellness<br/>Center</h1>
                 <p className="text-white/20 text-xs mt-4 leading-relaxed">{centerAddress}</p>
               </div>
               <button onClick={function() { var overlay = document.createElement('div'); overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,15,40,0.98);z-index:9999;display:flex;align-items:center;justify-content:center'; var box = document.createElement('div'); box.style.cssText = 'background:white;border-radius:24px;padding:48px;text-align:center;max-width:320px;width:90%'; box.innerHTML = '<p style="font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:2px;margin-bottom:16px">Staff Auth Required</p><input type="password" maxlength="4" style="width:100%;padding:20px;font-size:32px;text-align:center;letter-spacing:0.3em;border:2px solid #e2e8f0;border-radius:12px;outline:none;font-weight:900" autofocus /><p style="font-size:11px;color:#cbd5e1;margin-top:12px">Enter 4-digit code</p>'; overlay.appendChild(box); document.body.appendChild(overlay); var inp = box.querySelector('input'); inp.addEventListener('input', function() { if (inp.value.length === 4) { if (inp.value === '2026') { document.body.removeChild(overlay); setKioskStaffMenu(true); } else { inp.value = ''; inp.style.borderColor = '#ef4444'; setTimeout(function() { inp.style.borderColor = '#e2e8f0'; }, 500); } } }); overlay.addEventListener('click', function(e) { if (e.target === overlay) document.body.removeChild(overlay); }); }} className="flex items-center gap-2 text-white/10 hover:text-white/40 transition-all text-xs">
