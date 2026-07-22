@@ -28,6 +28,7 @@ export async function POST(request) {
       'Turns 18 Date',
       'Parent Permission Form',
       'Parent Permission Form Date',
+      'May Attend Alone',
       'Auto-Pay ACH',
       'ACH Draft Day'
     ];
