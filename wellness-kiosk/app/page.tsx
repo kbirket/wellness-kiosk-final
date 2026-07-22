@@ -1279,19 +1279,12 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                 )}
               </div>
 
-              {/* Non-success (warnings/errors) shown inline; success is full-screen below */}
-              {kioskMessage.text && kioskMessage.type !== 'success' && (
-                <div className={`mt-8 px-10 py-7 rounded-2xl text-4xl font-black flex items-center gap-5 ${kioskMessage.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : kioskMessage.type === 'warning' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
-                  {kioskMessage.photoUrl && <MemberPhoto src={kioskMessage.photoUrl} name="" size={80} className="border-2 border-white shadow-md" />}
-                  <div>{tKiosk(kioskMessage.text)}
-                  {kioskMessage.subtext && <span className="block text-xl font-bold mt-2 opacity-70">{tKiosk(kioskMessage.subtext)}</span>}
-                </div></div>
-              )}
-              {kioskMessage.text && kioskMessage.type === 'success' && (
-                <div onClick={() => setKioskMessage({ text: '', type: '', subtext: '' })} className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-gradient-to-br from-green-500 to-green-700 text-white cursor-pointer p-8">
-                  {kioskMessage.photoUrl && <MemberPhoto src={kioskMessage.photoUrl} name="" size={220} className="border-8 border-white/80 shadow-2xl mb-10" />}
-                  <div className="text-8xl font-black text-center leading-tight">{tKiosk(kioskMessage.text)}</div>
-                  {kioskMessage.subtext && <div className="text-3xl font-bold mt-8 opacity-90 text-center max-w-4xl">{tKiosk(kioskMessage.subtext)}</div>}
+              {/* All kiosk messages are full-screen overlays so they never push the layout */}
+              {kioskMessage.text && (
+                <div onClick={() => setKioskMessage({ text: '', type: '', subtext: '' })} className={`fixed inset-0 z-[100] flex flex-col items-center justify-center text-white cursor-pointer p-10 ${kioskMessage.type === 'success' ? 'bg-gradient-to-br from-green-500 to-green-700' : kioskMessage.type === 'warning' ? 'bg-gradient-to-br from-amber-500 to-amber-600' : 'bg-gradient-to-br from-red-500 to-red-700'}`}>
+                  {kioskMessage.photoUrl && <MemberPhoto src={kioskMessage.photoUrl} name="" size={200} className="border-8 border-white/80 shadow-2xl mb-8" />}
+                  <div className={`font-black text-center leading-tight ${kioskMessage.type === 'success' ? 'text-8xl' : 'text-6xl'}`}>{tKiosk(kioskMessage.text)}</div>
+                  {kioskMessage.subtext && <div className="text-3xl font-bold mt-8 opacity-90 text-center max-w-4xl leading-snug">{tKiosk(kioskMessage.subtext)}</div>}
                   <div className="mt-12 text-xl font-bold uppercase tracking-widest opacity-60">Tap to continue</div>
                 </div>
               )}
