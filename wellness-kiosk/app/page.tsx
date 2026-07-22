@@ -588,6 +588,10 @@ const handleAddMemberSubmit = async (e) => {
     if (p.length !== 3) return '';
     return p[1] + '/' + p[2] + '/' + p[0];
   };
+  useEffect(() => {
+    if (activeTab !== 'dashboard' && activeTab !== 'notif') return;
+    fetch('/api/get-blocked-checkins').then(res => res.json()).then(data => { if (data.records) { setBlockedCheckins(data.records.map(function(r) { var memberLink = r.fields['Member'] || []; var memberRecId = Array.isArray(memberLink) ? memberLink[0] || '' : memberLink; return { airtableId: r.id, memberRecId: String(memberRecId).trim(), memberId: r.fields['Member ID'] || '', memberName: r.fields['Member Name'] || 'Unknown', timestamp: r.fields['Timestamp'] || '', reason: r.fields['Reason'] || '', center: r.fields['Center'] || '', outcome: r.fields['Outcome'] || 'Pending', notes: r.fields['Notes'] || '' }; })); } }).catch(function() {});
+  }, [activeTab]);
  const getStoplight = (member) => { if (!member || !member.nextPayment) return 'green'; const comped = ['HD6', 'HD6 FAMILY', 'HCHF', 'MILITARY', 'MILITARY FAMILY', 'FIRST DAY FREE', 'LIFETIME', 'LIFETIME FAMILY']; if (comped.includes(member.type)) return 'green'; if (member.inactive) return 'red'; const due = new Date(member.nextPayment + 'T00:00:00'); const today = new Date(); const diffMs = today - due; const daysPastDue = Math.ceil(diffMs / (1000*60*60*24)); const daysUntilDue = Math.ceil((due - today) / (1000*60*60*24)); if (member.achAutoPay) { if (daysPastDue > 7) return 'red'; return 'green'; } if (daysPastDue > 2) return 'red'; if (daysUntilDue <= 5) return 'yellow'; return 'green'; };
 const filteredMembers = scopedMembers.filter(m => { if (!(m.firstName + ' ' + m.lastName + ' ' + m.id).toLowerCase().includes(searchQuery.toLowerCase())) return false; const today = new Date(); const firstOfNextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1); const paidThisPeriod = m.achAutoPay ? (!!m.nextPayment && new Date(m.nextPayment + 'T00:00:00') >= new Date(today.getFullYear(), today.getMonth(), today.getDate() - 7)) : (m.nextPayment && new Date(m.nextPayment + 'T00:00:00') >= firstOfNextMonth); const isComped = ['HD6', 'HD6 FAMILY', 'HCHF', 'MILITARY', 'MILITARY FAMILY', 'FIRST DAY FREE', 'LIFETIME', 'LIFETIME FAMILY', 'HERITAGE ESTATES'].includes(m.type); if (memberFilter === 'paid') return paidThisPeriod || isComped; if (memberFilter === 'unpaid') return !paidThisPeriod && !isComped; if (memberFilter === 'overdue') return getStoplight(m) === 'red'; if (memberFilter === '247') return m.access247; if (memberFilter === 'orientation') return m.needsOrientation; if (memberFilter === 'onboarding') return !m.basicOrientation || !m.paperworkCompleted; if (memberFilter === 'inactive') return m.inactive; if (memberFilter === 'corporate') return m.type.includes('CORPORATE') || m.sponsorName; if (memberFilter === 'family') return m.type.includes('FAMILY') || m.familyName; if (memberFilter === 'notes') return m.notes && m.notes.trim() !== ''; if (memberFilter === 'recent') { if (!m.startDate) return false; return new Date(m.startDate + 'T00:00:00') >= new Date(recentCutoffDate + 'T00:00:00'); } return true; }).sort((a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName));
 const processCheckIn = async (memberId, method = "Manual Entry", overrideCooldown = false) => {
@@ -1426,12 +1430,15 @@ var showToast = function(message, type, duration) { setToast({ message: message,
               {(() => {
                 const uniqueByMember = new Map();
                 blockedCheckins.filter(b => b.outcome === 'Pending' && b.reason !== 'Cooldown (2-hr)').forEach(b => {
-                  if (!b.timestamp || new Date(b.timestamp).toDateString() !== new Date().toDateString()) return;
+                  if (!b.timestamp) return;
+                  var tsStr = String(b.timestamp);
+                  var tsD = (tsStr.length === 10 && tsStr.indexOf('T') === -1) ? new Date(tsStr + 'T00:00:00') : new Date(tsStr);
+                  if (isNaN(tsD.getTime()) || tsD.toDateString() !== new Date().toDateString()) return;
                   const key = b.memberRecId || b.memberName;
                   if (!uniqueByMember.has(key) || new Date(b.timestamp) > new Date(uniqueByMember.get(key).timestamp)) uniqueByMember.set(key, b);
                 });
                 const flagged = Array.from(uniqueByMember.values());
-                const forCenter = (c) => flagged.filter(b => (b.center || '').toLowerCase() === c).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                const forCenter = (c) => flagged.filter(b => (b.center || '').toLowerCase().indexOf(c) !== -1).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
                 const reasonCls = (r) => r === 'Past Due Payment' ? 'bg-red-100 text-red-700' : r === 'Inactive Membership' ? 'bg-slate-200 text-slate-700' : ((r || '').indexOf('No Passes') !== -1 ? 'bg-orange-100 text-orange-700' : 'bg-amber-100 text-amber-700');
                 const cols = [{ name: 'Anthony', list: forCenter('anthony'), color: '#1080ad' }, { name: 'Harper', list: forCenter('harper'), color: '#dd6d22' }].filter(col => viewingCenter === 'both' || String(viewingCenter).toLowerCase() === col.name.toLowerCase());
                 return (<div className={'grid gap-6 mb-8 ' + (cols.length === 1 ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2')}>
