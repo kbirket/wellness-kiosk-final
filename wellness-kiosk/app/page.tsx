@@ -1,7 +1,7 @@
 // @ts-nocheck
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+import { Html5QrcodeScanner, Html5Qrcode } from 'html5-qrcode';
 import { Users, Search, QrCode, CreditCard, X, CheckCircle, AlertCircle, TrendingUp, Calendar, MapPin, Mail, LogOut, ShieldCheck, Phone, Activity, ChevronRight, LayoutDashboard, Filter, Download, Bell, FileText, Plus, Smartphone, Clock, Camera, UserCircle, Lock, Printer, Trash2, Briefcase, KeyRound, Eye, HelpCircle, RotateCcw } from 'lucide-react';
 
 const QRCode = ({ data, size = 160, darkColor = '#001f3f' }) => { const hexColor = darkColor.replace('#', ''); const safeData = encodeURIComponent(data || "WC-000"); const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${safeData}&color=${hexColor}&bgcolor=ffffff`; return <img src={qrUrl} alt="QR Code" style={{ width: size, height: size, display: 'block' }} />; };
@@ -561,7 +561,7 @@ const handleAddMemberSubmit = async (e) => {
   }, [kioskLang, kioskInput, kioskMessage.text]);
   const tKiosk = (s) => {
     if (kioskLang !== 'es' || !s) return s;
-    var reps = [["You're all set! Friendly reminder: your employer's payment is past due. Please remind them to submit it. Thank you!","¡Todo listo! Recordatorio: el pago de su empleador está vencido. Por favor, recuérdeles que lo envíen. ¡Gracias!"],["Parent or guardian must be present.","Debe estar acompañado por un padre o tutor."],["Please see the front desk at your convenience.","Acuda a recepción cuando pueda."],["Please see the front desk to purchase more.","Acuda a recepción para comprar más."],["Please see front desk to complete your Anthony orientation.","Acuda a recepción para completar su orientación de Anthony."],["Please see front desk to complete your Harper orientation.","Acuda a recepción para completar su orientación de Harper."],["was checked in within the last 2 hours.","se registró en las últimas 2 horas."],["We need to quickly update your account.","Necesitamos actualizar su cuenta."],["still needs to complete ","aún debe completar "],["signed parent permission form","formulario de permiso de los padres firmado"],["Already checked in!","¡Ya se registró!"],["Membership Inactive","Membresía inactiva"],["Orientation Required","Orientación requerida"],["No passes remaining","No quedan pases"],["Member not found","Miembro no encontrado"],["ID not found.","ID no encontrada."],["Check-in Error","Error de registro"],["System Error","Error del sistema"],["Network Error","Error de red"],["Please try again.","Intente de nuevo."],["Please see the front desk.","Por favor, acuda a recepción."],["Please see front desk.","Por favor, acuda a recepción."],["Welcome, ","¡Bienvenido/a, "],["orientation","orientación"],["paperwork","papeleo"],[" & "," y "]];
+    var reps = [["You're all set! Friendly reminder: your employer's payment is past due. Please remind them to submit it. Thank you!","¡Todo listo! Recordatorio: el pago de su empleador está vencido. Por favor, recuérdeles que lo envíen. ¡Gracias!"],["Camera unavailable","Cámara no disponible"],["Please search your name below instead.","Por favor, busque su nombre abajo."],["Parent or guardian must be present.","Debe estar acompañado por un padre o tutor."],["Please see the front desk at your convenience.","Acuda a recepción cuando pueda."],["Please see the front desk to purchase more.","Acuda a recepción para comprar más."],["Please see front desk to complete your Anthony orientation.","Acuda a recepción para completar su orientación de Anthony."],["Please see front desk to complete your Harper orientation.","Acuda a recepción para completar su orientación de Harper."],["was checked in within the last 2 hours.","se registró en las últimas 2 horas."],["We need to quickly update your account.","Necesitamos actualizar su cuenta."],["still needs to complete ","aún debe completar "],["signed parent permission form","formulario de permiso de los padres firmado"],["Already checked in!","¡Ya se registró!"],["Membership Inactive","Membresía inactiva"],["Orientation Required","Orientación requerida"],["No passes remaining","No quedan pases"],["Member not found","Miembro no encontrado"],["ID not found.","ID no encontrada."],["Check-in Error","Error de registro"],["System Error","Error del sistema"],["Network Error","Error de red"],["Please try again.","Intente de nuevo."],["Please see the front desk.","Por favor, acuda a recepción."],["Please see front desk.","Por favor, acuda a recepción."],["Welcome, ","¡Bienvenido/a, "],["orientation","orientación"],["paperwork","papeleo"],[" & "," y "]];
     var out = s;
     reps.forEach(function(p){ out = out.split(p[0]).join(p[1]); });
     return out;
@@ -796,22 +796,44 @@ useEffect(() => { let scanner = null; if (view === 'secret_scanner' && scannerAc
   useEffect(() => {
     let scanner = null;
     if (view === 'kiosk' && isScanning) {
-      const timer = setTimeout(() => {
-        scanner = new Html5QrcodeScanner("reader", { 
-          fps: 20, 
-          qrbox: { width: 250, height: 250 },
-          aspectRatio: 1.0,
-          showTorchButtonIfSupported: true 
-        }, false);
-        scanner.render((decodedText) => {
+      let cancelled = false;
+      const stopScanner = () => {
+        if (!scanner) return;
+        try { scanner.stop().then(() => { try { scanner.clear(); } catch (e) {} }).catch(() => {}); } catch (e) {}
+      };
+      const timer = setTimeout(async () => {
+        if (cancelled) return;
+        // Html5Qrcode starts the camera itself, so the browser asks for permission right away
+        // instead of showing the library's own Request Camera / Scan File buttons.
+        scanner = new Html5Qrcode("reader");
+        const config = { fps: 20, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
+        const onScan = (decodedText) => {
           processCheckIn(decodedText, "Kiosk Camera");
           setIsScanning(false);
-          if (scanner) { scanner.clear().catch(error => console.error("Failed to clear scanner", error)); }
-        }, (error) => {});
+        };
+        const tryStart = (cam) => scanner.start(cam, config, onScan, () => {});
+        try {
+          await tryStart({ facingMode: 'user' });
+        } catch (e1) {
+          try {
+            await tryStart({ facingMode: 'environment' });
+          } catch (e2) {
+            try {
+              const cams = await Html5Qrcode.getCameras();
+              if (cams && cams.length) { await tryStart(cams[0].id); } else { throw e2; }
+            } catch (e3) {
+              if (!cancelled) {
+                setIsScanning(false);
+                setKioskMessage({ text: 'Camera unavailable', type: 'error', subtext: 'Please search your name below instead.' });
+                setTimeout(() => setKioskMessage({ text: '', type: '', subtext: '' }), 5000);
+              }
+            }
+          }
+        }
       }, 300);
-      return () => clearTimeout(timer);
+      return () => { cancelled = true; clearTimeout(timer); stopScanner(); };
     }
-    return () => { if (scanner) { scanner.clear().catch(error => console.error("Scanner cleanup error", error)); } };
+    return () => { if (scanner) { try { if (scanner.stop) { scanner.stop().then(() => { try { scanner.clear(); } catch (e) {} }).catch(() => {}); } else { scanner.clear(); } } catch (e) {} } };
   }, [view, isScanning]);
 
   const handleExportCSV = () => { if (filteredMembers.length === 0) return; const headers = ["Member ID","First Name","Last Name","Email","Phone","Membership Type","Home Center","Status","Total Visits","Next Payment","Sponsor"]; const csvRows = [headers.join(','), ...filteredMembers.map(m => `"${m.id}","${m.firstName}","${m.lastName}","${m.email}","${m.phone}","${m.type}","${m.center}","${m.status}","${m.visits}","${m.nextPayment}","${m.sponsorName}"`)].join('\n'); const blob = new Blob([csvRows], { type: 'text/csv' }); const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `Wellness_Members_${new Date().toISOString().slice(0,10)}.csv`; a.click(); window.URL.revokeObjectURL(url); };
