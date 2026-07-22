@@ -1208,45 +1208,57 @@ var showToast = function(message, type, duration) { setToast({ message: message,
             </div>
           </div>
         ) : (
-          /* CHECK-IN SCREEN — SPLIT LAYOUT */
-          <div className="flex-1 flex">
-            {/* Left panel — center branding */}
-            <div className="w-[22%] flex flex-col items-center justify-between p-6" style={{ background: 'linear-gradient(180deg, #0a3158, #001f3f)', borderRight: `4px solid ${centerColor}` }}>
-              <img src={LOGO_URL} alt="Logo" className="h-8 opacity-40" />
-              <div className="text-center">
-                <p className="text-xs font-bold uppercase tracking-[0.4em] mb-3" style={{ color: centerColor }}>{kioskLang === 'es' ? 'Bienvenido a' : 'Welcome to'}</p>
-                <h1 className="text-3xl font-black text-white tracking-tight leading-[1.1]">{centerName}<br/>Wellness<br/>Center</h1>
-                <p className="text-white/20 text-xs mt-4 leading-relaxed">{centerAddress}</p>
+          /* CHECK-IN SCREEN */
+          <div className="flex-1 flex flex-col bg-[#faf8f4]">
+
+            {/* HEADER */}
+            <div className="flex items-center justify-between px-10 py-6" style={{ background: 'linear-gradient(180deg, #0a3158, #001f3f)', borderBottom: '5px solid #dba51f' }}>
+              <div className="flex items-center gap-5">
+                <div className="w-20 h-20 rounded-full border-[3px] border-[#dba51f] flex items-center justify-center shrink-0">
+                  <img src={LOGO_URL} alt="" className="h-11" />
+                </div>
+                <div>
+                  <h1 className="text-5xl font-black text-white tracking-tight leading-none">{centerName}</h1>
+                  <p className="text-white text-2xl font-bold uppercase tracking-[0.12em] mt-1">{kioskLang === 'es' ? 'Centro de Bienestar' : 'Wellness Center'}</p>
+                </div>
               </div>
-              <button onClick={function() { var overlay = document.createElement('div'); overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,15,40,0.98);z-index:9999;display:flex;align-items:center;justify-content:center'; var box = document.createElement('div'); box.style.cssText = 'background:white;border-radius:24px;padding:48px;text-align:center;max-width:320px;width:90%'; box.innerHTML = '<p style="font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:2px;margin-bottom:16px">Staff Auth Required</p><input type="password" maxlength="4" style="width:100%;padding:20px;font-size:32px;text-align:center;letter-spacing:0.3em;border:2px solid #e2e8f0;border-radius:12px;outline:none;font-weight:900" autofocus /><p style="font-size:11px;color:#cbd5e1;margin-top:12px">Enter 4-digit code</p>'; overlay.appendChild(box); document.body.appendChild(overlay); var inp = box.querySelector('input'); inp.addEventListener('input', function() { if (inp.value.length === 4) { if (inp.value === '2026') { document.body.removeChild(overlay); setKioskStaffMenu(true); } else { inp.value = ''; inp.style.borderColor = '#ef4444'; setTimeout(function() { inp.style.borderColor = '#e2e8f0'; }, 500); } } }); overlay.addEventListener('click', function(e) { if (e.target === overlay) document.body.removeChild(overlay); }); }} className="flex items-center gap-2 text-white/10 hover:text-white/40 transition-all text-xs">
-                <Lock size={12} /> <span className="font-bold tracking-wider uppercase">Staff</span>
-              </button>
+              <button onClick={() => setKioskLang(kioskLang === 'es' ? 'en' : 'es')} className="shrink-0 bg-white/10 border-2 border-white/40 text-white px-8 py-4 rounded-full font-bold text-xl hover:bg-white hover:text-[#001f3f] transition-all flex items-center gap-3">&#127760; {kioskLang === 'es' ? 'English' : 'Español'}</button>
             </div>
 
-            {/* Right panel — check-in area */}
-            <div className="flex-1 bg-[#f5f6f8] flex flex-col items-center justify-center px-10 py-8 relative">
-              <button onClick={() => setKioskLang(kioskLang === 'es' ? 'en' : 'es')} className="absolute top-5 right-6 z-20 bg-white border-2 border-[#1080ad] text-[#1080ad] px-5 py-2 rounded-full font-black text-sm shadow-md hover:bg-[#1080ad] hover:text-white transition-all flex items-center gap-2">&#127760; {kioskLang === 'es' ? 'English' : 'Español'}</button>
-              <p className="text-xs font-black text-slate-400 uppercase tracking-[0.25em] mb-8">{kioskLang === 'es' ? 'Regístrese' : 'Check in'}</p>
-              
-              {/* SCAN HERO — primary action */}
-              <button onClick={() => setIsScanning(true)} className="w-full max-w-md bg-[#001f3f] text-white rounded-3xl px-8 py-9 flex flex-col items-center gap-3 hover:bg-[#002d5a] transition-colors shadow-lg">
-                <div className="w-20 h-20 rounded-2xl bg-white/10 flex items-center justify-center"><QrCode size={46} /></div>
-                <div className="text-2xl font-black tracking-tight">{kioskLang === 'es' ? 'Escanea tu llavero' : 'Scan Your Fob'}</div>
-                <div className="text-[11px] font-bold text-white/60 uppercase tracking-[0.15em] text-center">{kioskLang === 'es' ? 'Toca y acerca tu llavero a la cámara' : 'Tap, then hold your fob to the camera'}</div>
+            {/* BODY */}
+            <div className="flex-1 flex flex-col items-center justify-center px-8 py-8 relative">
+              <h2 className="text-7xl font-black text-[#001f3f] tracking-tight">{kioskLang === 'es' ? 'Regístrese' : 'Check In'}</h2>
+              <p className="text-2xl text-slate-500 mt-3 mb-10">{kioskLang === 'es' ? "¡Bienvenido! Nos alegra tenerle aquí." : "Welcome! We're glad you're here."}</p>
+
+              {/* SCAN CARD - primary */}
+              <button onClick={() => setIsScanning(true)} className="w-full max-w-2xl bg-white rounded-[2.5rem] px-10 py-12 flex flex-col items-center gap-5 shadow-xl border border-slate-100 hover:border-[#1080ad] transition-all">
+                <div className="w-40 h-40 rounded-full bg-[#eaf2fb] flex items-center justify-center">
+                  <div className="w-28 h-28 rounded-full bg-white border-4 border-[#cfe2f5] flex items-center justify-center">
+                    <KeyRound size={58} className="text-[#001f3f]" />
+                  </div>
+                </div>
+                <div className="text-5xl font-black text-[#001f3f] tracking-tight text-center">{kioskLang === 'es' ? 'Escanea tu llavero' : 'Scan your key fob'}</div>
+                <div className="text-2xl text-slate-500 text-center leading-snug">{kioskLang === 'es' ? 'Toca y acerca tu llavero a la cámara' : 'Tap, then hold your key fob near the camera'}</div>
               </button>
 
-              {/* Divider — name fallback */}
-              <div className="flex items-center gap-3 my-6">
-                <div className="h-px w-10 bg-slate-200"></div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em]">{kioskLang === 'es' ? '¿Sin llavero? Busca tu nombre' : 'No fob? Search your name'}</span>
-                <div className="h-px w-10 bg-slate-200"></div>
+              {/* OR divider */}
+              <div className="flex items-center gap-5 w-full max-w-2xl my-8">
+                <div className="h-px flex-1 bg-slate-300"></div>
+                <span className="text-xl font-bold text-slate-400">{kioskLang === 'es' ? 'O' : 'OR'}</span>
+                <div className="h-px flex-1 bg-slate-300"></div>
               </div>
 
-              {/* Search input — secondary */}
-              <div className="w-full max-w-md relative">
-                <div className="bg-white border-2 border-slate-200 rounded-2xl px-6 py-4 flex items-center gap-3 focus-within:border-slate-400 transition-colors shadow-sm">
-                  <Search size={20} className="text-slate-300 shrink-0" />
-                  <input className="w-full bg-transparent text-lg font-bold outline-none text-[#001f3f] placeholder-slate-300" placeholder={kioskLang === 'es' ? 'Escriba su nombre...' : 'Type your name...'} value={kioskInput} onChange={(e) => setKioskInput(e.target.value)} />
+              {/* SEARCH BY NAME - secondary */}
+              <div className="flex items-center gap-4 mb-2">
+                <UserCircle size={38} className="text-[#001f3f]" />
+                <span className="text-3xl font-black text-[#001f3f] tracking-tight">{kioskLang === 'es' ? 'Buscar por Nombre' : 'Search by Name'}</span>
+              </div>
+              <p className="text-xl text-slate-500 mb-6">{kioskLang === 'es' ? "¿No tiene su llavero?" : "Don't have your key fob?"}</p>
+
+              <div className="w-full max-w-2xl relative">
+                <div className="bg-white border-2 border-slate-300 rounded-full px-8 py-5 flex items-center gap-4 focus-within:border-[#1080ad] transition-colors">
+                  <Search size={28} className="text-slate-400 shrink-0" />
+                  <input className="w-full bg-transparent text-2xl font-bold outline-none text-[#001f3f] placeholder-slate-300" placeholder={kioskLang === 'es' ? 'Escriba su nombre...' : 'Type your name...'} value={kioskInput} onChange={(e) => setKioskInput(e.target.value)} />
                 </div>
                 {allKioskMatches.length > 0 && (
                   <div className="absolute top-full mt-3 left-0 right-0 bg-white border border-slate-200 shadow-2xl rounded-2xl overflow-hidden z-50">
@@ -1280,6 +1292,14 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                 </div>
               )}
             </div>
+
+            {/* FOOTER */}
+            <div className="border-t border-slate-200 px-10 py-4 flex justify-end items-center">
+              <button onClick={function() { var overlay = document.createElement('div'); overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,15,40,0.98);z-index:9999;display:flex;align-items:center;justify-content:center'; var box = document.createElement('div'); box.style.cssText = 'background:white;border-radius:24px;padding:48px;text-align:center;max-width:320px;width:90%'; box.innerHTML = '<p style="font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:2px;margin-bottom:16px">Staff Auth Required</p><input type="password" maxlength="4" style="width:100%;padding:20px;font-size:32px;text-align:center;letter-spacing:0.3em;border:2px solid #e2e8f0;border-radius:12px;outline:none;font-weight:900" autofocus /><p style="font-size:11px;color:#cbd5e1;margin-top:12px">Enter 4-digit code</p>'; overlay.appendChild(box); document.body.appendChild(overlay); var inp = box.querySelector('input'); inp.addEventListener('input', function() { if (inp.value.length === 4) { if (inp.value === '2026') { document.body.removeChild(overlay); setKioskStaffMenu(true); } else { inp.value = ''; inp.style.borderColor = '#ef4444'; setTimeout(function() { inp.style.borderColor = '#e2e8f0'; }, 500); } } }); overlay.addEventListener('click', function(e) { if (e.target === overlay) document.body.removeChild(overlay); }); }} className="flex items-center gap-2 text-slate-300 hover:text-slate-500 transition-all text-sm">
+                <Lock size={14} /> <span className="font-bold tracking-widest uppercase">Staff</span>
+              </button>
+            </div>
+
           </div>
         )}
 
