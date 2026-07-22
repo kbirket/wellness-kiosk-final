@@ -1216,53 +1216,53 @@ var showToast = function(message, type, duration) { setToast({ message: message,
           <div className="flex-1 flex flex-col bg-[#faf8f4]">
 
             {/* HEADER */}
-            <div className="flex items-center justify-between px-10 py-6" style={{ background: 'linear-gradient(180deg, #0a3158, #001f3f)', borderBottom: '5px solid #dba51f' }}>
+            <div className="flex items-center justify-between px-8 py-3 shrink-0" style={{ background: 'linear-gradient(180deg, #0a3158, #001f3f)', borderBottom: '5px solid #dba51f' }}>
               <div className="flex items-center gap-5">
-                <div className="w-28 h-28 rounded-full border-[3px] border-[#dba51f] flex items-center justify-center shrink-0 overflow-hidden">
-                  <img src={LOGO_URL} alt="" className="h-[100px] w-[100px] object-contain" />
+                <div className="w-20 h-20 rounded-full border-[3px] border-[#dba51f] flex items-center justify-center shrink-0 overflow-hidden">
+                  <img src={LOGO_URL} alt="" className="h-[72px] w-[72px] object-contain" />
                 </div>
                 <div>
-                  <h1 className="text-5xl font-black text-white tracking-tight leading-none">{centerName}</h1>
-                  <p className="text-white text-2xl font-bold uppercase tracking-[0.12em] mt-1">{kioskLang === 'es' ? 'Centro de Bienestar' : 'Wellness Center'}</p>
+                  <h1 className="text-4xl font-black text-white tracking-tight leading-none">{centerName}</h1>
+                  <p className="text-white text-lg font-bold uppercase tracking-[0.12em] mt-1">{kioskLang === 'es' ? 'Centro de Bienestar' : 'Wellness Center'}</p>
                 </div>
               </div>
-              <button onClick={() => setKioskLang(kioskLang === 'es' ? 'en' : 'es')} className="shrink-0 bg-white/10 border-2 border-white/40 text-white px-8 py-4 rounded-full font-bold text-xl hover:bg-white hover:text-[#001f3f] transition-all flex items-center gap-3">&#127760; {kioskLang === 'es' ? 'English' : 'Español'}</button>
+              <button onClick={() => setKioskLang(kioskLang === 'es' ? 'en' : 'es')} className="shrink-0 bg-white/10 border-2 border-white/40 text-white px-6 py-3 rounded-full font-bold text-lg hover:bg-white hover:text-[#001f3f] transition-all flex items-center gap-3">&#127760; {kioskLang === 'es' ? 'English' : 'Español'}</button>
             </div>
 
             {/* BODY */}
-            <div className="flex-1 flex flex-col items-center justify-center px-8 py-8 relative">
-              <h2 className="text-7xl font-black text-[#001f3f] tracking-tight">{kioskLang === 'es' ? 'Regístrese' : 'Check In'}</h2>
-              <p className="text-2xl text-slate-500 mt-3 mb-10">{kioskLang === 'es' ? "¡Bienvenido! Nos alegra tenerle aquí." : "Welcome! We're glad you're here."}</p>
+            <div className="flex-1 min-h-0 flex flex-col items-center justify-center px-8 py-4 relative">
+              <h2 className="text-5xl font-black text-[#001f3f] tracking-tight">{kioskLang === 'es' ? 'Regístrese' : 'Check In'}</h2>
+              <p className="text-xl text-slate-500 mt-2 mb-5">{kioskLang === 'es' ? "¡Bienvenido! Nos alegra tenerle aquí." : "Welcome! We're glad you're here."}</p>
 
               {/* SCAN CARD - primary */}
-              <button onClick={() => setIsScanning(true)} className="w-full max-w-2xl bg-white rounded-[2.5rem] px-10 py-12 flex flex-col items-center gap-5 shadow-xl border border-slate-100 hover:border-[#1080ad] transition-all">
-                <div className="w-40 h-40 rounded-full bg-[#eaf2fb] flex items-center justify-center">
-                  <div className="w-28 h-28 rounded-full bg-white border-4 border-[#cfe2f5] flex items-center justify-center">
-                    <KeyRound size={58} className="text-[#001f3f]" />
+              <button onClick={() => setIsScanning(true)} className="w-full max-w-2xl bg-white rounded-[2rem] px-8 py-6 flex flex-col items-center gap-3 shadow-xl border border-slate-100 hover:border-[#1080ad] transition-all">
+                <div className="w-28 h-28 rounded-full bg-[#eaf2fb] flex items-center justify-center">
+                  <div className="w-20 h-20 rounded-full bg-white border-4 border-[#cfe2f5] flex items-center justify-center">
+                    <KeyRound size={42} className="text-[#001f3f]" />
                   </div>
                 </div>
-                <div className="text-5xl font-black text-[#001f3f] tracking-tight text-center">{kioskLang === 'es' ? 'Escanea tu llavero' : 'Scan your key fob'}</div>
-                <div className="text-2xl text-slate-500 text-center leading-snug">{kioskLang === 'es' ? 'Toca y acerca tu llavero a la cámara' : 'Tap, then hold your key fob near the camera'}</div>
+                <div className="text-4xl font-black text-[#001f3f] tracking-tight text-center">{kioskLang === 'es' ? 'Escanea tu llavero' : 'Scan your key fob'}</div>
+                <div className="text-xl text-slate-500 text-center leading-snug">{kioskLang === 'es' ? 'Toca y acerca tu llavero a la cámara' : 'Tap, then hold your key fob near the camera'}</div>
               </button>
 
               {/* OR divider */}
-              <div className="flex items-center gap-5 w-full max-w-2xl my-8">
+              <div className="flex items-center gap-5 w-full max-w-2xl my-4">
                 <div className="h-px flex-1 bg-slate-300"></div>
-                <span className="text-xl font-bold text-slate-400">{kioskLang === 'es' ? 'O' : 'OR'}</span>
+                <span className="text-lg font-bold text-slate-400">{kioskLang === 'es' ? 'O' : 'OR'}</span>
                 <div className="h-px flex-1 bg-slate-300"></div>
               </div>
 
               {/* SEARCH BY NAME - secondary */}
-              <div className="flex items-center gap-4 mb-2">
-                <UserCircle size={38} className="text-[#001f3f]" />
-                <span className="text-3xl font-black text-[#001f3f] tracking-tight">{kioskLang === 'es' ? 'Buscar por Nombre' : 'Search by Name'}</span>
+              <div className="flex items-center gap-3 mb-1">
+                <UserCircle size={30} className="text-[#001f3f]" />
+                <span className="text-2xl font-black text-[#001f3f] tracking-tight">{kioskLang === 'es' ? 'Buscar por Nombre' : 'Search by Name'}</span>
               </div>
-              <p className="text-xl text-slate-500 mb-6">{kioskLang === 'es' ? "¿No tiene su llavero?" : "Don't have your key fob?"}</p>
+              <p className="text-lg text-slate-500 mb-3">{kioskLang === 'es' ? "¿No tiene su llavero?" : "Don't have your key fob?"}</p>
 
               <div className="w-full max-w-2xl relative">
-                <div className="bg-white border-2 border-slate-300 rounded-full px-8 py-5 flex items-center gap-4 focus-within:border-[#1080ad] transition-colors">
-                  <Search size={28} className="text-slate-400 shrink-0" />
-                  <input className="w-full bg-transparent text-2xl font-bold outline-none text-[#001f3f] placeholder-slate-300" placeholder={kioskLang === 'es' ? 'Escriba su nombre...' : 'Type your name...'} value={kioskInput} onChange={(e) => setKioskInput(e.target.value)} />
+                <div className="bg-white border-2 border-slate-300 rounded-full px-7 py-4 flex items-center gap-3 focus-within:border-[#1080ad] transition-colors">
+                  <Search size={24} className="text-slate-400 shrink-0" />
+                  <input className="w-full bg-transparent text-xl font-bold outline-none text-[#001f3f] placeholder-slate-300" placeholder={kioskLang === 'es' ? 'Escriba su nombre...' : 'Type your name...'} value={kioskInput} onChange={(e) => setKioskInput(e.target.value)} />
                 </div>
                 {allKioskMatches.length > 0 && (
                   <div className="absolute top-full mt-3 left-0 right-0 bg-white border border-slate-200 shadow-2xl rounded-2xl overflow-hidden z-50">
@@ -1298,7 +1298,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
             </div>
 
             {/* FOOTER */}
-            <div className="border-t border-slate-200 px-10 py-4 flex justify-end items-center">
+            <div className="border-t border-slate-200 px-8 py-2 flex justify-end items-center shrink-0">
               <button onClick={function() { var overlay = document.createElement('div'); overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,15,40,0.98);z-index:9999;display:flex;align-items:center;justify-content:center'; var box = document.createElement('div'); box.style.cssText = 'background:white;border-radius:24px;padding:48px;text-align:center;max-width:320px;width:90%'; box.innerHTML = '<p style="font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:2px;margin-bottom:16px">Staff Auth Required</p><input type="password" maxlength="4" style="width:100%;padding:20px;font-size:32px;text-align:center;letter-spacing:0.3em;border:2px solid #e2e8f0;border-radius:12px;outline:none;font-weight:900" autofocus /><p style="font-size:11px;color:#cbd5e1;margin-top:12px">Enter 4-digit code</p>'; overlay.appendChild(box); document.body.appendChild(overlay); var inp = box.querySelector('input'); inp.addEventListener('input', function() { if (inp.value.length === 4) { if (inp.value === '2026') { document.body.removeChild(overlay); setKioskStaffMenu(true); } else { inp.value = ''; inp.style.borderColor = '#ef4444'; setTimeout(function() { inp.style.borderColor = '#e2e8f0'; }, 500); } } }); overlay.addEventListener('click', function(e) { if (e.target === overlay) document.body.removeChild(overlay); }); }} className="flex items-center gap-2 text-slate-300 hover:text-slate-500 transition-all text-sm">
                 <Lock size={14} /> <span className="font-bold tracking-widest uppercase">Staff</span>
               </button>
