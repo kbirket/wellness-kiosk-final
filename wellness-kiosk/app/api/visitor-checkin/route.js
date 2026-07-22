@@ -1,45 +1,71 @@
 // app/api/visitor-checkin/route.js
-
 import { NextResponse } from 'next/server';
 
-const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
+const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY || process.env.AIRTABLE_PAT;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
 
 export async function POST(request) {
   try {
-    const { visitorAirtableId, center } = await request.json();
+    const { visitorAirtableId, center, decrementPass, visitDate } = await request.json();
 
     if (!visitorAirtableId) {
       return NextResponse.json({ success: false, error: 'Missing visitor ID' });
     }
 
-    // 1. Get the visitor record to check expiration and get current visit count
+    // The visit time: either a backdated value from staff, or right now.
+    const visitISO = visitDate ? new Date(visitDate).toISOString() : new Date().toISOString();
+    const visitMoment = new Date(visitISO);
+    const isBackdated = !!visitDate;
+
+    // 1. Get the visitor record
     const getRes = await fetch(
       `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Visitors/${visitorAirtableId}`,
       { headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` } }
     );
     const visitor = await getRes.json();
-
     if (visitor.error) {
       return NextResponse.json({ success: false, error: 'Visitor not found' });
     }
 
-    // 2. Check if pass is expired
+    // 2. Expiration is checked against the DATE OF THE VISIT, so a pass that has
+    //    since lapsed can still have an old visit recorded against it.
     const expDate = visitor.fields['Expiration Date'];
     if (expDate) {
       const exp = new Date(expDate + 'T23:59:59');
-      if (exp < new Date()) {
-        return NextResponse.json({ success: false, error: 'Pass has expired. Please see front desk.' });
+      if (exp < visitMoment) {
+        return NextResponse.json({
+          success: false,
+          error: isBackdated
+            ? 'That pass had already expired on the date you entered.'
+            : 'Pass has expired. Please see front desk.'
+        });
       }
     }
 
-    // 3. Check orientation
+    // 3. Orientation must be complete
     if (!visitor.fields['Orientation Complete']) {
       return NextResponse.json({ success: false, error: 'Orientation required. Please see front desk.' });
     }
 
-    // 4. Increment Total Visits
+    // 4. Build the update: visit count, and the pass decrement in the SAME patch.
     const currentVisits = Number(visitor.fields['Total Visits'] || 0);
+    const fields = { 'Total Visits': currentVisits + 1 };
+
+    let newPassesRemaining = null;
+    const rawPasses = visitor.fields['Passes Remaining'];
+    const hasPassCount = rawPasses !== undefined && rawPasses !== null && rawPasses !== '';
+
+    if (decrementPass && hasPassCount) {
+      const currentPasses = Number(rawPasses || 0);
+      if (currentPasses <= 0) {
+        return NextResponse.json({ success: false, error: 'No passes remaining.' });
+      }
+      newPassesRemaining = Math.max(0, currentPasses - 1);
+      fields['Passes Remaining'] = newPassesRemaining;
+    } else if (hasPassCount) {
+      newPassesRemaining = Number(rawPasses || 0);
+    }
+
     const updateRes = await fetch(
       `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Visitors/${visitorAirtableId}`,
       {
@@ -48,29 +74,18 @@ export async function POST(request) {
           Authorization: `Bearer ${AIRTABLE_API_KEY}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          fields: {
-            'Total Visits': currentVisits + 1,
-          },
-        }),
+        body: JSON.stringify({ fields }),
       }
     );
     const updateResult = await updateRes.json();
-
     if (updateResult.error) {
-      return NextResponse.json({ success: false, error: 'Failed to update visit count' });
+      return NextResponse.json({
+        success: false,
+        error: updateResult.error.message || 'Failed to update visit count'
+      });
     }
 
-    if (decrementPass) {
-  // Fetch current passes remaining
-  const visitorRes = await fetch(`https://api.airtable.com/v0/${baseId}/Visitors/${visitorAirtableId}`, {
-    headers: { 'Authorization': `Bearer ${token}` }
-  });
-  const visitorData = await visitorRes.json();
-  const currentPasses = Number(visitorData.fields['Passes Remaining'] || 0);
-  fields['Passes Remaining'] = Math.max(0, currentPasses - 1);
-}
-    // 5. Also log to the Visits table (same as member check-ins) so it shows in the dashboard
+    // 5. Log to the Visits table so it shows in the check-in log and reports
     try {
       await fetch(
         `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Visits`,
@@ -84,20 +99,24 @@ export async function POST(request) {
             fields: {
               'Name': `${visitor.fields['First Name']} ${visitor.fields['Last Name']} (Visitor)`,
               'Center': center || 'Anthony',
-              'Time': new Date().toISOString(),
-              'Method': 'Kiosk - Visitor',
+              'Time': visitISO,
+              'Method': isBackdated ? 'Staff Entry - Backdated' : 'Kiosk - Visitor',
             },
           }),
         }
       );
     } catch (visitLogErr) {
-      // Non-critical — visitor count was already updated
       console.error('Could not log to Visits table:', visitLogErr);
     }
 
-    return NextResponse.json({ success: true, totalVisits: currentVisits + 1 });
+    return NextResponse.json({
+      success: true,
+      totalVisits: currentVisits + 1,
+      passesRemaining: newPassesRemaining,
+      visitTime: visitISO
+    });
   } catch (err) {
     console.error('Visitor check-in error:', err);
-    return NextResponse.json({ success: false, error: 'Server error' });
+    return NextResponse.json({ success: false, error: err.message || 'Server error' });
   }
 }
