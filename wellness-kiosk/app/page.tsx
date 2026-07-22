@@ -1420,7 +1420,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
       </aside>
 
       <main className="flex-1 p-10 h-screen overflow-y-auto relative print:m-0 print:p-0 print:h-auto print:overflow-visible">
-        <div className="mb-10 print:hidden"><h2 className="text-3xl font-bold text-[#001f3f] capitalize tracking-tight">{activeTab === 'notif' ? 'Notifications' : activeTab === 'help' ? '' : activeTab}</h2>{activeTab !== 'help' && <p className="text-sm text-slate-400 font-medium">{viewingCenter === 'both' ? 'All Centers' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1) + ' Center'} · {currentDateString}</p>}</div>
+        <div className="mb-6 print:hidden">{['members', 'payments', 'visitors', 'corporate', 'badge'].indexOf(activeTab) === -1 && <h2 className="text-3xl font-bold text-[#001f3f] capitalize tracking-tight">{activeTab === 'notif' ? 'Notifications' : activeTab === 'help' ? '' : activeTab}</h2>}{activeTab !== 'help' && <p className="text-sm text-slate-400 font-medium">{viewingCenter === 'both' ? 'All Centers' : viewingCenter.charAt(0).toUpperCase() + viewingCenter.slice(1) + ' Center'} · {currentDateString}</p>}</div>
 
         {activeTab === 'dashboard' && (() => {
           const today = new Date(); const todayStr = today.toDateString(); const weekFromNow = new Date(today.getTime() + 7*24*60*60*1000);
