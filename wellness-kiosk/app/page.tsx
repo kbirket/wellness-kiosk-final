@@ -1214,8 +1214,8 @@ var showToast = function(message, type, duration) { setToast({ message: message,
             {/* HEADER */}
             <div className="flex items-center justify-between px-10 py-6" style={{ background: 'linear-gradient(180deg, #0a3158, #001f3f)', borderBottom: '5px solid #dba51f' }}>
               <div className="flex items-center gap-5">
-                <div className="w-20 h-20 rounded-full border-[3px] border-[#dba51f] flex items-center justify-center shrink-0">
-                  <img src={LOGO_URL} alt="" className="h-11" />
+                <div className="w-28 h-28 rounded-full border-[3px] border-[#dba51f] flex items-center justify-center shrink-0 overflow-hidden">
+                  <img src={LOGO_URL} alt="" className="h-[100px] w-[100px] object-contain" />
                 </div>
                 <div>
                   <h1 className="text-5xl font-black text-white tracking-tight leading-none">{centerName}</h1>
