@@ -378,7 +378,7 @@ export default function DirectorMobile() {
         {/* ---------- CLASSES ---------- */}
         {!loading && tab === 'classes' && !activeClass && (
           <>
-            <h2 style={{ fontSize: 20, fontWeight: 900, color: NAVY, margin: '4px 0 4px' }}>Today\u2019s Classes</h2>
+            <h2 style={{ fontSize: 20, fontWeight: 900, color: NAVY, margin: '4px 0 4px' }}>Today's Classes</h2>
             <p style={{ color: '#94a3b8', fontSize: 13, margin: '0 0 14px' }}>{dayName}</p>
             {todaysClasses.length === 0 && <p style={S.muted}>No classes scheduled today at this center.</p>}
             {todaysClasses.map(c => {
@@ -388,7 +388,7 @@ export default function DirectorMobile() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                       <div style={{ fontWeight: 800, fontSize: 16, color: '#1e293b' }}>{c.name}</div>
-                      <div style={{ fontSize: 12, color: '#94a3b8', fontWeight: 600 }}>{c.time}{c.instructor ? ' \u00b7 ' + c.instructor : ''}</div>
+                      <div style={{ fontSize: 12, color: '#94a3b8', fontWeight: 600 }}>{c.time}{c.instructor ? ' · ' + c.instructor : ''}</div>
                     </div>
                     <span style={S.pill('#e0f2fe', '#0369a1')}>{n} here</span>
                   </div>
@@ -400,9 +400,9 @@ export default function DirectorMobile() {
 
         {!loading && tab === 'classes' && activeClass && (
           <>
-            <button onClick={() => setActiveClass(null)} style={{ background: 'none', border: 'none', color: BLUE, fontWeight: 800, fontSize: 14, padding: '4px 0 10px' }}>\u2190 All classes</button>
+            <button onClick={() => setActiveClass(null)} style={{ background: 'none', border: 'none', color: BLUE, fontWeight: 800, fontSize: 14, padding: '4px 0 10px' }}>← All classes</button>
             <h2 style={{ fontSize: 20, fontWeight: 900, color: NAVY, margin: '0 0 2px' }}>{activeClass.name}</h2>
-            <p style={{ color: '#94a3b8', fontSize: 13, margin: '0 0 14px' }}>{activeClass.time}{activeClass.instructor ? ' \u00b7 ' + activeClass.instructor : ''}</p>
+            <p style={{ color: '#94a3b8', fontSize: 13, margin: '0 0 14px' }}>{activeClass.time}{activeClass.instructor ? ' · ' + activeClass.instructor : ''}</p>
 
             <input style={S.input} placeholder="Add member to class" value={classSearch} onChange={e => setClassSearch(e.target.value)} />
             <div style={{ height: 10 }} />
@@ -417,7 +417,7 @@ export default function DirectorMobile() {
             {rosterFor(activeClass.name).length === 0 ? (<p style={S.muted}>No one marked yet.</p>) : rosterFor(activeClass.name).map((v, i) => (
               <div key={i} style={{ ...S.card, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <div style={{ fontWeight: 700, fontSize: 15, color: '#1e293b' }}>{v.name}</div>
-                <span style={{ color: '#22c55e', fontWeight: 900, fontSize: 18 }}>\u2713</span>
+                <span style={{ color: '#22c55e', fontWeight: 900, fontSize: 18 }}>✓</span>
               </div>
             ))}
           </>
