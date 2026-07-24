@@ -112,12 +112,18 @@ export default function DirectorMobile() {
         outcome: r.fields['Outcome'] || 'Pending',
       })));
 
-      const vv = (vRes.records || []).map(r => ({
-        name: Array.isArray(r.fields['Name']) ? r.fields['Name'][0] : (r.fields['Name'] || 'Unknown'),
-        center: r.fields['Center'] || r.fields['Location'] || '',
-        time: r.fields['Time'] || r.fields['Check-in Time'] || r.createdTime,
-        method: r.fields['Method'] || r.fields['Check-in Method'] || '',
-      }));
+      const vv = (vRes.records || []).map(r => {
+        const linked = r.fields['Member'] || r.fields['Members'] || [];
+        const linkId = Array.isArray(linked) ? linked[0] : linked;
+        const fm = mm.find(m => m.airtableId === linkId);
+        const fallback = Array.isArray(r.fields['Name']) ? r.fields['Name'][0] : (r.fields['Name'] || 'Unknown');
+        return {
+          name: fm ? (fm.firstName + ' ' + fm.lastName) : fallback,
+          center: r.fields['Center'] || r.fields['Location'] || '',
+          time: r.fields['Time'] || r.fields['Check-in Time'] || r.createdTime,
+          method: r.fields['Method'] || r.fields['Check-in Method'] || '',
+        };
+      });
       vv.sort((a, b) => new Date(b.time) - new Date(a.time));
       setVisits(vv);
 
