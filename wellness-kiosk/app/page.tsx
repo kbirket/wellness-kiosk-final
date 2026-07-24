@@ -2,7 +2,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { Html5QrcodeScanner, Html5Qrcode } from 'html5-qrcode';
-import { Users, Search, QrCode, CreditCard, X, CheckCircle, AlertCircle, TrendingUp, Calendar, MapPin, Mail, LogOut, ShieldCheck, Phone, Activity, ChevronRight, LayoutDashboard, Filter, Download, Bell, FileText, Plus, Smartphone, Clock, Camera, UserCircle, Lock, Printer, Trash2, Briefcase, KeyRound, Eye, HelpCircle, RotateCcw } from 'lucide-react';
+import { Users, Search, QrCode, CreditCard, X, CheckCircle, AlertCircle, TrendingUp, Calendar, MapPin, Mail, LogOut, ShieldCheck, Phone, Activity, ChevronRight, LayoutDashboard, Filter, Download, Bell, FileText, Plus, Smartphone, Clock, Camera, UserCircle, Lock, Printer, Trash2, Briefcase, KeyRound, Eye, HelpCircle, RotateCcw, Pencil } from 'lucide-react';
 
 const QRCode = ({ data, size = 160, darkColor = '#001f3f' }) => { const hexColor = darkColor.replace('#', ''); const safeData = encodeURIComponent(data || "WC-000"); const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${safeData}&color=${hexColor}&bgcolor=ffffff`; return <img src={qrUrl} alt="QR Code" style={{ width: size, height: size, display: 'block' }} />; };
 
@@ -274,6 +274,7 @@ const getBaseRate = (p, b) => {
   };
 
   const membersRef = useRef(members);
+  const lastScanRef = useRef({});
   useEffect(() => { membersRef.current = members; }, [members]);
   const centerRef = useRef(viewingCenter);
   useEffect(() => { centerRef.current = viewingCenter; }, [viewingCenter]);
@@ -642,7 +643,7 @@ const handleAddMemberSubmit = async (e) => {
   }, [kioskLang, kioskInput, kioskMessage.text]);
   const tKiosk = (s) => {
     if (kioskLang !== 'es' || !s) return s;
-    var reps = [["You're all set! Friendly reminder: your employer's payment is past due. Please remind them to submit it. Thank you!","¡Todo listo! Recordatorio: el pago de su empleador está vencido. Por favor, recuérdeles que lo envíen. ¡Gracias!"],["Camera unavailable","Cámara no disponible"],["Please search your name below instead.","Por favor, busque su nombre abajo."],["Parent or guardian must be present.","Debe estar acompañado por un padre o tutor."],["Please see the front desk at your convenience.","Acuda a recepción cuando pueda."],["Please see the front desk to purchase more.","Acuda a recepción para comprar más."],["Please see front desk to complete your Anthony orientation.","Acuda a recepción para completar su orientación de Anthony."],["Please see front desk to complete your Harper orientation.","Acuda a recepción para completar su orientación de Harper."],["was checked in within the last 2 hours.","se registró en las últimas 2 horas."],["We need to quickly update your account.","Necesitamos actualizar su cuenta."],["still needs to complete ","aún debe completar "],["signed parent permission form","formulario de permiso de los padres firmado"],["Already checked in!","¡Ya se registró!"],["Membership Inactive","Membresía inactiva"],["Orientation Required","Orientación requerida"],["No passes remaining","No quedan pases"],["Member not found","Miembro no encontrado"],["ID not found.","ID no encontrada."],["Check-in Error","Error de registro"],["System Error","Error del sistema"],["Network Error","Error de red"],["Please try again.","Intente de nuevo."],["Please see the front desk.","Por favor, acuda a recepción."],["Please see front desk.","Por favor, acuda a recepción."],["Welcome, ","¡Bienvenido/a, "],["orientation","orientación"],["paperwork","papeleo"],[" & "," y "]];
+    var reps = [["You're all set! Friendly reminder: your employer's payment is past due. Please remind them to submit it. Thank you!","¡Todo listo! Recordatorio: el pago de su empleador está vencido. Por favor, recuérdeles que lo envíen. ¡Gracias!"],["Check In Again","Registrarse de nuevo"],["Or tap anywhere to cancel","O toque para cancelar"],["Tap to continue","Toque para continuar"],["Camera unavailable","Cámara no disponible"],["Please search your name below instead.","Por favor, busque su nombre abajo."],["Parent or guardian must be present.","Debe estar acompañado por un padre o tutor."],["Please see the front desk at your convenience.","Acuda a recepción cuando pueda."],["Please see the front desk to purchase more.","Acuda a recepción para comprar más."],["Please see front desk to complete your Anthony orientation.","Acuda a recepción para completar su orientación de Anthony."],["Please see front desk to complete your Harper orientation.","Acuda a recepción para completar su orientación de Harper."],["was checked in within the last 2 hours.","se registró en las últimas 2 horas."],["We need to quickly update your account.","Necesitamos actualizar su cuenta."],["still needs to complete ","aún debe completar "],["signed parent permission form","formulario de permiso de los padres firmado"],["Already checked in!","¡Ya se registró!"],["Membership Inactive","Membresía inactiva"],["Orientation Required","Orientación requerida"],["No passes remaining","No quedan pases"],["Member not found","Miembro no encontrado"],["ID not found.","ID no encontrada."],["Check-in Error","Error de registro"],["System Error","Error del sistema"],["Network Error","Error de red"],["Please try again.","Intente de nuevo."],["Please see the front desk.","Por favor, acuda a recepción."],["Please see front desk.","Por favor, acuda a recepción."],["Welcome, ","¡Bienvenido/a, "],["orientation","orientación"],["paperwork","papeleo"],[" & "," y "]];
     var out = s;
     reps.forEach(function(p){ out = out.split(p[0]).join(p[1]); });
     return out;
@@ -732,6 +733,13 @@ return exp >= today && !v.convertedToMember && v.orientationComplete && v.passAc
     }
 
     if (m) {
+      // Instant double-scan guard: a fob read twice in a few seconds shouldn't
+      // create two visits. This runs off a ref, so it catches the second scan
+      // even before the first one finishes writing to state.
+      var scanKey = m.airtableId || m.id;
+      var lastScan = lastScanRef.current[scanKey] || 0;
+      if (!overrideCooldown && (Date.now() - lastScan) < 8000) { return false; }
+      lastScanRef.current[scanKey] = Date.now();
       if (m.inactive) {
         fetch('/api/log-blocked-checkin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ memberAirtableId: m.airtableId, memberId: m.id, memberName: m.firstName + ' ' + m.lastName, reason: 'Inactive Membership', center: ((m.center && m.center.toLowerCase().includes('harper')) ? 'Harper' : 'Anthony') }) }).catch(function(){});
         setKioskMessage({ text: 'Membership Inactive', type: 'error', subtext: 'Please see the front desk.' });
@@ -1421,7 +1429,8 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                   {kioskMessage.photoUrl && <MemberPhoto src={kioskMessage.photoUrl} name="" size={200} className="border-8 border-white/80 shadow-2xl mb-8" />}
                   <div className={`font-black text-center leading-tight ${kioskMessage.type === 'success' ? 'text-8xl' : 'text-6xl'}`}>{tKiosk(kioskMessage.text)}</div>
                   {kioskMessage.subtext && <div className="text-3xl font-bold mt-8 opacity-90 text-center max-w-4xl leading-snug">{tKiosk(kioskMessage.subtext)}</div>}
-                  <div className="mt-12 text-xl font-bold uppercase tracking-widest opacity-60">Tap to continue</div>
+                  {kioskMessage.cooldownBlocked && (<button onClick={(e) => { e.stopPropagation(); processCheckIn(kioskMessage.memberId, 'Repeat Visit (Same Day)', true); }} className="mt-10 bg-white text-amber-700 px-10 py-5 rounded-2xl text-3xl font-black shadow-2xl hover:bg-amber-50 transition-colors">{tKiosk('Check In Again')}</button>)}
+                  <div className="mt-12 text-xl font-bold uppercase tracking-widest opacity-60">{kioskMessage.cooldownBlocked ? tKiosk('Or tap anywhere to cancel') : tKiosk('Tap to continue')}</div>
                 </div>
               )}
             </div>
@@ -1623,7 +1632,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                                 <div className="flex items-center gap-3 text-slate-400 text-xs font-medium">
                                   {v.method && (() => { const m = String(v.method).toLowerCase(); const label = m.indexOf('camera') !== -1 || m.indexOf('scan') !== -1 ? 'Fob Scan' : m.indexOf('search') !== -1 ? 'Name Search' : m.indexOf('backdat') !== -1 ? 'Backdated' : m.indexOf('override') !== -1 || m.indexOf('flagged') !== -1 ? 'Override' : m.indexOf('visitor') !== -1 ? 'Visitor' : m.indexOf('staff') !== -1 ? 'Staff Entry' : v.method; const cls = m.indexOf('camera') !== -1 || m.indexOf('scan') !== -1 ? 'bg-blue-100 text-blue-700' : m.indexOf('search') !== -1 ? 'bg-teal-100 text-teal-700' : m.indexOf('backdat') !== -1 ? 'bg-amber-100 text-amber-700' : m.indexOf('override') !== -1 || m.indexOf('flagged') !== -1 ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-500'; return <span className={'px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-tight ' + cls}>{label}</span>; })()}
                                   <Clock size={14}/> {new Date(v.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                                  <button onClick={function(e) { e.stopPropagation(); setEditVisitModal(v); }} className="text-slate-300 hover:text-[#1080ad] transition-colors p-1 rounded-lg hover:bg-blue-50" title="Edit check-in time"><Clock size={14}/></button>
+                                  <button onClick={function(e) { e.stopPropagation(); setEditVisitModal(v); }} className="text-slate-300 hover:text-[#1080ad] transition-colors p-1 rounded-lg hover:bg-blue-50" title="Edit check-in time"><Pencil size={14}/></button>
                                   <button onClick={function(e) { e.stopPropagation(); if (!window.confirm('Remove check-in for ' + v.name + ' at ' + new Date(v.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + '?')) return; var matchMem = members.find(function(m) { return (m.firstName + ' ' + m.lastName) === v.name; }); if (matchMem) { fetch('/api/delete-visit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visitAirtableId: v.airtableId, memberAirtableId: matchMem.airtableId, visitTime: v.time, visitCenter: v.center }) }).catch(function(err) { console.error('Delete visit error:', err); }); setMembers(function(prev) { return prev.map(function(m) { return m.id === matchMem.id ? Object.assign({}, m, { visits: Math.max(0, m.visits - 1) }) : m; }); }); } setVisits(function(prev) { return prev.filter(function(visit) { return !(visit.name === v.name && visit.time === v.time && visit.center === v.center); }); }); }} className="text-slate-300 hover:text-red-500 transition-colors p-1 rounded-lg hover:bg-red-50" title="Remove this check-in"><X size={14}/></button>
                                 </div>
                               </div>
