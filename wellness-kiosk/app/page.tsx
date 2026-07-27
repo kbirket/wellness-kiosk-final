@@ -648,13 +648,20 @@ const handleAddMemberSubmit = async (e) => {
     var refreshTimer = setInterval(function() {
       fetch('/api/get-visits').then(function(r) { return r.json(); }).then(function(data) {
         if (data.records) {
-          var mapped = data.records.map(function(r) { return { name: (r.fields['Member Name'] ? (Array.isArray(r.fields['Member Name']) ? r.fields['Member Name'][0] : r.fields['Member Name']) : 'Unknown'), center: r.fields['Center'] || '', time: r.fields['Timestamp'] || '', type: r.fields['Member Plan'] ? (Array.isArray(r.fields['Member Plan']) ? r.fields['Member Plan'][0] : r.fields['Member Plan']) : '', method: r.fields['Method'] || 'Kiosk' }; });
+          var mapped = data.records.map(function(v) {
+            var linkedArray = v.fields['Member'] || v.fields['Members'] || [];
+            var linkId = linkedArray[0];
+            var foundMember = members.find(function(m) { return m.airtableId === linkId; });
+            var fallbackName = Array.isArray(v.fields['Name']) ? v.fields['Name'][0] : v.fields['Name'] || 'Unknown Member';
+            return { airtableId: v.id, name: foundMember ? (foundMember.firstName + ' ' + foundMember.lastName) : fallbackName, center: v.fields['Center'] || v.fields['Location'] || 'Both', time: v.fields['Check-in Time'] || v.fields['Time'] || v.fields['Date'] || v.createdTime, type: foundMember ? foundMember.type : (String(fallbackName).indexOf('(Visitor)') !== -1 ? 'VISITOR' : 'Unknown'), method: v.fields['Check-in Method'] || v.fields['Method'] || 'General' };
+          });
+          mapped.sort(function(a, b) { return new Date(b.time) - new Date(a.time); });
           setVisits(mapped);
         }
       }).catch(function() {});
     }, 60000);
     return function() { clearInterval(refreshTimer); };
-  }, [view, user]);
+  }, [view, user, members]);
   const tKiosk = (s) => {
     if (kioskLang !== 'es' || !s) return s;
     var reps = [["You're all set! Friendly reminder: your employer's payment is past due. Please remind them to submit it. Thank you!","¡Todo listo! Recordatorio: el pago de su empleador está vencido. Por favor, recuérdeles que lo envíen. ¡Gracias!"],["Yes, Check Me In","Sí, regístrenme"],["Or tap anywhere to cancel","O toque para cancelar"],["Tap to continue","Toque para continuar"],["Camera unavailable","Cámara no disponible"],["Please search your name below instead.","Por favor, busque su nombre abajo."],["Parent or guardian must be present.","Debe estar acompañado por un padre o tutor."],["Please see the front desk at your convenience.","Acuda a recepción cuando pueda."],["Please see the front desk to purchase more.","Acuda a recepción para comprar más."],["Please see front desk to complete your Anthony orientation.","Acuda a recepción para completar su orientación de Anthony."],["Please see front desk to complete your Harper orientation.","Acuda a recepción para completar su orientación de Harper."],["was checked in within the last 2 hours.","se registró en las últimas 2 horas."],["We need to quickly update your account.","Necesitamos actualizar su cuenta."],["still needs to complete ","aún debe completar "],["signed parent permission form","formulario de permiso de los padres firmado"],["Already checked in!","¡Ya se registró!"],["Membership Inactive","Membresía inactiva"],["Orientation Required","Orientación requerida"],["No passes remaining","No quedan pases"],["Member not found","Miembro no encontrado"],["ID not found.","ID no encontrada."],["Check-in Error","Error de registro"],["System Error","Error del sistema"],["Network Error","Error de red"],["Please try again.","Intente de nuevo."],["Please see the front desk.","Por favor, acuda a recepción."],["Please see front desk.","Por favor, acuda a recepción."],["Welcome, ","¡Bienvenido/a, "],["orientation","orientación"],["paperwork","papeleo"],[" & "," y "]];
