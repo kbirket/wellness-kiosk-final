@@ -1310,7 +1310,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
 
   /* --- PUBLIC KIOSK VIEW --- */
   if (view === 'kiosk') {
-    const kioskMemberMatches = kioskInput.length >= 2 ? members.filter(m => !m.inactive && ((m.firstName + ' ' + m.lastName).toLowerCase().includes(kioskInput.toLowerCase()) || m.id.toLowerCase().includes(kioskInput.toLowerCase()))).slice(0, 4) : [];
+    const kioskMemberMatches = kioskInput.length >= 2 ? members.filter(m => !m.inactive && ((m.firstName + ' ' + m.lastName).toLowerCase().includes(kioskInput.toLowerCase()) || m.id.toLowerCase().includes(kioskInput.toLowerCase()))).slice(0, 8) : [];
     const kioskVisitorMatches = kioskInput.length >= 2 ? visitors.filter(v => { const today = new Date(); const exp = new Date(v.expirationDate + 'T23:59:59'); const hasPasses = v.passesRemaining !== null && v.passesRemaining !== undefined && v.passesRemaining > 0; return (exp >= today || hasPasses) && !v.convertedToMember && v.orientationComplete && v.passActivated && (v.firstName + ' ' + v.lastName).toLowerCase().includes(kioskInput.toLowerCase()); }).slice(0, 2) : [];
     const allKioskMatches = [...kioskMemberMatches.map(m => ({...m, _type: 'member'})), ...kioskVisitorMatches.map(v => ({...v, _type: 'visitor'}))];
     const isHarper = viewingCenter === 'harper';
@@ -1415,15 +1415,15 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                   <Search size={24} className="text-slate-400 shrink-0" />
                   <input className="w-full bg-transparent text-xl font-bold outline-none text-[#001f3f] placeholder-slate-300" placeholder={kioskLang === 'es' ? 'Escriba su nombre...' : 'Type your name...'} value={kioskInput} onChange={(e) => setKioskInput(e.target.value)} />
                 </div>
-                {allKioskMatches.length > 0 && (
-                  <div className="absolute top-full mt-3 left-0 right-0 bg-white border border-slate-200 shadow-2xl rounded-2xl overflow-hidden z-50">
+               {allKioskMatches.length > 0 && (
+                  <div className="absolute bottom-full mb-3 left-0 right-0 bg-white border-2 border-[#1080ad] shadow-2xl rounded-2xl z-50 max-h-[40vh] overflow-y-auto overscroll-contain">
                     {allKioskMatches.map((m, idx) => (
-                      <button key={m._type + '-' + (m.airtableId || m.id || idx)} onClick={() => { setPinModal({...m, _kioskType: m._type}); setKioskInput(''); }} className="w-full px-7 py-4 text-left border-b border-slate-100 last:border-0 hover:bg-slate-50 flex justify-between items-center group transition-colors">
+                      <button key={m._type + '-' + (m.airtableId || m.id || idx)} onClick={() => { setPinModal({...m, _kioskType: m._type}); setKioskInput(''); }} className="w-full px-7 py-5 text-left border-b-2 border-slate-100 last:border-0 hover:bg-blue-50 active:bg-blue-100 flex justify-between items-center group transition-colors">
                         <div className="flex items-center gap-3">
-                          <span className="text-lg font-black text-[#001f3f] group-hover:text-[#1080ad] transition-colors">{m.firstName} {m.lastName}</span>
-                          {m._type === 'visitor' && <span className="px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-[9px] font-black uppercase tracking-wider">{kioskLang === 'es' ? 'Visitante' : 'Visitor'}</span>}
+                          <span className="text-2xl font-black text-[#001f3f] group-hover:text-[#1080ad] transition-colors">{m.firstName} {m.lastName}</span>
+                          {m._type === 'visitor' && <span className="px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-[10px] font-black uppercase tracking-wider">{kioskLang === 'es' ? 'Visitante' : 'Visitor'}</span>}
                         </div>
-                        <ChevronRight size={18} className="text-slate-200 group-hover:text-slate-400" />
+                        <div className="bg-[#1080ad] text-white px-5 py-2 rounded-xl text-sm font-bold shadow-sm shrink-0">{kioskLang === 'es' ? 'Elegir' : 'Select'}</div>
                       </button>
                     ))}
                   </div>
