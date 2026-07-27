@@ -857,6 +857,9 @@ var onboardingIncomplete = !m.basicOrientation || !m.paperworkCompleted || (m.is
   };
 
   const processVisitorCheckIn = async (visitor) => {
+    var vScanKey = 'vis_' + (visitor.airtableId || visitor.id);
+    if ((Date.now() - (lastScanRef.current[vScanKey] || 0)) < 8000) { return; }
+    lastScanRef.current[vScanKey] = Date.now();
     const currentCenter = centerRef.current;
     const scanCenter = currentCenter === 'both' ? (visitor.center || 'Anthony') : currentCenter.charAt(0).toUpperCase() + currentCenter.slice(1);
     try {
@@ -896,7 +899,11 @@ useEffect(() => { let scanner = null; if (view === 'secret_scanner' && scannerAc
         // instead of showing the library's own Request Camera / Scan File buttons.
         scanner = new Html5Qrcode("reader");
         const config = { fps: 20, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
+        var scanHandled = false;
         const onScan = (decodedText) => {
+          if (scanHandled) return;              // ignore the burst of frames after the first read
+          scanHandled = true;
+          try { scanner.stop().catch(function(){}); } catch (e) {}   // kill the camera immediately
           processCheckIn(decodedText, "Kiosk Camera");
           setIsScanning(false);
         };
