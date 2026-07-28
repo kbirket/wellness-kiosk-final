@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
-
 function generatePIN() {
   let pin;
   do {
@@ -8,17 +7,14 @@ function generatePIN() {
   } while (pin === '0000' || pin === '1111');
   return pin;
 }
-
 export async function POST(request) {
   const baseId = process.env.AIRTABLE_BASE_ID;
   const token = process.env.AIRTABLE_PAT;
   const tableName = process.env.AIRTABLE_TABLE_NAME || 'Members';
-
   try {
     const body = await request.json();
     const today = new Date().toISOString().split('T')[0];
     const newPIN = generatePIN();
-
     // 1. Create the main fields object
     const fields = {
       "First Name": body.firstName,
@@ -34,19 +30,22 @@ export async function POST(request) {
       "24/7 Access": body.access247 || false,
       "Badge Number": body.badgeNumber || '',
       "Billing Method": body.billingMethod || "Month-to-Month",
+      "Monthly Rate": body.monthlyRate !== undefined ? body.monthlyRate : '',
       "Password": newPIN,
       "Membership Status": "ACTIVE",
       "Start Date": body.startDate || today,
-      "Needs Orientation": body.needsOrientation,       
-      "Orientation Anthony": !body.needsOrientation,       
-      "Orientation Harper": !body.needsOrientation, 
+      "Needs Orientation": body.needsOrientation,
+      "Orientation Anthony": body.orientationAnthony !== undefined ? body.orientationAnthony : !body.needsOrientation,
+      "Orientation Harper": body.orientationHarper !== undefined ? body.orientationHarper : !body.needsOrientation,
+      "Basic Orientation": body.basicOrientation || false,
+      "Basic Orientation Date": body.basicOrientationDate || '',
+      "Paperwork Completed": body.paperworkCompleted || false,
+      "Paperwork Completed Date": body.paperworkCompletedDate || '',
       ...(body.corporateSponsor ? { "Corporate Sponsor": body.corporateSponsor } : {}),
     };
-
     // 2. Attach the discount fields safely OUTSIDE the object
     if (body.discountCode) fields["Discount Code"] = body.discountCode;
     if (body.discountExpiration) fields["Discount Expiration"] = body.discountExpiration;
-
     const response = await fetch(`https://api.airtable.com/v0/${baseId}/${tableName}`, {
       method: 'POST',
       headers: {
@@ -58,13 +57,10 @@ export async function POST(request) {
         typecast: true
       })
     });
-
     const data = await response.json();
-
     if (data.error) {
       return NextResponse.json({ success: false, error: data.error.message || "Airtable Error" }, { status: 400 });
     }
-
     return NextResponse.json({ success: true, pin: newPIN, airtableId: data.records && data.records[0] ? data.records[0].id : null, data: data });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
