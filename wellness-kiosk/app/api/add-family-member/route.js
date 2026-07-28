@@ -45,8 +45,12 @@ export async function POST(request) {
             "Membership Status": "ACTIVE",
             "Start Date": body.startDate || today,
             "Needs Orientation": body.needsOrientation === true,
-            "Orientation Anthony": body.needsOrientation !== true,
-            "Orientation Harper": body.needsOrientation !== true,
+            "Orientation Anthony": body.orientationAnthony !== undefined ? body.orientationAnthony : body.needsOrientation !== true,
+            "Orientation Harper": body.orientationHarper !== undefined ? body.orientationHarper : body.needsOrientation !== true,
+            "Basic Orientation": body.basicOrientation || false,
+            "Basic Orientation Date": body.basicOrientationDate || '',
+            "Paperwork Completed": body.paperworkCompleted || false,
+            "Paperwork Completed Date": body.paperworkCompletedDate || '',
             ...(body.corporateSponsor ? { "Corporate Sponsor": body.corporateSponsor } : {}),
           }
         }],
@@ -87,7 +91,6 @@ export async function POST(request) {
       const familyData = await familyRes.json();
 
       if (familyData.error) {
-        // Member was created but family linking failed — still return success with a warning
         return NextResponse.json({
           success: true,
           pin: newPIN,
@@ -121,7 +124,6 @@ export async function POST(request) {
     }
 
     // If this is a SECONDARY member (familyRecordId provided), link to existing family
-    // First, get the current family record to see existing members
     const existingFamilyRes = await fetch(`https://api.airtable.com/v0/${baseId}/${familiesTable}/${body.familyRecordId}`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
