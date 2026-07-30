@@ -802,13 +802,13 @@ return exp >= today && !v.convertedToMember && v.orientationComplete && v.passAc
       const scanCenter = currentLoc === 'both' ? m.center : currentLoc.charAt(0).toUpperCase() + currentLoc.slice(1);
       const currentTime = new Date().toISOString();
 
-var onboardingIncomplete = m.needsOrientation && (!m.basicOrientation || !m.paperworkCompleted || (m.isMinor && !m.parentPermission));
+var onboardingIncomplete = m.needsOrientation && (!m.basicOrientation || !m.paperworkCompleted || (m.isMinor && !m.parentPermission && !m.mayAttendAlone));
       if (onboardingIncomplete && !overrideCooldown) {
         var missing = [];
         if (!m.basicOrientation) missing.push('orientation');
         if (!m.paperworkCompleted) missing.push('paperwork');
-        if (m.isMinor && !m.parentPermission) missing.push('signed parent permission form');
-        var reasonCode = (m.isMinor && !m.parentPermission) ? ((!m.basicOrientation || !m.paperworkCompleted) ? 'Missing Parent Permission + Onboarding' : 'Missing Parent Permission') : (!m.basicOrientation && !m.paperworkCompleted) ? 'Missing Both' : !m.basicOrientation ? 'Missing Basic Orientation' : 'Missing Paperwork';
+        if (m.isMinor && !m.parentPermission && !m.mayAttendAlone) missing.push('signed parent permission form');
+        var reasonCode = (m.isMinor && !m.parentPermission && !m.mayAttendAlone) ? ((!m.basicOrientation || !m.paperworkCompleted) ? 'Missing Parent Permission + Onboarding' : 'Missing Parent Permission') : (!m.basicOrientation && !m.paperworkCompleted) ? 'Missing Both' : !m.basicOrientation ? 'Missing Basic Orientation' : 'Missing Paperwork';
         var blockCenter = (m.center && m.center.toLowerCase().includes('harper')) ? 'Harper' : (m.center && m.center.toLowerCase().includes('anthony')) ? 'Anthony' : 'Harper';
         fetch('/api/log-blocked-checkin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ memberAirtableId: m.airtableId, memberId: m.id, memberName: m.firstName + ' ' + m.lastName, reason: reasonCode, center: blockCenter }) }).catch(function() {});
         setKioskMessage({ text: 'Please see the front desk.', type: 'warning', subtext: m.firstName + ' still needs to complete ' + missing.join(' & ') + '.', onboardingBlocked: true, memberId: m.id, memberName: m.firstName + ' ' + m.lastName });
@@ -2046,7 +2046,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
           var mo = parseInt(periodParts[0]) - 1;
           var rStartP = null, rEndP = null, monthName;
           if (isCustomP) { rStartP = new Date(customRangeStart + 'T00:00:00'); rEndP = new Date(customRangeEnd + 'T23:59:59'); var fmtP = function(dd) { return dd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }; monthName = fmtP(rStartP) + ' — ' + fmtP(rEndP); } else { monthName = new Date(yr, mo).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }); }
-          var inPeriodP = function(ds) { if (!ds) return false; var d = new Date(ds); if (isNaN(d.getTime())) return false; if (isCustomP) return d >= rStartP && d <= rEndP; return d.getFullYear() === yr && d.getMonth() === mo; };
+          var inPeriodP = function(ds) { if (!ds) return false; var d = new Date(String(ds).length <= 10 ? ds + 'T00:00:00' : ds); if (isNaN(d.getTime())) return false; if (isCustomP) return d >= rStartP && d <= rEndP; return d.getFullYear() === yr && d.getMonth() === mo; };
           
           // 1. Get standard member payments
           var standardPayments = payments.filter(function(p) { return inPeriodP(p.date); });
