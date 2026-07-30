@@ -805,6 +805,26 @@ return exp >= today && !v.convertedToMember && v.orientationComplete && v.passAc
 
 var onboardingIncomplete = m.needsOrientation && (!m.basicOrientation || !m.paperworkCompleted || (m.isMinor && !m.parentPermission));
       if (onboardingIncomplete && !overrideCooldown) {
+        try {
+          var freshRes = await fetch('/api/get-member?id=' + m.airtableId);
+          var freshData = await freshRes.json();
+          if (freshData && freshData.fields) {
+            var f = freshData.fields;
+            var freshBasic = !!f['Basic Orientation'];
+            var freshPaperwork = !!f['Paperwork Completed'];
+            var freshParent = !!f['Parent Permission Form'];
+            var freshNeedsOrient = !!f['Needs Orientation'];
+            var stillIncomplete = freshNeedsOrient && (!freshBasic || !freshPaperwork || (m.isMinor && !freshParent));
+            if (!stillIncomplete) {
+              var updatedMember = Object.assign({}, m, { needsOrientation: freshNeedsOrient, basicOrientation: freshBasic, paperworkCompleted: freshPaperwork, parentPermission: freshParent });
+              setMembers(prev => prev.map(mm => mm.airtableId === m.airtableId ? Object.assign({}, mm, updatedMember) : mm));
+              m = updatedMember;
+              onboardingIncomplete = false;
+            }
+          }
+        } catch (e) {}
+      }
+      if (onboardingIncomplete && !overrideCooldown) {
         var missing = [];
         if (!m.basicOrientation) missing.push('orientation');
         if (!m.paperworkCompleted) missing.push('paperwork');
