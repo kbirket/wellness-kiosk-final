@@ -2087,7 +2087,37 @@ var showToast = function(message, type, duration) { setToast({ message: message,
             };
           });
 
-          // 3. Combine them
+          // 3. Build corporate payment entries for this period
+          var corpPayEntries = [];
+          corporatePartners.forEach(function(cp) {
+            var entries = [];
+            if (cp.paidMonths) cp.paidMonths.split(',').forEach(function(e) { var parts = e.split(':'); if (parts[0] === reportMonth || (isCustomP && inPeriodP(parts[0].split('-')[1] + '-' + String(parseInt(parts[0].split('-')[0])).padStart(2,'0') + '-01'))) entries.push({ method: parts[1] || 'Logged', center: 'Both' }); });
+            if (cp.paidMonthsHarper) cp.paidMonthsHarper.split(',').forEach(function(e) { var parts = e.split(':'); if (parts[0] === reportMonth) entries.push({ method: parts[1] || 'Logged', center: 'Harper' }); });
+            if (cp.paidMonthsAnthony) cp.paidMonthsAnthony.split(',').forEach(function(e) { var parts = e.split(':'); if (parts[0] === reportMonth) entries.push({ method: parts[1] || 'Logged', center: 'Anthony' }); });
+            if (entries.length === 0) return;
+            var corpMembers = members.filter(function(mm) { return mm.sponsorName === cp.sponsorMatch && mm.status === 'ACTIVE'; });
+            if (viewingCenter !== 'both') corpMembers = corpMembers.filter(function(mm) { return mm.center && mm.center.toLowerCase().includes(viewingCenter); });
+            var corpTotal = 0;
+            var famPrimaries = {};
+            corpMembers.forEach(function(cm) {
+              if (cm.familyName) {
+                var rate = parseFloat(String(cm.monthlyRate).replace(/[^0-9.]/g, '')) || 0;
+                if (!famPrimaries[cm.familyName] || rate > famPrimaries[cm.familyName].rate) famPrimaries[cm.familyName] = { id: cm.airtableId, rate: rate };
+              }
+            });
+            corpMembers.forEach(function(cm) {
+              var rate = parseFloat(String(cm.monthlyRate).replace(/[^0-9.]/g, '')) || 0;
+              if (cm.familyName && famPrimaries[cm.familyName] && famPrimaries[cm.familyName].id !== cm.airtableId) rate = 0;
+              corpTotal += rate;
+            });
+            entries.forEach(function(ent) {
+              if (viewingCenter !== 'both' && ent.center !== 'Both' && ent.center.toLowerCase() !== viewingCenter) return;
+              corpPayEntries.push({ company: cp.name, amount: corpTotal, method: ent.method, center: ent.center, memberCount: corpMembers.length });
+            });
+          });
+          var corpTotalCollected = corpPayEntries.reduce(function(s, e) { return s + e.amount; }, 0);
+
+          // 4. Combine individual + visitor payments (corporate shown separately)
           var periodPayments = [...standardPayments, ...visitorPayments];
 
         if (viewingCenter !== 'both') {
@@ -2117,16 +2147,24 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                   </div>
                 </div>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-[#16a34a]">
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Collected</p>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Individual + Visitor</p>
                   <p className="text-3xl font-black text-[#16a34a]">${totalCollected.toFixed(2)}</p>
+                </div>
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-[#8b5cf6]">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Corporate</p>
+                  <p className="text-3xl font-black text-[#8b5cf6]">${corpTotalCollected.toFixed(2)}</p>
+                </div>
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-[#003d6b]">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Revenue</p>
+                  <p className="text-3xl font-black text-[#003d6b]">${(totalCollected + corpTotalCollected).toFixed(2)}</p>
                 </div>
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-[#1080ad]">
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Payments Logged</p>
                   <p className="text-3xl font-black text-[#1080ad]">{periodPayments.length}</p>
                 </div>
-                {Object.entries(byMethod).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 2).map(function(entry) {
+                {Object.entries(byMethod).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 1).map(function(entry) {
                   var colors = { Cash: '#16a34a', Check: '#f59e0b', Card: '#8b5cf6', ACH: '#1080ad', Other: '#64748b' };
                   return (
                     <div key={entry[0]} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4" style={{borderTopColor: colors[entry[0]] || '#64748b'}}>
@@ -2178,6 +2216,27 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                   </tbody>
                 </table>
               </div>
+              {corpPayEntries.length > 0 && (
+                <div className="bg-white rounded-2xl shadow-sm border-2 border-[#8b5cf6] overflow-hidden">
+                  <div className="bg-[#8b5cf6] px-6 py-3 flex justify-between items-center">
+                    <h3 className="text-white font-black text-sm uppercase tracking-widest">Corporate Payments — {monthName}</h3>
+                    <span className="text-white/70 text-xs font-bold">{corpPayEntries.length} payment{corpPayEntries.length !== 1 ? 's' : ''} · ${corpTotalCollected.toFixed(2)}</span>
+                  </div>
+                  <table className="w-full text-left border-collapse">
+                    <thead className="bg-purple-50 text-[11px] font-black text-purple-500 uppercase tracking-widest border-b border-purple-200">
+                      <tr><th className="px-6 py-3">Company</th><th className="px-4 py-3">Members</th><th className="px-4 py-3">Amount</th><th className="px-4 py-3">Method</th><th className="px-4 py-3">Center</th></tr>
+                    </thead>
+                    <tbody className="text-sm">{corpPayEntries.map(function(cp, idx) { return (
+                      <tr key={idx} className="border-b border-purple-100 hover:bg-purple-50/40">
+                        <td className="px-6 py-4 font-bold text-slate-800">{cp.company}</td>
+                        <td className="px-4 py-4 text-slate-500 text-xs font-bold">{cp.memberCount}</td>
+                        <td className="px-4 py-4 font-black text-[#8b5cf6]">${cp.amount.toFixed(2)}</td>
+                        <td className="px-4 py-4"><span className="px-3 py-1 rounded-full text-[10px] font-black bg-purple-100 text-purple-700">{cp.method}</span></td>
+                        <td className="px-4 py-4"><span className={'px-3 py-1 rounded-full text-[10px] font-black uppercase ' + (cp.center === 'Harper' ? 'bg-orange-100 text-orange-700' : cp.center === 'Anthony' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600')}>{cp.center}</span></td>
+                      </tr>); })}</tbody>
+                  </table>
+                </div>
+              )}
               {periodPayments.length > 0 && (
                 <div className="flex gap-3">
                   <button onClick={function() { var csv = ['Member,ID,Amount,Method,Date,Notes', ...periodPayments.map(function(p) { var mem = p.memberId === 'VISITOR' ? visitors.find(v => v.airtableId === p.memberRecId) : members.find(m => m.airtableId === p.memberRecId); var name = mem ? `${mem.firstName} ${mem.lastName}` : (p.memberId === 'VISITOR' ? 'Visitor' : p.memberId); var id = p.memberId === 'VISITOR' ? 'VISITOR' : (mem ? mem.id : p.memberId); return '"' + name + '","' + id + '","$' + (parseFloat(p.amount) || 0).toFixed(2) + '","' + p.method + '","' + p.date + '","' + (p.notes || '').replace(/"/g, "'") + '"'; })].join('\n'); var b = new Blob([csv], {type: 'text/csv'}); var u = window.URL.createObjectURL(b); var a = document.createElement('a'); a.href = u; a.download = 'Payments_' + reportMonth + '.csv'; a.click(); window.URL.revokeObjectURL(u); }} className="bg-[#1080ad] text-white px-6 py-3 rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-blue-700 transition-colors"><Download size={16}/> Export CSV</button>
