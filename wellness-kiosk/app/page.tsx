@@ -803,13 +803,13 @@ return exp >= today && !v.convertedToMember && v.orientationComplete && v.passAc
       const scanCenter = currentLoc === 'both' ? m.center : currentLoc.charAt(0).toUpperCase() + currentLoc.slice(1);
       const currentTime = new Date().toISOString();
 
-var onboardingIncomplete = m.needsOrientation && (!m.basicOrientation || !m.paperworkCompleted || (m.isMinor && !m.parentPermission && !m.mayAttendAlone));
+var onboardingIncomplete = m.needsOrientation && (!m.basicOrientation || !m.paperworkCompleted || (m.isMinor && !m.parentPermission));
       if (onboardingIncomplete && !overrideCooldown) {
         var missing = [];
         if (!m.basicOrientation) missing.push('orientation');
         if (!m.paperworkCompleted) missing.push('paperwork');
-        if (m.isMinor && !m.parentPermission && !m.mayAttendAlone) missing.push('signed parent permission form');
-        var reasonCode = (m.isMinor && !m.parentPermission && !m.mayAttendAlone) ? ((!m.basicOrientation || !m.paperworkCompleted) ? 'Missing Parent Permission + Onboarding' : 'Missing Parent Permission') : (!m.basicOrientation && !m.paperworkCompleted) ? 'Missing Both' : !m.basicOrientation ? 'Missing Basic Orientation' : 'Missing Paperwork';
+        if (m.isMinor && !m.parentPermission) missing.push('signed parent permission form');
+        var reasonCode = (m.isMinor && !m.parentPermission) ? ((!m.basicOrientation || !m.paperworkCompleted) ? 'Missing Parent Permission + Onboarding' : 'Missing Parent Permission') : (!m.basicOrientation && !m.paperworkCompleted) ? 'Missing Both' : !m.basicOrientation ? 'Missing Basic Orientation' : 'Missing Paperwork';
         var blockCenter = (m.center && m.center.toLowerCase().includes('harper')) ? 'Harper' : (m.center && m.center.toLowerCase().includes('anthony')) ? 'Anthony' : 'Harper';
         fetch('/api/log-blocked-checkin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ memberAirtableId: m.airtableId, memberId: m.id, memberName: m.firstName + ' ' + m.lastName, reason: reasonCode, center: blockCenter }) }).catch(function() {});
         setKioskMessage({ text: 'Please see the front desk.', type: 'warning', subtext: m.firstName + ' still needs to complete ' + missing.join(' & ') + '.', onboardingBlocked: true, memberId: m.id, memberName: m.firstName + ' ' + m.lastName });
