@@ -773,8 +773,8 @@ return exp >= today && !v.convertedToMember && v.orientationComplete && v.passAc
 
       // Check for location-specific orientation
       const currentLoc = centerRef.current.toLowerCase(); 
-      const needsAnthony = currentLoc.includes('anthony') && !m.orientationAnthony;
-      const needsHarper = currentLoc.includes('harper') && !m.orientationHarper;
+      const needsAnthony = m.needsOrientation && currentLoc.includes('anthony') && !m.orientationAnthony;
+      const needsHarper = m.needsOrientation && currentLoc.includes('harper') && !m.orientationHarper;
 
       if (needsAnthony || needsHarper) {
         const centerName = needsAnthony ? "Anthony" : "Harper";
