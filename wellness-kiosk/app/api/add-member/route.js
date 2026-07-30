@@ -30,7 +30,6 @@ export async function POST(request) {
       "24/7 Access": body.access247 || false,
       "Badge Number": body.badgeNumber || '',
       "Billing Method": body.billingMethod || "Month-to-Month",
-      "Monthly Rate": body.monthlyRate !== undefined ? body.monthlyRate : '',
       "Password": newPIN,
       "Membership Status": "ACTIVE",
       "Start Date": body.startDate || today,
