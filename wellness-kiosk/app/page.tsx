@@ -818,7 +818,6 @@ var onboardingIncomplete = m.needsOrientation && (!m.basicOrientation || !m.pape
             if (!stillIncomplete) {
               var updatedMember = Object.assign({}, m, { needsOrientation: freshNeedsOrient, basicOrientation: freshBasic, paperworkCompleted: freshPaperwork, parentPermission: freshParent });
               setMembers(prev => prev.map(mm => mm.airtableId === m.airtableId ? Object.assign({}, mm, updatedMember) : mm));
-              m = updatedMember;
               onboardingIncomplete = false;
             }
           }
