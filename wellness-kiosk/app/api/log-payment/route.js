@@ -123,19 +123,20 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: mdetail }, { status: 400 });
     }
 
-    // 5. If the payer is part of a family, advance Next Payment Due for all other family members too
+// 5. If the payer is part of a family, look up the Family record to get ALL member IDs, then update them
     let familyMembersUpdated = 0;
     if (familyGroupId) {
       try {
-        const filterFormula = encodeURIComponent(`AND(FIND('${familyGroupId}', ARRAYJOIN({Family Group})), RECORD_ID()!='${airtableId}')`);
-        const famRes = await fetch(
-          `https://api.airtable.com/v0/${baseId}/Members?filterByFormula=${filterFormula}&maxRecords=20`,
+        const famLookup = await fetch(
+          `https://api.airtable.com/v0/${baseId}/Families/${familyGroupId}`,
           { headers: { 'Authorization': `Bearer ${token}` } }
         );
-        const famData = await famRes.json();
-        if (famData.records && famData.records.length > 0) {
-          const updates = famData.records.map(rec => ({
-            id: rec.id,
+        const famLookupData = await famLookup.json();
+        const allMemberIds = famLookupData.fields && famLookupData.fields['Members'] ? famLookupData.fields['Members'] : [];
+        const otherMemberIds = allMemberIds.filter(id => id !== airtableId);
+        if (otherMemberIds.length > 0) {
+          const updates = otherMemberIds.map(id => ({
+            id: id,
             fields: {
               "Next Payment Due": nextPaymentDue,
               "Membership Status": "Active"
