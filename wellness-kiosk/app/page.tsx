@@ -1100,44 +1100,31 @@ showToast('Network error.', 'error', 3000);
     };
     const classTimeStr = parseClassTime(classTime);
     
-    // Check if member already has a visit on this date
-    const existingVisit = visits.find(function(v) {
+    // Check if member already has a visit on this date NEAR the class time (within 1 hour)
+    const classDateTime = new Date(classDate + 'T' + classTimeStr);
+    const sameDayVisits = visits.filter(function(v) {
       return v.name === fullName && new Date(v.time).toDateString() === targetDateStr;
+    });
+    // Already on this class roster?
+    const alreadyInClass = sameDayVisits.find(function(v) { return v.method === classMethod; });
+    if (alreadyInClass) {
+      showToast(mem.firstName + ' is already on the class roster.', 'warning', 3000);
+      return false;
+    }
+    // Find the closest non-class visit within 1 hour of the class time
+    var existingVisit = null;
+    var closestDiff = Infinity;
+    sameDayVisits.forEach(function(v) {
+      if (v.method && v.method.startsWith('Class:')) return;
+      var diff = Math.abs(new Date(v.time) - classDateTime);
+      if (diff < 60 * 60 * 1000 && diff < closestDiff) {
+        closestDiff = diff;
+        existingVisit = v;
+      }
     });
     
   if (existingVisit) {
-      // They already checked in today — decide whether to relabel or create a new visit
-      if (existingVisit.method === classMethod) {
-        showToast(mem.firstName + ' is already on the class roster.', 'warning', 3000);
-        return false;
-      }
-      // If their existing visit is a different class, create a new visit (they're attending two classes today)
-      const existingIsClass = existingVisit.method && existingVisit.method.startsWith('Class:');
-      const newIsClass = classMethod && classMethod.startsWith('Class:');
-      if (existingIsClass && newIsClass) {
-        const visitISO = new Date(classDate + 'T' + classTimeStr).toISOString();
-        try {
-          const res = await fetch('/api/visits', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ airtableId: mem.airtableId, center: scanCenter, time: visitISO, method: classMethod })
-          });
-          const result = await res.json();
-          if (result.success) {
-            setVisits(function(prev) { return [{name: fullName, center: scanCenter, time: visitISO, type: mem.type, method: classMethod}, ...prev]; });
-            setMembers(function(prev) { return prev.map(function(member) { return member.id === mem.id ? Object.assign({}, member, { visits: member.visits + 1 }) : member; }); });
-            showToast(mem.firstName + ' added to second class of the day.', 'success', 3000);
-            return true;
-          } else {
-            showToast('Add failed: ' + (result.error || 'Unknown error'), 'error', 4500);
-            return false;
-          }
-        } catch (err) {
-          showToast('Network error.', 'error', 3000);
-          return false;
-        }
-      }
-      // Otherwise (existing visit is a kiosk scan, not a class) — relabel it as this class
+      // They have a non-class visit within 1 hour of the class — relabel it
       try {
         const res = await fetch('/api/update-visit-method', {
           method: 'POST',
