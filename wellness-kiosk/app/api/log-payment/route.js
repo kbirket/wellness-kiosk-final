@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 export async function POST(request) {
   try {
-    const { airtableId, method, currentDueDate, amount, paymentDate, note } = await request.json();
+    const { airtableId, method, currentDueDate, amount, paymentDate, note, renewalDateOverride, paymentCenter } = await request.json();
     const baseId = process.env.AIRTABLE_BASE_ID;
     const token = process.env.AIRTABLE_PAT;
 
@@ -30,18 +30,15 @@ export async function POST(request) {
     }
     const isAnthony = memberCenter.toLowerCase().includes('anthony');
 
-    // 2. Calculate the NEW due date
+    // 2. Calculate the NEW due date (or use director's manual override)
     let nextDate;
     if (paymentDate) {
-        nextDate = new Date(paymentDate + 'T00:00:00');
+      nextDate = new Date(paymentDate + 'T00:00:00');
     } else {
-        nextDate = new Date();
+      nextDate = new Date();
     }
     if (achAutoPay) {
       if (achDraftPref === 'Both') {
-        // Twice-a-month member: each draft points the due date at the NEXT draft in the cycle.
-        // A payment near the start of the month is the 3rd's draft -> next is the 18th of the SAME month.
-        // A payment later in the month is the 18th's draft -> next is the 3rd of NEXT month.
         const payDay = nextDate.getDate();
         if (payDay <= 10) {
           nextDate = new Date(nextDate.getFullYear(), nextDate.getMonth(), 18);
@@ -49,7 +46,6 @@ export async function POST(request) {
           nextDate = new Date(nextDate.getFullYear(), nextDate.getMonth() + 1, 3);
         }
       } else {
-        // Single draft day: due lands on that same day next month.
         const day = achDraftPref === '18th' ? 18 : 3;
         nextDate = new Date(nextDate.getFullYear(), nextDate.getMonth() + 1, day);
       }
@@ -58,7 +54,8 @@ export async function POST(request) {
     } else {
       nextDate.setMonth(nextDate.getMonth() + 1);
     }
-    const nextPaymentDue = nextDate.toLocaleDateString('en-CA');
+    const calculatedDue = nextDate.toLocaleDateString('en-CA');
+    const finalNextPaymentDue = renewalDateOverride || calculatedDue;
 
     // 3. Create the Payment Record
     const payAmount = Number(amount) || 0;
@@ -66,8 +63,8 @@ export async function POST(request) {
     const payMethod = method.startsWith('Check') ? 'Check' : method;
     const userNote = note && note.trim() ? note.trim() : '';
     const baseNote = checkNum
-        ? 'Check #' + checkNum + ' - Logged by staff via Wellness Hub'
-        : 'Logged by staff via Wellness Hub';
+      ? 'Check #' + checkNum + ' - Logged by staff via Wellness Hub'
+      : 'Logged by staff via Wellness Hub';
     const noteText = userNote ? userNote + ' | ' + baseNote : baseNote;
     const payFields = {
       "Member": [airtableId],
@@ -77,8 +74,9 @@ export async function POST(request) {
       "Status": "Completed",
       "Notes": noteText
     };
-
     if (checkNum) payFields["Check Number"] = checkNum;
+    if (paymentCenter) payFields["Center"] = paymentCenter;
+
     const payRes = await fetch(`https://api.airtable.com/v0/${baseId}/Payments`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -87,7 +85,6 @@ export async function POST(request) {
         typecast: true
       })
     });
-
     const payData = await payRes.json();
 
     if (!payRes.ok || payData.error) {
@@ -98,23 +95,20 @@ export async function POST(request) {
 
     // 4. Update the Member record
     const memberFields = {
-      "Next Payment Due": nextPaymentDue,
+      "Next Payment Due": finalNextPaymentDue,
       "Membership Status": "Active",
     };
-
     if (checkNum) {
       memberFields["Check Number"] = checkNum;
     } else {
       memberFields["Check Number"] = null;
     }
+
     const memRes = await fetch(`https://api.airtable.com/v0/${baseId}/Members/${airtableId}`, {
       method: 'PATCH',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        fields: memberFields
-      })
+      body: JSON.stringify({ fields: memberFields })
     });
-
     const memData = await memRes.json();
 
     if (!memRes.ok || memData.error) {
@@ -123,7 +117,7 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: mdetail }, { status: 400 });
     }
 
-// 5. If the payer is part of a family, look up the Family record to get ALL member IDs, then update them
+    // 5. If the payer is part of a family, look up the Family record to get ALL member IDs, then update them
     let familyMembersUpdated = 0;
     if (familyGroupId) {
       try {
@@ -138,7 +132,7 @@ export async function POST(request) {
           const updates = otherMemberIds.map(id => ({
             id: id,
             fields: {
-              "Next Payment Due": nextPaymentDue,
+              "Next Payment Due": finalNextPaymentDue,
               "Membership Status": "Active"
             }
           }));
@@ -159,7 +153,7 @@ export async function POST(request) {
 
     return NextResponse.json({
       success: true,
-      nextPaymentDue,
+      nextPaymentDue: finalNextPaymentDue,
       paymentSaved: true,
       memberUpdated: true,
       familyMembersUpdated
