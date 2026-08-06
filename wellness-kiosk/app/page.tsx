@@ -2101,7 +2101,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
           var inPeriodP = function(ds) { if (!ds) return false; var d = new Date(String(ds).length <= 10 ? ds + 'T00:00:00' : ds); if (isNaN(d.getTime())) return false; if (isCustomP) return d >= rStartP && d <= rEndP; return d.getFullYear() === yr && d.getMonth() === mo; };
           
           // 1. Get standard member payments
-          var standardPayments = payments.filter(function(p) { if (!inPeriodP(p.date)) return false; if (viewingCenter === 'both') return true; var payCenter = p.center ? p.center.toLowerCase() : ''; if (payCenter) return payCenter.includes(viewingCenter); var mem = members.find(function(mm) { return mm.airtableId === p.memberRecId; }); return mem && mem.center && mem.center.toLowerCase().includes(viewingCenter); });
+          var standardPayments = payments.filter(function(p) { if (!inPeriodP(p.date)) return false; if (viewingCenter === 'both') return true; var vc = viewingCenter.toLowerCase(); var payCenter = p.center ? p.center.toLowerCase() : ''; if (payCenter) return payCenter.includes(vc); var mem = members.find(function(mm) { return mm.airtableId === p.memberRecId; }); return mem && mem.center && mem.center.toLowerCase().includes(vc); });
           
           // 2. Extract visitor payments and format them for the ledger
          var visitorPayments = visitors.filter(function(v) { 
