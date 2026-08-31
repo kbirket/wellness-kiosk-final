@@ -1,8 +1,8 @@
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { recordId, status, printType } = body;
-    if (!recordId || (!status && !printType)) {
+    const { recordId, status, printType, statusNote } = body;
+    if (!recordId || (!status && !printType && statusNote === undefined)) {
       return Response.json({ success: false, error: 'Missing required fields' }, { status: 400 });
     }
     const fields = {};
@@ -21,6 +21,9 @@ export async function POST(request) {
     }
     if (printType) {
       fields['Print Type'] = printType;
+    }
+    if (statusNote !== undefined) {
+      fields['Status Note'] = statusNote === '' ? null : statusNote;
     }
     const res = await fetch(
       'https://api.airtable.com/v0/' + process.env.AIRTABLE_BASE_ID + '/Card%20Print%20Queue/' + recordId,
