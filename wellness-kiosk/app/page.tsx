@@ -1631,13 +1631,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
           const orientationMembers = scopedMembers.filter(function(m) { if (!m.needsOrientation) return false; if (viewingCenter === 'anthony') return !m.orientationAnthony; if (viewingCenter === 'harper') return !m.orientationHarper; return !m.orientationAnthony && !m.orientationHarper; });
           const expiringThisWeek = scopedMembers.filter(m => { if (!m.nextPayment || m.status === 'OVERDUE') return false; const d = new Date(m.nextPayment); return d > today && d <= weekFromNow; });
           const pendingCardRequests = user?.role === 'admin' ? cardQueue.filter(c => c.status === 'Pending') : [];
-          const myCardRequests = cardQueue.filter(function(c) {
-            if (c.requestedBy && user?.name && c.requestedBy === user.name) return true;
-            var m = members.find(function(x) { return x.airtableId === c.memberRecId; });
-            if (!m || !m.center || !user?.center) return false;
-            if (user.center === 'both') return true;
-            return m.center.toLowerCase().includes(user.center.toLowerCase());
-          }).sort((a, b) => new Date(b.requestedDate || 0) - new Date(a.requestedDate || 0));
+       
           const briefingItems = [...overdueMembers.map(m => ({name:`${m.firstName} ${m.lastName}`,detail:`Overdue since ${m.nextPayment}`,type:'overdue',id:m.id})),...dueTodayMembers.map(m => ({name:`${m.firstName} ${m.lastName}`,detail:'Payment due today',type:'due',id:m.id})),...orientationMembers.map(m => ({name:`${m.firstName} ${m.lastName}`,detail:'Needs facility orientation',type:'orientation',id:m.id})),...expiringThisWeek.map(m => ({name:`${m.firstName} ${m.lastName}`,detail:`Expires ${m.nextPayment}`,type:'expiring',id:m.id})),...pendingCardRequests.map(req => { const m = members.find(mem => mem.airtableId === req.memberRecId); return { name: m ? (m.firstName + ' ' + m.lastName) : 'Unknown', detail: 'Card requested by ' + req.requestedBy, type: 'card', id: m ? m.id : '' }; })];
           const quickResults = quickSearch.length >= 2 ? scopedMembers.filter(m => `${m.firstName} ${m.lastName} ${m.id} ${m.email}`.toLowerCase().includes(quickSearch.toLowerCase())).slice(0,5) : [];
           const exportTodaysLog = () => { const tv = filteredVisits.filter(v => new Date(v.time).toDateString() === todayStr); if (tv.length === 0) { alert('No check-ins today yet.'); return; } const csv = ["Name,Center,Time,Type,Check-In Method",...tv.map(v => `"${v.name}","${v.center}","${new Date(v.time).toLocaleTimeString()}","${v.type}","${v.method || 'General Workout'}"`)].join('\n'); const b = new Blob([csv],{type:'text/csv'}); const u = window.URL.createObjectURL(b); const a = document.createElement('a'); a.href=u; a.download=`Check_Ins_${new Date().toISOString().slice(0,10)}.csv`; a.click(); window.URL.revokeObjectURL(u); };         
@@ -1662,34 +1656,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 relative"><h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Search size={14}/> Quick Member Lookup</h3><div className="relative"><input className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#1080ad] text-sm" placeholder="Type a name, ID, or email..." value={quickSearch} onChange={e => setQuickSearch(e.target.value)} />{quickResults.length > 0 && (<div className="absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 overflow-hidden">{quickResults.map(m => (<button key={m.id} onClick={() => { setSelectedMember(m); setQuickSearch(''); }} className="w-full p-4 border-b border-slate-50 last:border-0 hover:bg-blue-50 transition-colors flex justify-between items-center text-left"><div><p className="font-bold text-[#001f3f]">{m.firstName} {m.lastName}</p><p className="text-[10px] text-slate-400">{m.id} · {m.type}</p></div><span className={`px-2 py-1 rounded-full text-[9px] font-black ${getStoplight(m)==='green'?'bg-green-100 text-green-600':getStoplight(m)==='yellow'?'bg-yellow-100 text-yellow-600':'bg-red-100 text-red-600'}`}>{getStoplight(m)==='green'?'ACTIVE':getStoplight(m)==='yellow'?'GRACE':'LOCKED'}</span></button>))}</div>)}</div></div><div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between"><h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><FileText size={14}/> Quick Export</h3><div className="space-y-3"><button onClick={exportTodaysLog} className="w-full bg-[#1080ad] text-white py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors shadow-sm"><Download size={16}/> Export Today's Check-in Log</button><button onClick={handleExportCSV} className="w-full bg-slate-100 text-[#001f3f] py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-slate-200 transition-colors"><Download size={16}/> Export Full Member List</button></div></div></div>
 
-              {user?.role !== 'admin' && myCardRequests.length > 0 && (() => {
-                var labels = { 'Pending': ['Waiting on Kristen', 'bg-amber-100 text-amber-700'], 'Printed': ['Printed — on its way to you', 'bg-blue-100 text-blue-700'], 'Issued': ['Given to member', 'bg-green-100 text-green-700'] };
-                var waiting = myCardRequests.filter(function(c) { return c.status === 'Pending'; }).length;
-                return (
-                  <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><QrCode size={14} className="text-[#dba51f]"/> My Card &amp; Fob Requests {waiting > 0 && <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[10px]">{waiting} waiting</span>}</h3>
-                    <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1">
-                      {myCardRequests.slice(0, 25).map(function(req) {
-                        var m = members.find(function(x) { return x.airtableId === req.memberRecId; });
-                        var st = labels[req.status] || labels['Pending'];
-                        return (
-                          <div key={req.airtableId} className="flex justify-between items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                            <div className="min-w-0">
-                              <p className="font-bold text-slate-800 text-sm truncate">{m ? m.firstName + ' ' + m.lastName : 'Unknown member'}</p>
-                              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{req.printType || 'Card'} · asked {req.requestedDate ? new Date(req.requestedDate).toLocaleDateString('en-US', {month: 'short', day: 'numeric'}) : '—'}{req.printedDate ? ' · printed ' + new Date(req.printedDate + 'T00:00:00').toLocaleDateString('en-US', {month: 'short', day: 'numeric'}) : ''}</p>
-                              {req.note && <p className="text-[10px] text-slate-400 italic mt-1 truncate" title={req.note}>{req.note}</p>}
-                              {req.statusNote && <p className="text-[10px] font-bold text-[#dba51f] mt-1">Kristen: {req.statusNote}</p>}
-                            </div>
-                            <span className={'shrink-0 px-2 py-1 rounded text-[9px] font-black uppercase tracking-tight ' + st[1]}>{st[0]}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    {myCardRequests.length > 25 && <p className="text-[10px] text-slate-400 text-center mt-3 font-bold">Showing 25 most recent</p>}
-                  </div>
-                );
-              })()}
-              
+             
               {(() => {
                 const uniqueByMember = new Map();
                 blockedCheckins.filter(b => b.outcome === 'Pending' && b.reason !== 'Cooldown (2-hr)').forEach(b => {
@@ -3251,7 +3218,7 @@ if (memberBatch.length < 3 && !window.confirm('You selected ' + memberBatch.leng
                 { id: 'card2', q: "What if I'm adding a new member and they need a card?", a: "In the Add Member form, scroll down and check the gold <b>Request Card Print</b> checkbox before saving. You can also add an optional note like 'Rush' or 'Hand-deliver.' When you save, the member is created AND the card request is added to the queue automatically. You don't need to do anything else." },
                 { id: 'card3', q: "Why don't directors print cards directly?", a: "Cards are printed on a special CR80 card printer that lives with Kristen at PHC Main Campus. The kiosk-printable letters with QR codes (that you can hand to members) are different from the plastic cards. For plastic cards, the request goes to Kristen so she can batch-print and deliver them." },
                 { id: 'card4', q: "When will the card actually be printed?", a: "Kristen checks her Card Queue regularly. Most requests are printed within a few business days. If it's urgent (like a 24/7 access badge), add 'RUSH' to the note and she'll prioritize it. If you have not received it within a week, message Kristen directly." },
-                { id: 'card5', q: "Can I see what cards I've already requested?", a: "Yes. Scroll down on your <b>Dashboard</b> to the <b>My Card &amp; Fob Requests</b> panel. It lists everything you've requested with its current status:<br/><br/><b>Waiting on Kristen</b> — she has it in her queue but hasn't printed it yet<br/><b>Printed — on its way to you</b> — it's made and headed to your center<br/><b>Given to member</b> — you've handed it over and marked it issued<br/><br/>You'll also see the date you asked, the date it was printed, and any note Kristen added (for example, if she's waiting on card stock). If something has sat on 'Waiting' longer than a week, message her directly." },
+                { id: 'card5', q: "Can I see what cards I've already requested?", a: "Yes. Click <b>Card Queue</b> in the sidebar. It lists every card and fob requested for your center, grouped by status:<br/><br/><b>Waiting on Kristen</b> — she has it in her queue but hasn't printed it yet<br/><b>Printed — on its way to you</b> — it's made and headed to your center<br/><b>Given to member</b> — you've handed it over and marked it issued<br/><br/>You'll also see the date you asked, the date it was printed, and any note Kristen added (for example, if she's waiting on card stock). If something has sat on 'Waiting' longer than a week, message her directly." },
                 { id: 'card6', q: "Does requesting a card cost extra?", a: "No — the plastic cards are included as part of membership. Kristen will print them as needed." }
             ]},
             { category: "Visitors & Passes", icon: <Eye size={20} className="text-[#16a34a]" />, items: [
