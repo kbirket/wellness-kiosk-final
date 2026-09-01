@@ -2096,13 +2096,32 @@ var showToast = function(message, type, duration) { setToast({ message: message,
         )})()}
         
 {activeTab === 'payments' && (() => {
-          var isCustomP = reportMonth === 'custom';
+                   var isCustomP = reportMonth === 'custom';
           var periodParts = reportMonth.split('-');
           var yr = parseInt(periodParts[1]);
-          var mo = parseInt(periodParts[0]) - 1;
+          var targetMonthsP = [];
           var rStartP = null, rEndP = null, monthName;
-          if (isCustomP) { rStartP = new Date(customRangeStart + 'T00:00:00'); rEndP = new Date(customRangeEnd + 'T23:59:59'); var fmtP = function(dd) { return dd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }; monthName = fmtP(rStartP) + ' — ' + fmtP(rEndP); } else { monthName = new Date(yr, mo).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }); }
-          var inPeriodP = function(ds) { if (!ds) return false; var d = new Date(String(ds).length <= 10 ? ds + 'T00:00:00' : ds); if (isNaN(d.getTime())) return false; if (isCustomP) return d >= rStartP && d <= rEndP; return d.getFullYear() === yr && d.getMonth() === mo; };
+          if (isCustomP) {
+            rStartP = new Date(customRangeStart + 'T00:00:00');
+            rEndP = new Date(customRangeEnd + 'T23:59:59');
+            yr = rStartP.getFullYear();
+            var fmtP = function(dd) { return dd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); };
+            monthName = fmtP(rStartP) + ' — ' + fmtP(rEndP);
+          } else if (periodParts[0].charAt(0) === 'Q') {
+            var qNum = parseInt(periodParts[0].replace('Q', ''));
+            targetMonthsP = [(qNum - 1) * 3, (qNum - 1) * 3 + 1, (qNum - 1) * 3 + 2];
+            monthName = 'Q' + qNum + ' ' + yr;
+          } else {
+            targetMonthsP = [parseInt(periodParts[0]) - 1];
+            monthName = new Date(yr, targetMonthsP[0]).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+          }
+          var inPeriodP = function(ds) {
+            if (!ds) return false;
+            var d = new Date(String(ds).length <= 10 ? ds + 'T00:00:00' : ds);
+            if (isNaN(d.getTime())) return false;
+            if (isCustomP) return d >= rStartP && d <= rEndP;
+            return d.getFullYear() === yr && targetMonthsP.indexOf(d.getMonth()) !== -1;
+          };
           
           // 1. Get standard member payments
           var standardPayments = payments.filter(function(p) { if (!inPeriodP(p.date)) return false; if (viewingCenter === 'both') return true; var vc = viewingCenter.toLowerCase(); var payCenter = p.center ? p.center.toLowerCase() : ''; if (payCenter) return payCenter.includes(vc); var mem = members.find(function(mm) { return mm.airtableId === p.memberRecId; }); return mem && mem.center && mem.center.toLowerCase().includes(vc); });
@@ -2127,9 +2146,19 @@ var showToast = function(message, type, duration) { setToast({ message: message,
           var corpPayEntries = [];
           corporatePartners.forEach(function(cp) {
             var entries = [];
-            if (cp.paidMonths) cp.paidMonths.split(',').forEach(function(e) { var parts = e.split(':'); if (parts[0] === reportMonth || (isCustomP && inPeriodP(parts[0].split('-')[1] + '-' + String(parseInt(parts[0].split('-')[0])).padStart(2,'0') + '-01'))) entries.push({ method: parts[1] || 'Logged', center: 'Both' }); });
-            if (cp.paidMonthsHarper) cp.paidMonthsHarper.split(',').forEach(function(e) { var parts = e.split(':'); if (parts[0] === reportMonth) entries.push({ method: parts[1] || 'Logged', center: 'Harper' }); });
-            if (cp.paidMonthsAnthony) cp.paidMonthsAnthony.split(',').forEach(function(e) { var parts = e.split(':'); if (parts[0] === reportMonth) entries.push({ method: parts[1] || 'Logged', center: 'Anthony' }); });
+                        var entryInPeriod = function(key) {
+              if (!key) return false;
+              var kp = key.split('-');
+              if (kp.length !== 2) return false;
+              var kYr = parseInt(kp[1]);
+              var kMo = parseInt(kp[0]) - 1;
+              if (isNaN(kYr) || isNaN(kMo)) return false;
+              if (isCustomP) { var kd = new Date(kYr, kMo, 1); return kd >= new Date(rStartP.getFullYear(), rStartP.getMonth(), 1) && kd <= rEndP; }
+              return kYr === yr && targetMonthsP.indexOf(kMo) !== -1;
+            };
+            if (cp.paidMonths) cp.paidMonths.split(',').forEach(function(e) { var parts = e.split(':'); if (entryInPeriod(parts[0])) entries.push({ method: parts[1] || 'Logged', center: 'Both' }); });
+            if (cp.paidMonthsHarper) cp.paidMonthsHarper.split(',').forEach(function(e) { var parts = e.split(':'); if (entryInPeriod(parts[0])) entries.push({ method: parts[1] || 'Logged', center: 'Harper' }); });
+            if (cp.paidMonthsAnthony) cp.paidMonthsAnthony.split(',').forEach(function(e) { var parts = e.split(':'); if (entryInPeriod(parts[0])) entries.push({ method: parts[1] || 'Logged', center: 'Anthony' }); });
             if (entries.length === 0) return;
             var corpMembers = members.filter(function(mm) { return mm.sponsorName === cp.sponsorMatch && mm.status === 'ACTIVE'; });
             if (viewingCenter !== 'both') corpMembers = corpMembers.filter(function(mm) { return mm.center && mm.center.toLowerCase().includes(viewingCenter); });
