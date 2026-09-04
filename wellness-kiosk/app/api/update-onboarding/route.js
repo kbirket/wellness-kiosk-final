@@ -30,8 +30,8 @@ export async function POST(request) {
       'Parent Permission Form Date',
       'May Attend Alone',
       'Auto-Pay ACH',
-      'ACH Draft Day'
-            'Family Primary'
+            'ACH Draft Day',
+      'Family Primary'
     ];
 
     const cleanFields = {};
