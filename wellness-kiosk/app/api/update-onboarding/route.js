@@ -31,6 +31,7 @@ export async function POST(request) {
       'May Attend Alone',
       'Auto-Pay ACH',
       'ACH Draft Day'
+            'Family Primary'
     ];
 
     const cleanFields = {};
