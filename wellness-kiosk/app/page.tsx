@@ -289,7 +289,9 @@ const getBaseRate = (p, b) => {
     for (const fm of fam) {
       const makeIt = fm.airtableId === member.airtableId;
       try {
-        await fetch('/api/update-onboarding', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: fm.airtableId, fields: { 'Family Primary': makeIt } }) });
+              const pr = await fetch('/api/update-onboarding', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: fm.airtableId, fields: { 'Family Primary': makeIt } }) });
+        const pj = await pr.json();
+        if (!pj.success) throw new Error('Could not set the payer flag: ' + (pj.error || 'unknown error') + '. Check that a "Family Primary" checkbox field exists on the Members table.');
         await fetch('/api/update-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: fm.airtableId, monthlyRate: makeIt ? rate : 0, billingMethod: makeIt ? (member.billingMethod || 'Month-to-Month') : '' }) });
       } catch (e) {}
     }
