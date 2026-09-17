@@ -1651,6 +1651,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
           const overdueMembers = scopedMembers.filter(m => m.status === 'OVERDUE');
           const orientationMembers = scopedMembers.filter(function(m) { if (!m.needsOrientation) return false; if (viewingCenter === 'anthony') return !m.orientationAnthony; if (viewingCenter === 'harper') return !m.orientationHarper; return !m.orientationAnthony && !m.orientationHarper; });
           const expiringThisWeek = scopedMembers.filter(m => { if (!m.nextPayment || m.status === 'OVERDUE') return false; const d = new Date(m.nextPayment); return d > today && d <= weekFromNow; });
+         const cancelledCardRequests = user?.role === 'admin' ? cardQueue.filter(c => c.status === 'Cancelled') : [];
           const pendingCardRequests = user?.role === 'admin' ? cardQueue.filter(c => c.status === 'Pending') : [];
        
           const briefingItems = [...overdueMembers.map(m => ({name:`${m.firstName} ${m.lastName}`,detail:`Overdue since ${m.nextPayment}`,type:'overdue',id:m.id})),...dueTodayMembers.map(m => ({name:`${m.firstName} ${m.lastName}`,detail:'Payment due today',type:'due',id:m.id})),...orientationMembers.map(m => ({name:`${m.firstName} ${m.lastName}`,detail:'Needs facility orientation',type:'orientation',id:m.id})),...expiringThisWeek.map(m => ({name:`${m.firstName} ${m.lastName}`,detail:`Expires ${m.nextPayment}`,type:'expiring',id:m.id})),...pendingCardRequests.map(req => { const m = members.find(mem => mem.airtableId === req.memberRecId); return { name: m ? (m.firstName + ' ' + m.lastName) : 'Unknown', detail: 'Card requested by ' + req.requestedBy, type: 'card', id: m ? m.id : '' }; })];
@@ -3117,6 +3118,7 @@ if (memberBatch.length < 3 && !window.confirm('You selected ' + memberBatch.leng
                       <div className="flex items-center justify-between mb-4">
                                                <div className="flex items-center gap-3 flex-wrap"><h3 className="text-lg font-bold text-[#001f3f] flex items-center gap-2"><KeyRound size={18} className="text-[#8b5cf6]"/> Pending Fobs ({fobRequests.length})</h3><span className={"px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest " + (selectedFobs.length === 3 ? "bg-[#8b5cf6] text-white" : "bg-slate-100 text-slate-500")}>{selectedFobs.length} of 3 selected</span>{selectedFobs.length > 0 && (<button onClick={function() { setSelectedFobs([]); }} className="text-[10px] font-bold text-slate-400 hover:text-red-500 underline">Clear</button>)}</div><div className="flex gap-2">{[['all','All'],['anthony','Anthony'],['harper','Harper']].map(function(f) { return (<button key={f[0]} onClick={function() { setFobCenterFilter(f[0]); setSelectedFobs([]); }} className={"px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all " + (fobCenterFilter === f[0] ? "bg-[#8b5cf6] text-white shadow-sm" : "bg-slate-100 text-slate-500 hover:bg-slate-200")}>{f[1]}</button>); })}</div>
                       </div>
+                      {cancelledCardRequests.length > 0 && (<div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mt-6"><h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Cancelled by a director ({cancelledCardRequests.length}) — do not print</h3><div className="space-y-2">{cancelledCardRequests.map(function(req) { var m = members.find(function(x) { return x.airtableId === req.memberRecId; }); return (<div key={req.airtableId} className="flex justify-between items-center bg-slate-50 border border-slate-200 rounded-xl p-3 opacity-70"><div><p className="font-bold text-slate-600 text-sm line-through">{m ? m.firstName + ' ' + m.lastName : 'Unknown'}</p><p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{req.printType || 'Card'} · {req.statusNote || 'cancelled'}</p></div><button onClick={function() { handleUpdateCardStatus(req, 'Pending'); }} className="text-[11px] font-bold text-slate-400 hover:text-[#1080ad] underline">Restore</button></div>); })}</div></div>)}
                       {fobRequests.length === 0 ? (
                         <div className="text-center py-8 text-slate-400 font-medium italic">No pending fob requests.</div>
                       ) : (
@@ -3139,8 +3141,22 @@ if (memberBatch.length < 3 && !window.confirm('You selected ' + memberBatch.leng
           var groups = [
             { key: 'Pending', title: 'Waiting on Kristen', color: '#dba51f', bg: 'bg-amber-50', border: 'border-amber-200', pill: 'bg-amber-100 text-amber-700', blurb: 'Kristen has these in her print queue.' },
             { key: 'Printed', title: 'Printed — on the way to you', color: '#1080ad', bg: 'bg-blue-50', border: 'border-blue-200', pill: 'bg-blue-100 text-blue-700', blurb: 'Made and headed to your center. Mark issued once you hand it over.' },
-            { key: 'Issued', title: 'Given to member', color: '#16a34a', bg: 'bg-green-50', border: 'border-green-200', pill: 'bg-green-100 text-green-700', blurb: 'Done — nothing left to do on these.' }
+                        { key: 'Issued', title: 'Given to member', color: '#16a34a', bg: 'bg-green-50', border: 'border-green-200', pill: 'bg-green-100 text-green-700', blurb: 'Done — nothing left to do on these.' },
+            { key: 'Cancelled', title: 'Cancelled', color: '#94a3b8', bg: 'bg-slate-50', border: 'border-slate-200', pill: 'bg-slate-200 text-slate-600', blurb: "You called these off. Kristen won't print them." }
           ];
+                    var cancelRequest = async function(req) {
+            var m = members.find(function(x) { return x.airtableId === req.memberRecId; });
+            var who = m ? m.firstName + ' ' + m.lastName : 'this member';
+            if (!window.confirm('Cancel the ' + (req.printType || 'card') + ' request for ' + who + '?\n\nIt will be removed from the print queue and nothing will be printed. You can request it again later if you need to.')) return;
+            try {
+                            var res = await fetch('/api/update-card-request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ recordId: req.airtableId, status: 'Cancelled', statusNote: 'Cancelled by ' + (user?.name || 'director') }) });
+              var result = await res.json();
+              if (result.success) {
+                setCardQueue(function(prev) { return prev.map(function(c) { return c.airtableId === req.airtableId ? Object.assign({}, c, { status: 'Cancelled', statusNote: 'Cancelled by ' + (user?.name || 'director') }) : c; }); });
+                showToast('Request cancelled — Kristen will see it marked cancelled.', 'success', 4000);
+              } else { alert('Could not cancel: ' + (result.error || 'unknown error')); }
+            } catch (err) { alert('Network error — the request was not cancelled.'); }
+          };
           var markIssued = async function(req) {
             try {
               var res = await fetch('/api/update-card-request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ recordId: req.airtableId, status: 'Issued' }) });
@@ -3193,7 +3209,8 @@ if (memberBatch.length < 3 && !window.confirm('You selected ' + memberBatch.leng
                             </div>
                             <div className="shrink-0 flex flex-col gap-2 items-end">
                               <span className={'px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tight ' + g.pill}>{g.key === 'Pending' ? 'Waiting' : g.key}</span>
-                              {g.key === 'Printed' && <button onClick={function() { markIssued(req); }} className="bg-[#16a34a] text-white px-3 py-1.5 rounded-lg text-[11px] font-bold hover:bg-green-700 transition-colors whitespace-nowrap">Mark Given</button>}
+                                                            {g.key === 'Printed' && <button onClick={function() { markIssued(req); }} className="bg-[#16a34a] text-white px-3 py-1.5 rounded-lg text-[11px] font-bold hover:bg-green-700 transition-colors whitespace-nowrap">Mark Given</button>}
+                              {g.key === 'Pending' && <button onClick={function() { cancelRequest(req); }} className="bg-white text-slate-500 border border-slate-300 px-3 py-1.5 rounded-lg text-[11px] font-bold hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-colors whitespace-nowrap">Cancel Request</button>}
                             </div>
                           </div>
                         );
