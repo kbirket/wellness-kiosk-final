@@ -2433,11 +2433,32 @@ var showToast = function(message, type, duration) { setToast({ message: message,
             return { label, value: Math.round(value), color: colorMap[label] || '#64748b' };
           });
 
-const memberRefundsTotal = payments.filter(p => { if (!p.date || !p.isRefund || !isInPeriod(p.date)) return false; const mem = members.find(mm => mm.airtableId === p.memberRecId); if (!mem) return false; if (mem.type.includes('CORPORATE') || mem.sponsorName) return false; if (viewingCenter !== 'both' && (!mem.center || !mem.center.toLowerCase().includes(viewingCenter))) return false; return true; }).reduce((s, p) => s + (parseFloat(p.amount) || 0), 0); const actualRevenue = paidMembers.filter(m => payments.some(p => p.date && p.memberRecId === m.airtableId && !p.isRefund && isInPeriod(p.date))).reduce((sum, m) => sum + (parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0), 0) - memberRefundsTotal;          const corpCollected = corporatePartners.reduce((sum, cp) => {
-            const isPaid = cp.paidMonths && cp.paidMonths.split(',').some(str => str.startsWith(reportMonth));
-            if (!isPaid) return sum;
+const memberRefundsTotal = payments.filter(p => { if (!p.date || !p.isRefund || !isInPeriod(p.date)) return false; const mem = members.find(mm => mm.airtableId === p.memberRecId); if (!mem) return false; if (mem.type.includes('CORPORATE') || mem.sponsorName) return false; if (viewingCenter !== 'both' && (!mem.center || !mem.center.toLowerCase().includes(viewingCenter))) return false; return true; }).reduce((s, p) => s + (parseFloat(p.amount) || 0), 0); const actualRevenue = paidMembers.filter(m => payments.some(p => p.date && p.memberRecId === m.airtableId && !p.isRefund && isInPeriod(p.date))).reduce((sum, m) => sum + (parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0), 0) - memberRefundsTotal;          const periodHasEntry = (fieldVal) => {
+            if (!fieldVal) return false;
+            return fieldVal.split(',').some(function(e) {
+              var key = (e.split(':')[0] || '').trim();
+              var kp = key.split('-');
+              if (kp.length !== 2) return false;
+              var kMo = parseInt(kp[0]) - 1, kYr = parseInt(kp[1]);
+              if (isNaN(kMo) || isNaN(kYr)) return false;
+              return kYr === y && targetMonths.includes(kMo);
+            });
+          };
+          const corpCollected = corporatePartners.reduce((sum, cp) => {
+            const paidUnified = periodHasEntry(cp.paidMonths);
+            const paidHarper = periodHasEntry(cp.paidMonthsHarper);
+            const paidAnthony = periodHasEntry(cp.paidMonthsAnthony);
+            if (!paidUnified && !paidHarper && !paidAnthony) return sum;
             const corpMems = paidMembers.filter(m => m.sponsorName === cp.sponsorMatch);
-            return sum + corpMems.reduce((s, m) => s + (parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0), 0);
+            return sum + corpMems.reduce((s, m) => {
+              const rate = parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0;
+              if (paidUnified) return s + rate;
+              const memHarper = m.center && m.center.toLowerCase().includes('harper');
+              const memAnthony = m.center && m.center.toLowerCase().includes('anthony');
+              if (memHarper && paidHarper) return s + rate;
+              if (memAnthony && paidAnthony) return s + rate;
+              return s;
+            }, 0);
           }, 0);
           
           const totalCollected = actualRevenue + corpCollected + visitorRevenue;
