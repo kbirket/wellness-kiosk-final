@@ -3,12 +3,27 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request) {
   try {
-    const { airtableId, amount, method, quantity, pricePer, passesRemaining, paymentCenter } = await request.json();
+    const { airtableId, amount, method, quantity, pricePer, passesRemaining, paymentCenter, visitOnly } = await request.json();
     if (!airtableId) {
       return NextResponse.json({ success: false, error: 'Member ID required' }, { status: 400 });
     }
     const baseId = process.env.AIRTABLE_BASE_ID;
     const token = process.env.AIRTABLE_PAT;
+
+    // visitOnly: spending a pass, not buying one — update the balance and write no payment
+    if (visitOnly) {
+      const vRes = await fetch('https://api.airtable.com/v0/' + baseId + '/Members/' + airtableId, {
+        method: 'PATCH',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields: { "Passes Remaining": Number(passesRemaining) || 0 }, typecast: true })
+      });
+      const vData = await vRes.json();
+      if (!vRes.ok || vData.error) {
+        const vdetail = (vData.error && (vData.error.message || vData.error.type)) || 'Could not update the passes balance';
+        return NextResponse.json({ success: false, error: vdetail }, { status: 400 });
+      }
+      return NextResponse.json({ success: true, passesRemaining: Number(passesRemaining) || 0 });
+    }
 
     const qty = parseInt(quantity) || 1;
     const per = Number(pricePer) || 0;
