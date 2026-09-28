@@ -320,6 +320,7 @@ const getBaseRate = (p, b) => {
     'convert-visitor-to-member':  ['Visitor', 'Converted visitor to member'],
     'update-corporate':     ['Corporate',    'Updated corporate partner'],
     'request-card':         ['Card Request', 'Requested a card or fob'],
+    'log-day-pass':         ['Payment',      'Sold day passes'],
     'update-card-request':  ['Card Request', 'Updated card request'],
     'create-family-group':  ['Family',       'Created family group'],
     'add-family-member':    ['Family',       'Added to family'],
@@ -4649,10 +4650,14 @@ if (memberBatch.length < 3 && !window.confirm('You selected ' + memberBatch.leng
                       const per = parseFloat(each);
                       if (isNaN(per) || per < 0) { alert('Enter a price.'); return; }
                       const total = qty * per;
+                      const tender = window.prompt('How did they pay?\n\nCash, Check, Card, or ACH.', 'Cash');
+                      if (tender === null) return;
+                      if (!tender.trim()) { alert('Enter how they paid.'); return; }
                       const left = (selectedMember.passesRemaining || 0) + qty;
                       try {
-                        await logFetch('/api/log-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ memberRecId: selectedMember.airtableId, amount: total, method: 'Day Pass', date: new Date().toISOString().split('T')[0], notes: qty + ' day pass' + (qty === 1 ? '' : 'es') }) });
-                        await logFetch('/api/update-member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: selectedMember.airtableId, passesRemaining: left }) });
+                        const dpRes = await logFetch('/api/log-day-pass', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ airtableId: selectedMember.airtableId, amount: total, method: tender.trim(), quantity: qty, pricePer: per, passesRemaining: left, paymentCenter: selectedMember.center || '' }) });
+                        const dpJson = await dpRes.json();
+                        if (!dpJson.success) { alert('Could not add passes: ' + (dpJson.error || 'unknown error')); return; }
                         setMembers(prev => prev.map(m => m.airtableId === selectedMember.airtableId ? Object.assign({}, m, { passesRemaining: left }) : m));
                         setSelectedMember(Object.assign({}, selectedMember, { passesRemaining: left }));
                         showToast(qty + ' day pass' + (qty === 1 ? '' : 'es') + ' added - ' + left + ' on the card. Renewal date unchanged.', 'success', 5000);
