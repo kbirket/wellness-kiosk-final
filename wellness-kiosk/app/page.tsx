@@ -403,6 +403,75 @@ const getBaseRate = (p, b) => {
     return res;
   };
 
+  const [corpCharges, setCorpCharges] = useState([]);
+  const [chargesLoaded, setChargesLoaded] = useState(false);
+  const [generatingCharges, setGeneratingCharges] = useState(false);
+
+  const monthKey = (d) => {
+    const dt = d || new Date();
+    return String(dt.getMonth() + 1).padStart(2, '0') + '-' + dt.getFullYear();
+  };
+  const monthLabel = (key) => {
+    const kp = String(key).split('-');
+    if (kp.length !== 2) return key;
+    const dt = new Date(parseInt(kp[1]), parseInt(kp[0]) - 1, 1);
+    return isNaN(dt.getTime()) ? key : dt.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  };
+  const monthSort = (a, b) => {
+    const pa = String(a).split('-'), pb = String(b).split('-');
+    return (parseInt(pb[1]) - parseInt(pa[1])) || (parseInt(pb[0]) - parseInt(pa[0]));
+  };
+
+  const loadCorpCharges = async () => {
+    try {
+      const res = await window.fetch('/api/get-corporate-charges', { cache: 'no-store' });
+      const j = await res.json();
+      if (j.success) { setCorpCharges(j.charges || []); setChargesLoaded(true); return j.charges || []; }
+    } catch (e) {}
+    setChargesLoaded(true);
+    return [];
+  };
+
+  // charges for the current month are created once, automatically
+  const generateThisMonth = async (existing) => {
+    if (generatingCharges) return;
+    const key = monthKey();
+    const have = (existing || corpCharges).some(c => c.month === key);
+    if (have) return;
+    const rows = [];
+    corporatePartners.forEach(cp => {
+      membersRef.current
+        .filter(m => m.sponsorName === cp.sponsorMatch && m.status !== 'INACTIVE' && !m.inactive)
+        .forEach(m => {
+          const rate = parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0;
+          if (rate <= 0) return;
+          rows.push({
+            companyId: cp.id,
+            memberRecId: m.airtableId,
+            memberName: (m.firstName || '') + ' ' + (m.lastName || '') + (m.id ? ' (' + m.id + ')' : ''),
+            month: key,
+            amount: rate,
+            status: 'Owed',
+            notes: 'Generated automatically'
+          });
+        });
+    });
+    if (!rows.length) return;
+    setGeneratingCharges(true);
+    try {
+      const res = await window.fetch('/api/save-corporate-charge', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ create: rows })
+      });
+      const j = await res.json();
+      if (j.success) {
+        await loadCorpCharges();
+        writeLog({ user: (user && user.name) || 'System', center: (user && user.center) || '', recordType: 'Corporate', recordName: 'All corporate partners', action: 'Generated monthly charges', fields: monthLabel(key) + ': ' + j.created + ' charges created', notes: '' });
+      }
+    } catch (e) {}
+    setGeneratingCharges(false);
+  };
+
   const [changeLog, setChangeLog] = useState([]);
   const [logLoading, setLogLoading] = useState(false);
   const [logUserFilter, setLogUserFilter] = useState('all');
@@ -1774,7 +1843,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
         <div className="p-8 border-b border-white/10 flex justify-center"><img src={LOGO_URL} alt="Logo" className="h-10 opacity-90 drop-shadow-md" /></div>
         <div className="p-6"><div className="flex items-center gap-3 mb-4"><div className="w-10 h-10 rounded-lg bg-[#f59e0b] flex items-center justify-center font-bold text-lg text-[#001f3f]">{user?.name.charAt(0)}</div><div><p className="text-sm font-bold leading-none">{user?.name}</p><p className="text-[11px] text-white/50">{user?.role === 'business' ? 'Business Office' : `@${user?.username}`}</p></div></div><button onClick={handleLogout} className="flex items-center gap-2 text-xs text-white/40 hover:text-white transition-colors"><LogOut size={14} /> Sign Out</button></div>
         <div className="px-4 mb-8"><p className="px-2 text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3">Viewing</p><div className="space-y-1">{[{k:'both',c:'#ffffff'},{k:'harper',c:'#f59e0b'},{k:'anthony',c:'#1080ad'}].map(item => (<button key={item.k} onClick={() => { setViewingCenter(item.k); localStorage.setItem('wellnessCenter', item.k); }} className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all ${viewingCenter === item.k ? 'bg-white/20 font-bold' : 'text-white/60 hover:bg-white/5'}`}><span className="w-1.5 h-6 rounded-full" style={{ backgroundColor: item.c }} />{item.k === 'both' ? 'Both Centers' : `${item.k.charAt(0).toUpperCase() + item.k.slice(1)}`}</button>))}</div></div>
-        <nav className="flex-1 px-4 space-y-1">{[{id:'dashboard',label:'Dashboard',icon:<LayoutDashboard size={18}/>},{id:'members',label:'Members',icon:<Users size={18}/>},{id:'classes',label:'Classes',icon:<Calendar size={18}/>},{id:'badge',label:'Staff Check-In',icon:<QrCode size={18}/>},{id:'notif',label:'Notifications',icon:<Bell size={18}/>},{id:'visitors',label:'Visitors',icon:<Eye size={18}/>},{id:'corporate',label:'Corporate',icon:<Briefcase size={18}/>},{id:'payments',label:'Payments',icon:<CreditCard size={18}/>},{id:'cardqueue',label:'Card Queue',icon:<QrCode size={18}/>,adminOnly:true},{id:'mycards',label:'My Card Requests',icon:<QrCode size={18}/>,directorOnly:true},{id:'reports',label:'Reports',icon:<FileText size={18}/>},{id:'changelog',label:'Change Log',icon:<FileText size={18}/>},{id:'help',label:'Help & Training',icon:<HelpCircle size={18}/>}].filter(item => { if (user?.role === 'business') return ['reports', 'corporate'].includes(item.id); if (item.adminOnly) return user?.role === 'admin'; if (item.directorOnly) return user?.role !== 'admin'; return true; }).map(item => { const pendingCardCount = cardQueue.filter(c => c.status === 'Pending').length; return (<button key={item.id} onClick={() => { setActiveTab(item.id); setKioskInput(''); setHelpSearch(''); if (item.id === 'changelog') loadChangeLog(); }} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all ${activeTab === item.id ? 'bg-[#1080ad] text-white font-bold' : 'text-white/60 hover:bg-white/5'}`}>{item.icon} {item.label}{item.id === 'notif' && stats.overdue > 0 && <span className="ml-auto w-5 h-5 rounded-full bg-red-500 text-[10px] flex items-center justify-center font-bold tracking-tight">{stats.overdue}</span>}{item.id === 'cardqueue' && pendingCardCount > 0 && <span className="ml-auto w-5 h-5 rounded-full bg-[#dba51f] text-[10px] flex items-center justify-center font-bold tracking-tight">{pendingCardCount}</span>}{item.id === 'mycards' && (function() { var n = cardQueue.filter(function(c) { if (c.status !== 'Pending') return false; if (c.requestedBy && user?.name && c.requestedBy === user.name) return true; var mm = members.find(function(x) { return x.airtableId === c.memberRecId; }); if (!mm || !mm.center || !user?.center) return false; if (user.center === 'both') return true; return mm.center.toLowerCase().includes(user.center.toLowerCase()); }).length; return n > 0 ? <span className="ml-auto w-5 h-5 rounded-full bg-[#dba51f] text-[10px] flex items-center justify-center font-bold tracking-tight">{n}</span> : null; })()}</button>); })}</nav>
+        <nav className="flex-1 px-4 space-y-1">{[{id:'dashboard',label:'Dashboard',icon:<LayoutDashboard size={18}/>},{id:'members',label:'Members',icon:<Users size={18}/>},{id:'classes',label:'Classes',icon:<Calendar size={18}/>},{id:'badge',label:'Staff Check-In',icon:<QrCode size={18}/>},{id:'notif',label:'Notifications',icon:<Bell size={18}/>},{id:'visitors',label:'Visitors',icon:<Eye size={18}/>},{id:'corporate',label:'Corporate',icon:<Briefcase size={18}/>},{id:'payments',label:'Payments',icon:<CreditCard size={18}/>},{id:'cardqueue',label:'Card Queue',icon:<QrCode size={18}/>,adminOnly:true},{id:'mycards',label:'My Card Requests',icon:<QrCode size={18}/>,directorOnly:true},{id:'reports',label:'Reports',icon:<FileText size={18}/>},{id:'changelog',label:'Change Log',icon:<FileText size={18}/>},{id:'help',label:'Help & Training',icon:<HelpCircle size={18}/>}].filter(item => { if (user?.role === 'business') return ['reports', 'corporate'].includes(item.id); if (item.adminOnly) return user?.role === 'admin'; if (item.directorOnly) return user?.role !== 'admin'; return true; }).map(item => { const pendingCardCount = cardQueue.filter(c => c.status === 'Pending').length; return (<button key={item.id} onClick={() => { setActiveTab(item.id); setKioskInput(''); setHelpSearch(''); if (item.id === 'changelog') loadChangeLog(); if (item.id === 'corporate') { loadCorpCharges().then(cs => generateThisMonth(cs)); } }} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all ${activeTab === item.id ? 'bg-[#1080ad] text-white font-bold' : 'text-white/60 hover:bg-white/5'}`}>{item.icon} {item.label}{item.id === 'notif' && stats.overdue > 0 && <span className="ml-auto w-5 h-5 rounded-full bg-red-500 text-[10px] flex items-center justify-center font-bold tracking-tight">{stats.overdue}</span>}{item.id === 'cardqueue' && pendingCardCount > 0 && <span className="ml-auto w-5 h-5 rounded-full bg-[#dba51f] text-[10px] flex items-center justify-center font-bold tracking-tight">{pendingCardCount}</span>}{item.id === 'mycards' && (function() { var n = cardQueue.filter(function(c) { if (c.status !== 'Pending') return false; if (c.requestedBy && user?.name && c.requestedBy === user.name) return true; var mm = members.find(function(x) { return x.airtableId === c.memberRecId; }); if (!mm || !mm.center || !user?.center) return false; if (user.center === 'both') return true; return mm.center.toLowerCase().includes(user.center.toLowerCase()); }).length; return n > 0 ? <span className="ml-auto w-5 h-5 rounded-full bg-[#dba51f] text-[10px] flex items-center justify-center font-bold tracking-tight">{n}</span> : null; })()}</button>); })}</nav>
       </aside>
 
       <main className="flex-1 p-10 h-screen overflow-y-auto relative print:m-0 print:p-0 print:h-auto print:overflow-visible">
@@ -2101,6 +2170,74 @@ var showToast = function(message, type, duration) { setToast({ message: message,
         </div>)}
 
 {activeTab === 'corporate' && (() => { 
+  const chargesFor = (cp) => corpCharges.filter(c => c.companyId === cp.id && c.status !== 'Removed');
+  const owedFor = (cp) => chargesFor(cp).filter(c => c.status === 'Owed');
+  const owedTotal = (cp) => owedFor(cp).reduce((s, c) => s + c.amount, 0);
+  const owedMonths = (cp) => Array.from(new Set(owedFor(cp).map(c => c.month))).sort(monthSort);
+
+  const markMonthPaid = async (cp, mo) => {
+    const rows = chargesFor(cp).filter(c => c.month === mo && c.status === 'Owed');
+    if (!rows.length) return;
+    const total = rows.reduce((s, c) => s + c.amount, 0);
+    const how = window.prompt('How did ' + cp.name + ' pay ' + monthLabel(mo) + '? ($' + total.toFixed(2) + ')\n\nCheck number, ACH, cash, etc.', 'Check');
+    if (how === null) return;
+    const today = new Date().toISOString().split('T')[0];
+    try {
+      const res = await window.fetch('/api/save-corporate-charge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ updates: rows.map(r => ({ recordId: r.airtableId, status: 'Paid', paidDate: today, paymentMethod: how })) }) });
+      const j = await res.json();
+      if (!j.success) { alert('Could not mark paid: ' + (j.error || 'unknown error')); return; }
+      setCorpCharges(prev => prev.map(c => rows.some(r => r.airtableId === c.airtableId) ? Object.assign({}, c, { status: 'Paid', paidDate: today, paymentMethod: how }) : c));
+      writeLog({ user: (user && user.name) || 'Unknown', center: (user && user.center) || '', recordType: 'Corporate', recordName: cp.name, action: 'Marked a month paid', fields: monthLabel(mo) + ': $' + total.toFixed(2) + ' - ' + how, notes: '' });
+      showToast(cp.name + ' - ' + monthLabel(mo) + ' marked paid.', 'success', 4000);
+    } catch (e) { alert('Network error.'); }
+  };
+
+  const addOwedMonth = async (cp) => {
+    const mo = window.prompt('Which month does ' + cp.name + ' still owe?\n\nUse MM-YYYY, for example 07-2026.', '');
+    if (mo === null) return;
+    if (!/^\d{2}-\d{4}$/.test(mo.trim())) { alert('Use MM-YYYY, for example 07-2026.'); return; }
+    const mems = membersRef.current.filter(m => m.sponsorName === cp.sponsorMatch);
+    if (!mems.length) { alert('No members are linked to ' + cp.name + '.'); return; }
+    const who = window.prompt('Who was it for?\n\n' + mems.map((m, i) => (i + 1) + '. ' + m.firstName + ' ' + m.lastName).join('\n') + '\n\nType a number, or "all" for everyone.', 'all');
+    if (who === null) return;
+    const picked = who.trim().toLowerCase() === 'all' ? mems : [mems[parseInt(who) - 1]].filter(Boolean);
+    if (!picked.length) { alert('That was not one of the numbers.'); return; }
+    const rows = picked.map(m => ({ companyId: cp.id, memberRecId: m.airtableId, memberName: (m.firstName || '') + ' ' + (m.lastName || '') + (m.id ? ' (' + m.id + ')' : ''), month: mo.trim(), amount: parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0, status: 'Owed', notes: 'Added by hand' }));
+    try {
+      const res = await window.fetch('/api/save-corporate-charge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ create: rows }) });
+      const j = await res.json();
+      if (!j.success) { alert('Could not add: ' + (j.error || 'unknown error')); return; }
+      await loadCorpCharges();
+      writeLog({ user: (user && user.name) || 'Unknown', center: (user && user.center) || '', recordType: 'Corporate', recordName: cp.name, action: 'Added a month owed', fields: monthLabel(mo.trim()) + ': ' + rows.length + ' charge(s)', notes: '' });
+      showToast('Added ' + monthLabel(mo.trim()) + ' for ' + rows.length + ' member(s).', 'success', 4000);
+    } catch (e) { alert('Network error.'); }
+  };
+
+  const editCharge = async (cp, c) => {
+    const what = window.prompt(c.memberName + ' - ' + monthLabel(c.month) + '\n\nType a new amount, or type REMOVE to take this charge off the bill.', String(c.amount));
+    if (what === null) return;
+    const today = new Date().toISOString().split('T')[0];
+    if (what.trim().toUpperCase() === 'REMOVE') {
+      const why = window.prompt('Why is this coming off? (recorded in the change log)', '');
+      if (why === null) return;
+      const res = await window.fetch('/api/save-corporate-charge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ recordId: c.airtableId, status: 'Removed', notes: why }) });
+      const j = await res.json();
+      if (!j.success) { alert('Could not remove: ' + (j.error || 'unknown error')); return; }
+      setCorpCharges(prev => prev.map(x => x.airtableId === c.airtableId ? Object.assign({}, x, { status: 'Removed', notes: why }) : x));
+      writeLog({ user: (user && user.name) || 'Unknown', center: (user && user.center) || '', recordType: 'Corporate', recordName: cp.name, action: 'Removed a charge', fields: c.memberName + ' - ' + monthLabel(c.month) + ' - $' + c.amount.toFixed(2) + ' - ' + why, notes: '' });
+      showToast('Charge removed.', 'success', 3000);
+      return;
+    }
+    const amt = parseFloat(what);
+    if (isNaN(amt) || amt < 0) { alert('Enter a number, or REMOVE.'); return; }
+    const res = await window.fetch('/api/save-corporate-charge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ recordId: c.airtableId, amount: amt }) });
+    const j = await res.json();
+    if (!j.success) { alert('Could not change the amount: ' + (j.error || 'unknown error')); return; }
+    setCorpCharges(prev => prev.map(x => x.airtableId === c.airtableId ? Object.assign({}, x, { amount: amt }) : x));
+    writeLog({ user: (user && user.name) || 'Unknown', center: (user && user.center) || '', recordType: 'Corporate', recordName: cp.name, action: 'Changed a charge amount', fields: c.memberName + ' - ' + monthLabel(c.month) + ': $' + c.amount.toFixed(2) + ' -> $' + amt.toFixed(2), notes: '' });
+    showToast('Amount updated.', 'success', 3000);
+  };
+
   const isCustomRange = reportMonth === 'custom';
           let periodStr, yearStr, y, targetMonths = [], displayPeriod = '';
           let rangeStart = null, rangeEnd = null;
@@ -2188,6 +2325,43 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                  const printInvoiceForCenter = (targetCenter) => { if (corpMembers.length === 0) { alert('No employees enrolled for this partner.'); return; } const isHarper = targetCenter === 'harper'; const centerName = isHarper ? 'Harper Wellness Center' : 'Anthony Wellness Center'; const centerAddr = isHarper ? '615 W 12th St, Harper, KS 67058' : '309 W Main St, Anthony, KS 67003'; const centerPhone = isHarper ? '(620) 896-1202' : '(620) 842-5190'; const directorName = isHarper ? 'Patrick Johnson' : 'Deanna Smithhisler'; const splitCorps = ['Harper Industries', 'USD 361', 'Harper County'];                      const isSplitCorp = splitCorps.some(sc => corp.name.toLowerCase().includes(sc.toLowerCase()) || corp.sponsorMatch.toLowerCase().includes(sc.toLowerCase()));                      const buildRow = (mem) => `<tr><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${mem.firstName} ${mem.lastName}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; font-family: monospace; color: #64748b;">${mem.id}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${mem.type}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: center; font-weight: bold; color: ${mem.periodVisits > 0 ? '#1080ad' : '#94a3b8'};">${mem.periodVisits}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: center;">${mem.activeMonthsCount}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: ${mem.memberOwed > 0 ? '#16a34a' : '#94a3b8'};">$${mem.memberOwed.toFixed(2)}</td></tr>`;                      let rows = '';                      if (isSplitCorp) {                        const anthonyMems = enrichedMembers.filter(em => em.center && em.center.toLowerCase().includes('anthony'));                        const harperMems = enrichedMembers.filter(em => em.center && em.center.toLowerCase().includes('harper'));                        if (anthonyMems.length > 0) { rows += `<tr><td colspan="6" style="padding: 12px 10px 6px; font-weight: 900; color: #1080ad; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 2px solid #1080ad; background: #f0f9ff;">Anthony Wellness Center (${anthonyMems.length})</td></tr>` + anthonyMems.map(buildRow).join('') + `<tr><td colspan="5" style="padding: 8px 10px; text-align: right; font-weight: 700; color: #64748b; font-size: 11px;">Anthony Subtotal:</td><td style="padding: 8px 10px; text-align: right; font-weight: 900; color: #1080ad;">$${anthonyMems.reduce((s,m) => s + m.memberOwed, 0).toFixed(2)}</td></tr>`; }                        if (harperMems.length > 0) { rows += `<tr><td colspan="6" style="padding: 12px 10px 6px; font-weight: 900; color: #dd6d22; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 2px solid #dd6d22; background: #fff7ed;">Harper Wellness Center (${harperMems.length})</td></tr>` + harperMems.map(buildRow).join('') + `<tr><td colspan="5" style="padding: 8px 10px; text-align: right; font-weight: 700; color: #64748b; font-size: 11px;">Harper Subtotal:</td><td style="padding: 8px 10px; text-align: right; font-weight: 900; color: #dd6d22;">$${harperMems.reduce((s,m) => s + m.memberOwed, 0).toFixed(2)}</td></tr>`; }                      } else {                        rows = enrichedMembers.map(buildRow).join('');                      } const addressBlock = corp.address ? `${corp.address}<br/>${corp.city}, ${corp.state} ${corp.zip}` : 'Address not on file'; const html = `<!DOCTYPE html><html><head><title>Corporate Invoice - ${corp.name} - ${displayPeriod}</title><style>@media print{body{margin:0}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:40px}.hdr{background:#003d6b;padding:20px 44px;display:flex;justify-content:space-between;align-items:center;border-radius:8px 8px 0 0}.hdr-logo{height:40px}.hdr-text{text-align:right;color:white}.hdr-title{font-size:24px;font-weight:900;margin:0}.hdr-sub{font-size:12px;color:#8bb8d9;margin-top:4px;line-height:1.4}.accent{height:4px;background:linear-gradient(to right,#dba51f,#dd6d22);margin-bottom:40px}.bill-to{margin-bottom:30px}.bill-to h2{margin:0 0 5px 0;font-size:14px;color:#64748b;text-transform:uppercase;letter-spacing:1px}.bill-to p{margin:0;font-size:18px;font-weight:900;color:#003d6b}.summary{display:flex;gap:40px;margin-bottom:30px;background:#f8fafc;padding:20px;border-radius:8px;border:1px solid #e2e8f0}.sum-box{text-align:left}.sum-lbl{font-size:10px;font-weight:bold;color:#64748b;text-transform:uppercase;letter-spacing:1px}.sum-val{font-size:24px;font-weight:900;color:#003d6b;margin-top:5px}.sum-val.due{color:#16a34a}table{width:100%;border-collapse:collapse;margin-bottom:30px;font-size:12px}th{background:#003d6b;color:white;text-align:left;padding:12px 10px;font-size:10px;text-transform:uppercase;letter-spacing:1px}th.right{text-align:right}th.center{text-align:center}.total-row td{background:#fff;border-top:2px solid #003d6b;padding-top:20px;font-size:14px}.total-lbl{text-align:right;font-weight:900;color:#1e293b;text-transform:uppercase}.total-val{font-size:20px;font-weight:900;color:#16a34a;text-align:right}.sign{margin-top:40px;font-size:14px}.sign-name{font-weight:bold;color:#003d6b;margin-top:5px}.sign-title{color:#64748b;font-size:12px}</style></head><body><div class="hdr"><img src="${LOGO_URL}" class="hdr-logo" /><div class="hdr-text"><h1 class="hdr-title">Corporate Invoice</h1><div class="hdr-sub">${centerName}<br/>${centerAddr} | ${centerPhone}</div></div></div><div class="accent"></div><div class="bill-to"><h2>Billed To:</h2><p>${corp.name}</p><p style="font-size: 14px; font-weight: normal; color: #475569; margin-top: 4px;">Attn: ${corp.contactName || 'Benefits Administrator'}<br/>${addressBlock}</p></div><div class="summary"><div class="sum-box"><div class="sum-lbl">Billing Period</div><div class="sum-val" style="font-size: 18px;">${displayPeriod}</div></div><div class="sum-box"><div class="sum-lbl">${isUsageBased ? 'Active Employees' : 'Total Enrolled'}</div><div class="sum-val" style="font-size: 18px;">${activeMembersCount}</div></div><div class="sum-box"><div class="sum-lbl">Total Amount Due</div><div class="sum-val due" style="font-size: 18px;">$${totalOwed.toFixed(2)}</div></div></div><table><thead><tr><th>Employee Name</th><th>Member ID</th><th>Plan Type</th><th class="center">Period Visits</th><th class="center">Months Billed</th><th class="right">Amount Billed</th></tr></thead><tbody>${rows}</tbody><tfoot><tr class="total-row"><td colspan="5" class="total-lbl">Total Corporate Responsibility:</td><td class="total-val">$${totalOwed.toFixed(2)}</td></tr></tfoot></table><div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:6px;padding:16px;margin-top:20px;font-size:11px;color:#475569;line-height:1.8"><strong style="color:#003d6b">Payment Instructions:</strong><br/>Make checks payable to <strong>Patterson Health Center</strong><br/>Mail to: <strong>Patterson Health Center</strong>, Attn: ${centerName}, 485 N. KS HWY 2, Anthony, KS 67003</div><div class="sign"><p>Thank you for partnering with Patterson Health Center to keep your team healthy!</p><div class="sign-name">${directorName}</div><div class="sign-title">Director, ${centerName}</div></div></body></html>`; const w = window.open('', '_blank'); w.document.write(html); w.document.close(); setTimeout(() => w.print(), 500); };
                  return (
                    <div key={corp.id} className={`bg-white rounded-2xl shadow-sm border transition-all ${isPaid ? 'border-green-300' : 'border-slate-200'}`}>
+                     {!isInternal && chargesLoaded && (() => {
+                       const months = owedMonths(corp);
+                       const total = owedTotal(corp);
+                       return (
+                         <div className="mx-5 mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                           <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+                             <p className="text-[11px] font-black uppercase tracking-widest text-slate-400">Months owed</p>
+                             <div className="flex items-center gap-2">
+                               <span className={"px-3 py-1 rounded-full text-[11px] font-black " + (total > 0 ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700")}>{total > 0 ? "$" + total.toFixed(2) + " across " + months.length + " month" + (months.length === 1 ? "" : "s") : "Nothing owed"}</span>
+                               <button onClick={() => addOwedMonth(corp)} className="text-[11px] font-bold text-slate-400 hover:text-[#1080ad] underline">Add a month</button>
+                             </div>
+                           </div>
+                           {months.length === 0 ? (
+                             <p className="text-xs text-slate-400 font-medium">Every charge on file has been paid.</p>
+                           ) : months.map(mo => {
+                             const rows = chargesFor(corp).filter(c => c.month === mo && c.status === 'Owed');
+                             const sub = rows.reduce((s, c) => s + c.amount, 0);
+                             return (
+                               <div key={mo} className="bg-white border border-slate-200 rounded-xl p-3 mb-2">
+                                 <div className="flex items-center justify-between gap-3 flex-wrap">
+                                   <p className="font-black text-[#001f3f] text-sm">{monthLabel(mo)} <span className="text-slate-400 font-bold">· ${sub.toFixed(2)} · {rows.length} member{rows.length === 1 ? '' : 's'}</span></p>
+                                   <button onClick={() => markMonthPaid(corp, mo)} className="bg-[#16a34a] text-white px-3 py-1.5 rounded-lg text-[11px] font-bold hover:bg-green-700">Mark this month paid</button>
+                                 </div>
+                                 <div className="mt-2 space-y-1">
+                                   {rows.map(c => (
+                                     <div key={c.airtableId} className="flex items-center justify-between gap-3 text-[11px]">
+                                       <span className="text-slate-500 font-medium truncate">{c.memberName}</span>
+                                       <button onClick={() => editCharge(corp, c)} className="font-black text-slate-600 hover:text-[#1080ad] whitespace-nowrap">${c.amount.toFixed(2)} <span className="text-slate-300">edit</span></button>
+                                     </div>
+                                   ))}
+                                 </div>
+                               </div>
+                             );
+                           })}
+                         </div>
+                       );
+                     })()}
                      {/* COMPACT HEADER ROW — always visible */}
                      <button onClick={() => setExpandedCorpId(expandedCorpId === corp.id ? null : corp.id)} className="w-full p-5 flex items-center justify-between text-left hover:bg-slate-50/50 transition-colors rounded-2xl">
                        <div className="flex items-center gap-4 min-w-0">
