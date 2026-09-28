@@ -331,6 +331,8 @@ const getBaseRate = (p, b) => {
     'save-class':           ['Member',       'Saved a class'],
     'save-class-override':  ['Member',       'Changed a class session']
   };
+  const FIELD_TO_PROP = { plan: 'type', sponsor: 'sponsorName', access247: 'access247', badgeNumber: 'badgeNumber', nextPayment: 'nextPayment', monthlyRate: 'monthlyRate', billingMethod: 'billingMethod', discountCode: 'discountCode', discountExpiration: 'discountExpiration' };
+  const FIELD_LABELS = { firstName: 'First name', lastName: 'Last name', email: 'Email', phone: 'Phone', address: 'Address', city: 'City', state: 'State', zip: 'ZIP', plan: 'Plan', billingMethod: 'Billing method', center: 'Home center', sponsor: 'Corporate sponsor', access247: '24/7 access', badgeNumber: 'Badge number', notes: 'Director notes', discountCode: 'Discount', discountExpiration: 'Discount expires', monthlyRate: 'Monthly rate', nextPayment: 'Next payment due', amount: 'Amount', method: 'Method', date: 'Date', status: 'Status', familyName: 'Family name', familyPrimary: 'Family payer', statusNote: 'Note to director', printType: 'Print type' };
   const SKIP_KEYS = ['airtableId', 'recordId', 'memberRecId', 'familyGroupId', 'id', 'photoBase64', 'photo', 'pin', 'newPin'];
 
   const describeRecord = (body) => {
@@ -368,9 +370,24 @@ const getBaseRate = (p, b) => {
         if (ok) {
           const body = JSON.parse(opts.body || '{}');
           const flat = body.fields && typeof body.fields === 'object' ? body.fields : body;
+          const existingId = body.airtableId || body.recordId || body.memberRecId;
+          const before = existingId ? membersRef.current.find(x => x.airtableId === existingId) : null;
+          const show = (v) => (v === '' || v === null || v === undefined) ? '(blank)' : String(v);
           const changed = Object.keys(flat)
             .filter(k => SKIP_KEYS.indexOf(k) === -1 && flat[k] !== undefined)
-            .map(k => k + ': ' + (flat[k] === '' ? '(cleared)' : String(flat[k])));
+            .filter(k => {
+              if (!before) return true;
+              const prop = FIELD_TO_PROP[k] || k;
+              if (!(prop in before)) return true;
+              return String(before[prop] === null || before[prop] === undefined ? '' : before[prop]) !== String(flat[k]);
+            })
+            .map(k => {
+              const prop = FIELD_TO_PROP[k] || k;
+              const label = FIELD_LABELS[k] || k;
+              if (before && (prop in before)) return label + ': ' + show(before[prop]) + ' \u2192 ' + show(flat[k]);
+              return label + ': ' + show(flat[k]);
+            });
+          if (changed.length === 0) return res;
           writeLog({
             user: (user && user.name) || 'Unknown',
             center: (user && user.center) || '',
