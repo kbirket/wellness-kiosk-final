@@ -371,6 +371,16 @@ const getBaseRate = (p, b) => {
         if (ok) {
           const body = JSON.parse(opts.body || '{}');
           const flat = body.fields && typeof body.fields === 'object' ? body.fields : body;
+          if (key === 'log-day-pass') {
+            const dpName = describeRecord(body);
+            if (body.visitOnly) {
+              writeLog({ user: (user && user.name) || 'Unknown', center: (user && user.center) || '', recordType: 'Member', recordName: dpName, action: 'Used a day pass', fields: (body.passesRemaining === 0 ? 'No passes left' : body.passesRemaining + ' left'), notes: '' });
+            } else {
+              const dpQty = parseInt(body.quantity) || 0;
+              writeLog({ user: (user && user.name) || 'Unknown', center: (user && user.center) || '', recordType: 'Payment', recordName: dpName, action: 'Sold day passes', fields: dpQty + ' pass' + (dpQty === 1 ? '' : 'es') + ' - $' + (Number(body.amount) || 0).toFixed(2) + ' ' + String(body.method || '') + ' - now ' + body.passesRemaining + ' on the card', notes: '' });
+            }
+            return res;
+          }
           const existingId = body.airtableId || body.recordId || body.memberRecId;
           const before = existingId ? membersRef.current.find(x => x.airtableId === existingId) : null;
           const show = (v) => (v === '' || v === null || v === undefined) ? '(blank)' : String(v);
