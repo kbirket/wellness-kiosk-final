@@ -2194,16 +2194,23 @@ var showToast = function(message, type, duration) { setToast({ message: message,
         </div>)}
 
 {activeTab === 'corporate' && (() => { 
+  const SPLIT_CORPS = ['Harper Industries', 'USD 361', 'Harper County', 'SCTelcom', 'HD6', 'HCHF'];
+  const isSplitPayer = (cp) => SPLIT_CORPS.some(sc => (cp.name || '').toLowerCase().includes(sc.toLowerCase()) || (cp.sponsorMatch || '').toLowerCase().includes(sc.toLowerCase()));
+  const centerOfCharge = (c) => {
+    const m = membersRef.current.find(x => x.airtableId === c.memberRecId);
+    const ctr = (m && m.center) || '';
+    return ctr.toLowerCase().includes('harper') ? 'Harper' : 'Anthony';
+  };
   const chargesFor = (cp) => corpCharges.filter(c => c.companyId === cp.id && c.status !== 'Removed');
   const owedFor = (cp) => chargesFor(cp).filter(c => c.status === 'Owed');
   const owedTotal = (cp) => owedFor(cp).reduce((s, c) => s + c.amount, 0);
   const owedMonths = (cp) => Array.from(new Set(owedFor(cp).map(c => c.month))).sort(monthSort);
 
-  const markMonthPaid = async (cp, mo) => {
-    const rows = chargesFor(cp).filter(c => c.month === mo && c.status === 'Owed');
+  const markMonthPaid = async (cp, mo, ctr) => {
+    const rows = chargesFor(cp).filter(c => c.month === mo && c.status === 'Owed' && (!ctr || centerOfCharge(c) === ctr));
     if (!rows.length) return;
     const total = rows.reduce((s, c) => s + c.amount, 0);
-    const how = window.prompt('How did ' + cp.name + ' pay ' + monthLabel(mo) + '? ($' + total.toFixed(2) + ')\n\nCheck number, ACH, cash, etc.', 'Check');
+    const how = window.prompt('How did ' + cp.name + ' pay ' + monthLabel(mo) + (ctr ? ' - ' + ctr + ' side' : '') + '? ($' + total.toFixed(2) + ')\n\nCheck number, ACH, cash, etc.', 'Check');
     if (how === null) return;
     const today = new Date().toISOString().split('T')[0];
     try {
@@ -2211,8 +2218,8 @@ var showToast = function(message, type, duration) { setToast({ message: message,
       const j = await res.json();
       if (!j.success) { alert('Could not mark paid: ' + (j.error || 'unknown error')); return; }
       setCorpCharges(prev => prev.map(c => rows.some(r => r.airtableId === c.airtableId) ? Object.assign({}, c, { status: 'Paid', paidDate: today, paymentMethod: how }) : c));
-      writeLog({ user: (user && user.name) || 'Unknown', center: (user && user.center) || '', recordType: 'Corporate', recordName: cp.name, action: 'Marked a month paid', fields: monthLabel(mo) + ': $' + total.toFixed(2) + ' - ' + how, notes: '' });
-      showToast(cp.name + ' - ' + monthLabel(mo) + ' marked paid.', 'success', 4000);
+      writeLog({ user: (user && user.name) || 'Unknown', center: (user && user.center) || '', recordType: 'Corporate', recordName: cp.name, action: 'Marked a month paid', fields: monthLabel(mo) + (ctr ? ' (' + ctr + ')' : '') + ': $' + total.toFixed(2) + ' - ' + how, notes: '' });
+      showToast(cp.name + ' - ' + monthLabel(mo) + (ctr ? ' ' + ctr : '') + ' marked paid.', 'success', 4000);
     } catch (e) { alert('Network error.'); }
   };
 
@@ -2315,6 +2322,9 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                  const paidMatch = corp.paidMonths ? corp.paidMonths.split(',').find(str => str.startsWith(reportMonth)) : null;
                  const paidMatchHarper = corp.paidMonthsHarper ? corp.paidMonthsHarper.split(',').find(str => str.startsWith(reportMonth)) : null;
                  const paidMatchAnthony = corp.paidMonthsAnthony ? corp.paidMonthsAnthony.split(',').find(str => str.startsWith(reportMonth)) : null;
+                 const corpOwedRows = corpCharges.filter(c => c.companyId === corp.id && c.status === 'Owed');
+                 const corpOwedTotal = corpOwedRows.reduce((s, c) => s + c.amount, 0);
+                 const corpOwedMonthCount = Array.from(new Set(corpOwedRows.map(c => c.month))).length;
                  const isPaidHarper = isInternal || !!paidMatchHarper;
                  const isPaidAnthony = isInternal || !!paidMatchAnthony;
                  const isPaid = isSplitPaid ? (isPaidHarper && isPaidAnthony) : (isInternal || !!paidMatch);
@@ -2349,7 +2359,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                  const printInvoiceForCenter = (targetCenter) => { if (corpMembers.length === 0) { alert('No employees enrolled for this partner.'); return; } const isHarper = targetCenter === 'harper'; const centerName = isHarper ? 'Harper Wellness Center' : 'Anthony Wellness Center'; const centerAddr = isHarper ? '615 W 12th St, Harper, KS 67058' : '309 W Main St, Anthony, KS 67003'; const centerPhone = isHarper ? '(620) 896-1202' : '(620) 842-5190'; const directorName = isHarper ? 'Patrick Johnson' : 'Deanna Smithhisler'; const splitCorps = ['Harper Industries', 'USD 361', 'Harper County'];                      const isSplitCorp = splitCorps.some(sc => corp.name.toLowerCase().includes(sc.toLowerCase()) || corp.sponsorMatch.toLowerCase().includes(sc.toLowerCase()));                      const buildRow = (mem) => `<tr><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${mem.firstName} ${mem.lastName}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; font-family: monospace; color: #64748b;">${mem.id}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${mem.type}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: center; font-weight: bold; color: ${mem.periodVisits > 0 ? '#1080ad' : '#94a3b8'};">${mem.periodVisits}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: center;">${mem.activeMonthsCount}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: ${mem.memberOwed > 0 ? '#16a34a' : '#94a3b8'};">$${mem.memberOwed.toFixed(2)}</td></tr>`;                      let rows = '';                      if (isSplitCorp) {                        const anthonyMems = enrichedMembers.filter(em => em.center && em.center.toLowerCase().includes('anthony'));                        const harperMems = enrichedMembers.filter(em => em.center && em.center.toLowerCase().includes('harper'));                        if (anthonyMems.length > 0) { rows += `<tr><td colspan="6" style="padding: 12px 10px 6px; font-weight: 900; color: #1080ad; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 2px solid #1080ad; background: #f0f9ff;">Anthony Wellness Center (${anthonyMems.length})</td></tr>` + anthonyMems.map(buildRow).join('') + `<tr><td colspan="5" style="padding: 8px 10px; text-align: right; font-weight: 700; color: #64748b; font-size: 11px;">Anthony Subtotal:</td><td style="padding: 8px 10px; text-align: right; font-weight: 900; color: #1080ad;">$${anthonyMems.reduce((s,m) => s + m.memberOwed, 0).toFixed(2)}</td></tr>`; }                        if (harperMems.length > 0) { rows += `<tr><td colspan="6" style="padding: 12px 10px 6px; font-weight: 900; color: #dd6d22; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 2px solid #dd6d22; background: #fff7ed;">Harper Wellness Center (${harperMems.length})</td></tr>` + harperMems.map(buildRow).join('') + `<tr><td colspan="5" style="padding: 8px 10px; text-align: right; font-weight: 700; color: #64748b; font-size: 11px;">Harper Subtotal:</td><td style="padding: 8px 10px; text-align: right; font-weight: 900; color: #dd6d22;">$${harperMems.reduce((s,m) => s + m.memberOwed, 0).toFixed(2)}</td></tr>`; }                      } else {                        rows = enrichedMembers.map(buildRow).join('');                      } const addressBlock = corp.address ? `${corp.address}<br/>${corp.city}, ${corp.state} ${corp.zip}` : 'Address not on file'; const html = `<!DOCTYPE html><html><head><title>Corporate Invoice - ${corp.name} - ${displayPeriod}</title><style>@media print{body{margin:0}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:40px}.hdr{background:#003d6b;padding:20px 44px;display:flex;justify-content:space-between;align-items:center;border-radius:8px 8px 0 0}.hdr-logo{height:40px}.hdr-text{text-align:right;color:white}.hdr-title{font-size:24px;font-weight:900;margin:0}.hdr-sub{font-size:12px;color:#8bb8d9;margin-top:4px;line-height:1.4}.accent{height:4px;background:linear-gradient(to right,#dba51f,#dd6d22);margin-bottom:40px}.bill-to{margin-bottom:30px}.bill-to h2{margin:0 0 5px 0;font-size:14px;color:#64748b;text-transform:uppercase;letter-spacing:1px}.bill-to p{margin:0;font-size:18px;font-weight:900;color:#003d6b}.summary{display:flex;gap:40px;margin-bottom:30px;background:#f8fafc;padding:20px;border-radius:8px;border:1px solid #e2e8f0}.sum-box{text-align:left}.sum-lbl{font-size:10px;font-weight:bold;color:#64748b;text-transform:uppercase;letter-spacing:1px}.sum-val{font-size:24px;font-weight:900;color:#003d6b;margin-top:5px}.sum-val.due{color:#16a34a}table{width:100%;border-collapse:collapse;margin-bottom:30px;font-size:12px}th{background:#003d6b;color:white;text-align:left;padding:12px 10px;font-size:10px;text-transform:uppercase;letter-spacing:1px}th.right{text-align:right}th.center{text-align:center}.total-row td{background:#fff;border-top:2px solid #003d6b;padding-top:20px;font-size:14px}.total-lbl{text-align:right;font-weight:900;color:#1e293b;text-transform:uppercase}.total-val{font-size:20px;font-weight:900;color:#16a34a;text-align:right}.sign{margin-top:40px;font-size:14px}.sign-name{font-weight:bold;color:#003d6b;margin-top:5px}.sign-title{color:#64748b;font-size:12px}</style></head><body><div class="hdr"><img src="${LOGO_URL}" class="hdr-logo" /><div class="hdr-text"><h1 class="hdr-title">Corporate Invoice</h1><div class="hdr-sub">${centerName}<br/>${centerAddr} | ${centerPhone}</div></div></div><div class="accent"></div><div class="bill-to"><h2>Billed To:</h2><p>${corp.name}</p><p style="font-size: 14px; font-weight: normal; color: #475569; margin-top: 4px;">Attn: ${corp.contactName || 'Benefits Administrator'}<br/>${addressBlock}</p></div><div class="summary"><div class="sum-box"><div class="sum-lbl">Billing Period</div><div class="sum-val" style="font-size: 18px;">${displayPeriod}</div></div><div class="sum-box"><div class="sum-lbl">${isUsageBased ? 'Active Employees' : 'Total Enrolled'}</div><div class="sum-val" style="font-size: 18px;">${activeMembersCount}</div></div><div class="sum-box"><div class="sum-lbl">Total Amount Due</div><div class="sum-val due" style="font-size: 18px;">$${totalOwed.toFixed(2)}</div></div></div><table><thead><tr><th>Employee Name</th><th>Member ID</th><th>Plan Type</th><th class="center">Period Visits</th><th class="center">Months Billed</th><th class="right">Amount Billed</th></tr></thead><tbody>${rows}</tbody><tfoot><tr class="total-row"><td colspan="5" class="total-lbl">Total Corporate Responsibility:</td><td class="total-val">$${totalOwed.toFixed(2)}</td></tr></tfoot></table><div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:6px;padding:16px;margin-top:20px;font-size:11px;color:#475569;line-height:1.8"><strong style="color:#003d6b">Payment Instructions:</strong><br/>Make checks payable to <strong>Patterson Health Center</strong><br/>Mail to: <strong>Patterson Health Center</strong>, Attn: ${centerName}, 485 N. KS HWY 2, Anthony, KS 67003</div><div class="sign"><p>Thank you for partnering with Patterson Health Center to keep your team healthy!</p><div class="sign-name">${directorName}</div><div class="sign-title">Director, ${centerName}</div></div></body></html>`; const w = window.open('', '_blank'); w.document.write(html); w.document.close(); setTimeout(() => w.print(), 500); };
                  return (
                    <div key={corp.id} className={`bg-white rounded-2xl shadow-sm border transition-all ${isPaid ? 'border-green-300' : 'border-slate-200'}`}>
-                     {!isInternal && chargesLoaded && (() => {
+                     {!isInternal && chargesLoaded && expandedCorp === corp.id && (() => {
                        const months = owedMonths(corp);
                        const total = owedTotal(corp);
                        return (
@@ -2364,22 +2374,34 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                            {months.length === 0 ? (
                              <p className="text-xs text-slate-400 font-medium">Every charge on file has been paid.</p>
                            ) : months.map(mo => {
-                             const rows = chargesFor(corp).filter(c => c.month === mo && c.status === 'Owed');
-                             const sub = rows.reduce((s, c) => s + c.amount, 0);
+                             const allRows = chargesFor(corp).filter(c => c.month === mo && c.status === 'Owed');
+                             const sub = allRows.reduce((s, c) => s + c.amount, 0);
+                             const split = isSplitPayer(corp);
+                             const sides = split
+                               ? [['Anthony', allRows.filter(c => centerOfCharge(c) === 'Anthony')], ['Harper', allRows.filter(c => centerOfCharge(c) === 'Harper')]].filter(s => s[1].length)
+                               : [[null, allRows]];
                              return (
                                <div key={mo} className="bg-white border border-slate-200 rounded-xl p-3 mb-2">
-                                 <div className="flex items-center justify-between gap-3 flex-wrap">
-                                   <p className="font-black text-[#001f3f] text-sm">{monthLabel(mo)} <span className="text-slate-400 font-bold">· ${sub.toFixed(2)} · {rows.length} member{rows.length === 1 ? '' : 's'}</span></p>
-                                   <button onClick={() => markMonthPaid(corp, mo)} className="bg-[#16a34a] text-white px-3 py-1.5 rounded-lg text-[11px] font-bold hover:bg-green-700">Mark this month paid</button>
-                                 </div>
-                                 <div className="mt-2 space-y-1">
-                                   {rows.map(c => (
-                                     <div key={c.airtableId} className="flex items-center justify-between gap-3 text-[11px]">
-                                       <span className="text-slate-500 font-medium truncate">{c.memberName}</span>
-                                       <button onClick={() => editCharge(corp, c)} className="font-black text-slate-600 hover:text-[#1080ad] whitespace-nowrap">${c.amount.toFixed(2)} <span className="text-slate-300">edit</span></button>
+                                 <p className="font-black text-[#001f3f] text-sm mb-2">{monthLabel(mo)} <span className="text-slate-400 font-bold">· ${sub.toFixed(2)} · {allRows.length} member{allRows.length === 1 ? '' : 's'}</span>{split && <span className="ml-2 text-[10px] font-black uppercase tracking-widest text-slate-400">billed separately</span>}</p>
+                                 {sides.map(([ctr, rows]) => {
+                                   const sideTotal = rows.reduce((s, c) => s + c.amount, 0);
+                                   return (
+                                     <div key={ctr || 'all'} className={ctr ? 'rounded-lg border p-2 mb-2 ' + (ctr === 'Harper' ? 'border-orange-200 bg-orange-50' : 'border-blue-200 bg-blue-50') : ''}>
+                                       <div className="flex items-center justify-between gap-3 flex-wrap mb-1">
+                                         {ctr ? <p className={'text-[11px] font-black uppercase tracking-widest ' + (ctr === 'Harper' ? 'text-orange-700' : 'text-blue-700')}>{ctr} Wellness Center · ${sideTotal.toFixed(2)} · {rows.length} member{rows.length === 1 ? '' : 's'}</p> : <span />}
+                                         <button onClick={() => markMonthPaid(corp, mo, ctr)} className="bg-[#16a34a] text-white px-3 py-1.5 rounded-lg text-[11px] font-bold hover:bg-green-700">{ctr ? 'Mark ' + ctr + ' paid' : 'Mark this month paid'}</button>
+                                       </div>
+                                       <div className="mt-1 space-y-1">
+                                         {rows.map(c => (
+                                           <div key={c.airtableId} className="flex items-center justify-between gap-3 text-[11px]">
+                                             <span className="text-slate-500 font-medium truncate">{c.memberName}</span>
+                                             <button onClick={() => editCharge(corp, c)} className="font-black text-slate-600 hover:text-[#1080ad] whitespace-nowrap">${c.amount.toFixed(2)} <span className="text-slate-300">edit</span></button>
+                                           </div>
+                                         ))}
+                                       </div>
                                      </div>
-                                   ))}
-                                 </div>
+                                   );
+                                 })}
                                </div>
                              );
                            })}
@@ -2392,11 +2414,11 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                          <div className="w-10 h-10 rounded-xl bg-[#8b5cf6]/10 flex items-center justify-center shrink-0"><Briefcase size={18} className="text-[#8b5cf6]" /></div>
                          <div className="min-w-0">
                            <h3 className="font-black text-[#001f3f] text-lg truncate">{corp.name}</h3>
-                           <p className="text-[11px] text-slate-400 font-bold">{corpMembers.length} enrolled · {totalPeriodVisits} visits · {isInternal ? 'No Charge' : '$' + totalOwed.toFixed(2) + ' owed'}</p>
+                           <p className="text-[11px] text-slate-400 font-bold">{corpMembers.length} enrolled · {isInternal ? 'No charge' : chargesLoaded ? (corpOwedTotal > 0 ? '$' + corpOwedTotal.toFixed(2) + ' owed across ' + corpOwedMonthCount + ' month' + (corpOwedMonthCount === 1 ? '' : 's') : 'Nothing owed') : 'Loading…'}</p>
                          </div>
                        </div>
                        <div className="flex items-center gap-3 shrink-0">
-                         {isInternal ? (<span className="px-3 py-1 rounded-full text-[10px] font-black tracking-widest bg-slate-100 text-slate-600">INTERNAL · NO CHARGE</span>) : isSplitPaid ? (<div className="flex gap-1.5"><span className={`px-2 py-1 rounded-full text-[9px] font-black tracking-widest ${isPaidAnthony ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>ANT {isPaidAnthony ? '✓' : 'UNPAID'}</span><span className={`px-2 py-1 rounded-full text-[9px] font-black tracking-widest ${isPaidHarper ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>HRP {isPaidHarper ? '✓' : 'UNPAID'}</span></div>) : (<span className={`px-3 py-1 rounded-full text-[10px] font-black tracking-widest ${isPaid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{isPaid ? `PAID${corpPayMethod ? ` · ${corpPayMethod.toUpperCase()}` : ''}` : 'UNPAID'}</span>)}
+                         {isInternal ? (<span className="px-3 py-1 rounded-full text-[10px] font-black tracking-widest bg-slate-100 text-slate-600">INTERNAL · NO CHARGE</span>) : isSplitPaid ? (<div className="flex gap-1.5"><span className={`px-2 py-1 rounded-full text-[9px] font-black tracking-widest ${!corpOwedRows.some(c => centerOfCharge(c) === 'Anthony') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>ANT {!corpOwedRows.some(c => centerOfCharge(c) === 'Anthony') ? '✓' : '$' + corpOwedRows.filter(c => centerOfCharge(c) === 'Anthony').reduce((s, c) => s + c.amount, 0).toFixed(0)}</span><span className={`px-2 py-1 rounded-full text-[9px] font-black tracking-widest ${!corpOwedRows.some(c => centerOfCharge(c) === 'Harper') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>HRP {!corpOwedRows.some(c => centerOfCharge(c) === 'Harper') ? '✓' : '$' + corpOwedRows.filter(c => centerOfCharge(c) === 'Harper').reduce((s, c) => s + c.amount, 0).toFixed(0)}</span></div>) : (<span className={`px-3 py-1 rounded-full text-[10px] font-black tracking-widest ${isInternal || corpOwedTotal === 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{isInternal ? 'NO CHARGE' : corpOwedTotal === 0 ? 'PAID' : '$' + corpOwedTotal.toFixed(0) + ' OWED'}</span>)}
                          <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-transform ${expandedCorpId === corp.id ? 'rotate-90 bg-blue-100 text-[#1080ad]' : 'bg-slate-100 text-slate-400'}`}><ChevronRight size={14} /></div>
                        </div>
                      </button>
