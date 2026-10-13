@@ -445,11 +445,12 @@ const getBaseRate = (p, b) => {
   };
 
   // charges for the current month are created once, automatically
-  const generateThisMonth = async (existing) => {
+  const generateThisMonth = async (existing, loud) => {
     if (generatingCharges) return;
     const key = monthKey();
     const have = (existing || corpCharges).some(c => c.month === key);
-    if (have) return;
+    if (have) { if (loud) alert(monthLabel(key) + ' charges already exist. Nothing to do.'); return; }
+    if (!corporatePartners.length) { if (loud) alert('Corporate partners have not loaded yet. Wait a moment and try again.'); return; }
     const rows = [];
     corporatePartners.forEach(cp => {
       membersRef.current
@@ -468,7 +469,10 @@ const getBaseRate = (p, b) => {
           });
         });
     });
-    if (!rows.length) return;
+    if (!rows.length) {
+      if (loud) alert('Nothing to generate.\n\nNo corporate members were found with a monthly rate above $0.\n\nCheck that members have a Corporate Sponsor matching a partner, and that their Monthly Rate is not blank.');
+      return;
+    }
     setGeneratingCharges(true);
     try {
       const res = await window.fetch('/api/save-corporate-charge', {
@@ -479,8 +483,13 @@ const getBaseRate = (p, b) => {
       if (j.success) {
         await loadCorpCharges();
         writeLog({ user: (user && user.name) || 'System', center: (user && user.center) || '', recordType: 'Corporate', recordName: 'All corporate partners', action: 'Generated monthly charges', fields: monthLabel(key) + ': ' + j.created + ' charges created', notes: '' });
+        if (loud) showToast(j.created + ' charges created for ' + monthLabel(key) + '.', 'success', 5000);
+      } else if (loud) {
+        alert('Could not create the charges:\n\n' + (j.error || 'unknown error'));
       }
-    } catch (e) {}
+    } catch (e) {
+      if (loud) alert('Could not reach the server: ' + e.message);
+    }
     setGeneratingCharges(false);
   };
 
@@ -2280,7 +2289,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
           const currentPeriodVisits = visits.filter(v => { if (!v.time) return false; const d = new Date(v.time); return d.getFullYear() === y && targetMonths.includes(d.getMonth()); });
           return (
           <div className="space-y-6">
-            <div className="flex justify-between items-center mb-4"><div><h2 className="text-3xl font-bold text-[#001f3f] tracking-tight">Corporate Partners</h2><p className="text-slate-400 font-medium">Manage corporate sponsorships and billing rosters.</p></div><div className="bg-white p-2 rounded-xl shadow-sm border border-slate-200"><PeriodSelector value={reportMonth} onChange={(e) => setReportMonth(e.target.value)} customStart={customRangeStart} customEnd={customRangeEnd} onCustomStartChange={(e) => setCustomRangeStart(e.target.value)} onCustomEndChange={(e) => setCustomRangeEnd(e.target.value)} /></div></div>
+            <div className="flex justify-between items-center mb-4"><div><h2 className="text-3xl font-bold text-[#001f3f] tracking-tight">Corporate Partners</h2><p className="text-slate-400 font-medium">Manage corporate sponsorships and billing rosters.</p><button onClick={() => { loadCorpCharges().then(cs => generateThisMonth(cs, true)); }} className="mt-2 bg-white border border-slate-200 text-[#001f3f] px-4 py-1.5 rounded-lg font-bold text-xs shadow-sm hover:bg-slate-50">{generatingCharges ? 'Working...' : 'Generate this month\'s charges'}</button></div><div className="bg-white p-2 rounded-xl shadow-sm border border-slate-200"><PeriodSelector value={reportMonth} onChange={(e) => setReportMonth(e.target.value)} customStart={customRangeStart} customEnd={customRangeEnd} onCustomStartChange={(e) => setCustomRangeStart(e.target.value)} onCustomEndChange={(e) => setCustomRangeEnd(e.target.value)} /></div></div>
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4">
               <Search className="text-slate-300 shrink-0" size={18} />
               <input className="flex-1 outline-none text-sm font-medium text-[#001f3f] placeholder-slate-300" placeholder="Search corporate partners..." value={corpSearch} onChange={e => setCorpSearch(e.target.value)} />
