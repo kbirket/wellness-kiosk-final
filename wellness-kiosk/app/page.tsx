@@ -456,9 +456,16 @@ const getBaseRate = (p, b) => {
       membersRef.current
         .filter(m => m.sponsorName === cp.sponsorMatch && m.status !== 'INACTIVE' && !m.inactive)
         .forEach(m => {
-          // a covered family member is billed through the family payer, never separately
+          // a covered family member is billed through the family payer, never separately.
+          // if nobody in the household has been flagged yet, fall back to whoever carries the rate.
           const inFam = !!(m.familyGroupId || m.familyName);
-          if (inFam && !m.familyPrimary) return;
+          if (inFam && !m.familyPrimary) {
+            const household = membersRef.current.filter(x =>
+              (m.familyGroupId && x.familyGroupId === m.familyGroupId) ||
+              (m.familyName && x.familyName && x.familyName === m.familyName));
+            const flagged = household.some(x => x.familyPrimary);
+            if (flagged) return;
+          }
           const rate = parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0;
           if (rate <= 0) return;
           rows.push({
