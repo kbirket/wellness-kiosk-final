@@ -2231,23 +2231,65 @@ var showToast = function(message, type, duration) { setToast({ message: message,
   };
 
   const addOwedMonth = async (cp) => {
-    const mo = window.prompt('Which month does ' + cp.name + ' still owe?\n\nUse MM-YYYY, for example 07-2026.', '');
+    const mo = window.prompt('Which month does ' + cp.name + ' still owe?\n\nUse MM-YYYY, for example 09-2026.', '');
     if (mo === null) return;
-    if (!/^\d{2}-\d{4}$/.test(mo.trim())) { alert('Use MM-YYYY, for example 07-2026.'); return; }
+    if (!/^\d{2}-\d{4}$/.test(mo.trim())) { alert('Use MM-YYYY, for example 09-2026.'); return; }
+    const key = mo.trim();
+    if (chargesFor(cp).some(c => c.month === key)) {
+      if (!window.confirm(monthLabel(key) + ' already has charges for ' + cp.name + '.\n\nAdd more anyway?')) return;
+    }
+    const how = window.prompt('How do you want to enter ' + monthLabel(key) + '?\n\n1. A balance - just the total they owe\n2. Member by member - a line for each person at their rate\n\nType 1 or 2.', '1');
+    if (how === null) return;
+
+    if (how.trim() === '1') {
+      const amt = window.prompt('What does ' + cp.name + ' owe for ' + monthLabel(key) + '?', '');
+      if (amt === null) return;
+      const total = parseFloat(String(amt).replace(/[^0-9.]/g, ''));
+      if (isNaN(total) || total <= 0) { alert('Enter a dollar amount.'); return; }
+      let ctr = '';
+      if (isSplitPayer(cp)) {
+        const side = window.prompt(cp.name + ' bills each center separately.\n\nWhich side is this $' + total.toFixed(2) + ' for?\n\nType A for Anthony or H for Harper.', 'A');
+        if (side === null) return;
+        ctr = side.trim().toUpperCase().startsWith('H') ? 'Harper' : 'Anthony';
+      }
+      const note = window.prompt('Anything to note about it? (optional)', 'Balance entered by hand');
+      if (note === null) return;
+      const anyMember = membersRef.current.find(m => m.sponsorName === cp.sponsorMatch && (!ctr || ((m.center || '').toLowerCase().includes('harper') ? 'Harper' : 'Anthony') === ctr));
+      const rows = [{
+        companyId: cp.id,
+        memberRecId: anyMember ? anyMember.airtableId : '',
+        memberName: (ctr ? ctr + ' balance' : 'Balance') + ' - ' + monthLabel(key),
+        month: key,
+        amount: total,
+        status: 'Owed',
+        notes: note || 'Balance entered by hand'
+      }];
+      try {
+        const res = await window.fetch('/api/save-corporate-charge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ create: rows }) });
+        const j = await res.json();
+        if (!j.success) { alert('Could not add: ' + (j.error || 'unknown error')); return; }
+        await loadCorpCharges();
+        writeLog({ user: (user && user.name) || 'Unknown', center: (user && user.center) || '', recordType: 'Corporate', recordName: cp.name, action: 'Added a balance owed', fields: monthLabel(key) + (ctr ? ' (' + ctr + ')' : '') + ': $' + total.toFixed(2) + (note ? ' - ' + note : ''), notes: '' });
+        showToast('Added $' + total.toFixed(2) + ' for ' + monthLabel(key) + '.', 'success', 4000);
+      } catch (e) { alert('Network error.'); }
+      return;
+    }
+
     const mems = membersRef.current.filter(m => m.sponsorName === cp.sponsorMatch);
     if (!mems.length) { alert('No members are linked to ' + cp.name + '.'); return; }
     const who = window.prompt('Who was it for?\n\n' + mems.map((m, i) => (i + 1) + '. ' + m.firstName + ' ' + m.lastName).join('\n') + '\n\nType a number, or "all" for everyone.', 'all');
     if (who === null) return;
     const picked = who.trim().toLowerCase() === 'all' ? mems : [mems[parseInt(who) - 1]].filter(Boolean);
     if (!picked.length) { alert('That was not one of the numbers.'); return; }
-    const rows = picked.map(m => ({ companyId: cp.id, memberRecId: m.airtableId, memberName: (m.firstName || '') + ' ' + (m.lastName || '') + (m.id ? ' (' + m.id + ')' : ''), month: mo.trim(), amount: parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0, status: 'Owed', notes: 'Added by hand' }));
+    const rows = picked.map(m => ({ companyId: cp.id, memberRecId: m.airtableId, memberName: (m.firstName || '') + ' ' + (m.lastName || '') + (m.id ? ' (' + m.id + ')' : ''), month: key, amount: parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0, status: 'Owed', notes: 'Added by hand' })).filter(r => r.amount > 0);
+    if (!rows.length) { alert('Nobody picked has a rate above $0.'); return; }
     try {
       const res = await window.fetch('/api/save-corporate-charge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ create: rows }) });
       const j = await res.json();
       if (!j.success) { alert('Could not add: ' + (j.error || 'unknown error')); return; }
       await loadCorpCharges();
-      writeLog({ user: (user && user.name) || 'Unknown', center: (user && user.center) || '', recordType: 'Corporate', recordName: cp.name, action: 'Added a month owed', fields: monthLabel(mo.trim()) + ': ' + rows.length + ' charge(s)', notes: '' });
-      showToast('Added ' + monthLabel(mo.trim()) + ' for ' + rows.length + ' member(s).', 'success', 4000);
+      writeLog({ user: (user && user.name) || 'Unknown', center: (user && user.center) || '', recordType: 'Corporate', recordName: cp.name, action: 'Added a month owed', fields: monthLabel(key) + ': ' + rows.length + ' charge(s)', notes: '' });
+      showToast('Added ' + monthLabel(key) + ' for ' + rows.length + ' member(s).', 'success', 4000);
     } catch (e) { alert('Network error.'); }
   };
 
