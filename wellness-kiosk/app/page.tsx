@@ -2617,7 +2617,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                              const byMonth = Array.from(new Set(settled.map(c => c.month))).sort(monthSort);
                              return (
                                <div className="mt-3 border-t border-slate-200 pt-3">
-                                 <p className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2">Paid</p>
+                                 <p className="text-[11px] font-black uppercase tracking-widest text-green-700 mb-2">Paid</p>
                                  {byMonth.map(mo2 => {
                                    const rws = settled.filter(c => c.month === mo2);
                                    const amt = rws.reduce((s, c) => s + c.amount, 0);
@@ -2626,8 +2626,8 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                                    const nte = rws.find(c => c.notes && c.notes !== 'Generated automatically' && c.notes !== 'Added by hand');
                                    return (
                                      <div key={mo2} className="flex items-center justify-between gap-3 text-[11px] py-1">
-                                       <span className="text-slate-500 font-bold">{monthLabel(mo2)} <button onClick={() => markMonthUnpaid(corp, mo2)} className="ml-2 text-[10px] font-black uppercase tracking-widest text-red-500 bg-red-50 border border-red-200 rounded-full px-2 py-0.5 hover:bg-red-100">Undo</button></span>
-                                       <span className="text-slate-400 font-medium truncate text-right">
+                                       <span className="text-[#001f3f] font-black">{monthLabel(mo2)} <button onClick={() => markMonthUnpaid(corp, mo2)} className="ml-2 text-[10px] font-black uppercase tracking-widest text-white bg-red-600 rounded-full px-2.5 py-1 hover:bg-red-700">Undo</button></span>
+                                       <span className="text-slate-600 font-bold truncate text-right">
                                          ${amt.toFixed(2)}
                                          {how2 ? ' \u00b7 ' + how2.paymentMethod : ''}
                                          {when ? ' \u00b7 ' + new Date(when.paidDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}
