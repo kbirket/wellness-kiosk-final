@@ -299,7 +299,7 @@ const getBaseRate = (p, b) => {
     return rate;
   };
 
-  // ---- CHANGE LOG -------------------------------------------------------
+  // ---- CHANGE LOGS -------------------------------------------------------
   // Every write to /api/* goes through logFetch, which records what changed.
   const LOGGED_ROUTES = {
     'update-member':        ['Member',       'Updated member'],
