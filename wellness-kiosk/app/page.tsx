@@ -2310,6 +2310,36 @@ var showToast = function(message, type, duration) { setToast({ message: message,
     } catch (e) { alert('Network error.'); }
   };
 
+  const markMonthUnpaid = async (cp, mo, ctr) => {
+    const rows = chargesFor(cp).filter(c => c.month === mo && c.status === 'Paid' && (!ctr || centerOfCharge(c) === ctr));
+    if (!rows.length) return;
+    const total = rows.reduce((s, c) => s + c.amount, 0);
+    if (!window.confirm('Put ' + monthLabel(mo) + (ctr ? ' - ' + ctr : '') + ' back to unpaid for ' + cp.name + '?\n\n$' + total.toFixed(2) + ' across ' + rows.length + ' line' + (rows.length === 1 ? '' : 's') + ' will show as owed again.')) return;
+    try {
+      const res = await window.fetch('/api/save-corporate-charge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ updates: rows.map(r => ({ recordId: r.airtableId, status: 'Owed', paidDate: '', paymentMethod: '', notes: 'Payment undone' })) }) });
+      const j = await res.json();
+      if (!j.success) { alert('Could not undo: ' + (j.error || 'unknown error')); return; }
+      await loadCorpCharges();
+      writeLog({ user: (user && user.name) || 'Unknown', center: (user && user.center) || '', recordType: 'Corporate', recordName: cp.name + (ctr ? ' (' + ctr + ')' : ''), action: 'Undid a payment', fields: monthLabel(mo) + ': $' + total.toFixed(2) + ' back to owed', notes: '' });
+      showToast(monthLabel(mo) + ' is owed again.', 'success', 4000);
+    } catch (e) { alert('Network error - nothing was changed.'); }
+  };
+
+  const clearCredit = async (cp, ctr) => {
+    const rows = chargesFor(cp).filter(c => c.status === 'Credit' && (!ctr || (c.memberName || '').indexOf(ctr) === 0));
+    if (!rows.length) return;
+    const amt = rows.reduce((s, c) => s + Math.abs(c.amount), 0);
+    if (!window.confirm('Remove the $' + amt.toFixed(2) + ' credit' + (ctr ? ' on the ' + ctr + ' side' : '') + ' for ' + cp.name + '?')) return;
+    try {
+      const res = await window.fetch('/api/save-corporate-charge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ updates: rows.map(r => ({ recordId: r.airtableId, status: 'Removed', notes: 'Credit cleared by hand' })) }) });
+      const j = await res.json();
+      if (!j.success) { alert('Could not clear it: ' + (j.error || 'unknown error')); return; }
+      await loadCorpCharges();
+      writeLog({ user: (user && user.name) || 'Unknown', center: (user && user.center) || '', recordType: 'Corporate', recordName: cp.name + (ctr ? ' (' + ctr + ')' : ''), action: 'Cleared a credit', fields: '$' + amt.toFixed(2), notes: '' });
+      showToast('Credit removed.', 'success', 3000);
+    } catch (e) { alert('Network error.'); }
+  };
+
   const creditFor = (cp, ctr) => chargesFor(cp)
     .filter(c => c.status === 'Credit' && (!ctr || (c.memberName || '').indexOf(ctr) === 0))
     .reduce((s, c) => s + Math.abs(c.amount), 0);
@@ -2535,9 +2565,9 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                              <div className="flex items-center gap-2">
                                <span className={"px-3 py-1 rounded-full text-[11px] font-black " + (total > 0 ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700")}>{total > 0 ? "$" + total.toFixed(2) + " across " + months.length + " month" + (months.length === 1 ? "" : "s") : "Nothing owed"}</span>
                                {isSplitPayer(corp) ? (<>
-                                 {creditFor(corp, 'Anthony') > 0 && <span className="px-3 py-1 rounded-full text-[11px] font-black bg-blue-100 text-blue-700">ANT ${creditFor(corp, 'Anthony').toFixed(2)} credit</span>}
-                                 {creditFor(corp, 'Harper') > 0 && <span className="px-3 py-1 rounded-full text-[11px] font-black bg-orange-100 text-orange-700">HRP ${creditFor(corp, 'Harper').toFixed(2)} credit</span>}
-                               </>) : (creditFor(corp) > 0 && <span className="px-3 py-1 rounded-full text-[11px] font-black bg-blue-100 text-blue-700">${creditFor(corp).toFixed(2)} credit</span>)}
+                                 {creditFor(corp, 'Anthony') > 0 && <button onClick={() => clearCredit(corp, 'Anthony')} title="Click to remove this credit" className="px-3 py-1 rounded-full text-[11px] font-black bg-blue-100 text-blue-700 hover:bg-blue-200">ANT ${creditFor(corp, 'Anthony').toFixed(2)} credit</button>}
+                                 {creditFor(corp, 'Harper') > 0 && <button onClick={() => clearCredit(corp, 'Harper')} title="Click to remove this credit" className="px-3 py-1 rounded-full text-[11px] font-black bg-orange-100 text-orange-700 hover:bg-orange-200">HRP ${creditFor(corp, 'Harper').toFixed(2)} credit</button>}
+                               </>) : (creditFor(corp) > 0 && <button onClick={() => clearCredit(corp)} title="Click to remove this credit" className="px-3 py-1 rounded-full text-[11px] font-black bg-blue-100 text-blue-700 hover:bg-blue-200">${creditFor(corp).toFixed(2)} credit</button>)}
                                {isSplitPayer(corp) ? (<>
                                  <button onClick={() => recordPayment(corp, 'Anthony')} className="bg-[#1080ad] text-white px-3 py-1.5 rounded-lg text-[11px] font-bold hover:bg-[#0d6f94]">Payment - Anthony</button>
                                  <button onClick={() => recordPayment(corp, 'Harper')} className="bg-[#dd6d22] text-white px-3 py-1.5 rounded-lg text-[11px] font-bold hover:bg-[#c25d18]">Payment - Harper</button>
@@ -2596,7 +2626,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                                    const nte = rws.find(c => c.notes && c.notes !== 'Generated automatically' && c.notes !== 'Added by hand');
                                    return (
                                      <div key={mo2} className="flex items-center justify-between gap-3 text-[11px] py-1">
-                                       <span className="text-slate-500 font-bold">{monthLabel(mo2)}</span>
+                                       <span className="text-slate-500 font-bold">{monthLabel(mo2)} <button onClick={() => markMonthUnpaid(corp, mo2)} className="ml-1 text-[10px] font-bold text-slate-300 hover:text-red-500 underline">undo</button></span>
                                        <span className="text-slate-400 font-medium truncate text-right">
                                          ${amt.toFixed(2)}
                                          {how2 ? ' \u00b7 ' + how2.paymentMethod : ''}
