@@ -448,9 +448,10 @@ const getBaseRate = (p, b) => {
   const generateThisMonth = async (existing, loud) => {
     if (generatingCharges) return;
     const key = monthKey();
-    const have = (existing || corpCharges).some(c => c.month === key);
-    if (have) { if (loud) alert(monthLabel(key) + ' charges already exist. Nothing to do.'); return; }
     if (!corporatePartners.length) { if (loud) alert('Corporate partners have not loaded yet. Wait a moment and try again.'); return; }
+    const already = (existing || corpCharges).filter(c => c.month === key && c.status !== 'Removed');
+    const alreadyFor = {};
+    already.forEach(c => { if (c.memberRecId) alreadyFor[c.companyId + '|' + c.memberRecId] = true; });
     const rows = [];
     corporatePartners.forEach(cp => {
       membersRef.current
@@ -466,6 +467,7 @@ const getBaseRate = (p, b) => {
             const flagged = household.some(x => x.familyPrimary);
             if (flagged) return;
           }
+          if (alreadyFor[cp.id + '|' + m.airtableId]) return;
           const rate = parseFloat(String(m.monthlyRate).replace(/[^0-9.]/g, '')) || 0;
           if (rate <= 0) return;
           rows.push({
@@ -480,7 +482,10 @@ const getBaseRate = (p, b) => {
         });
     });
     if (!rows.length) {
-      if (loud) alert('Nothing to generate.\n\nNo corporate members were found with a monthly rate above $0.\n\nCheck that members have a Corporate Sponsor matching a partner, and that their Monthly Rate is not blank.');
+      if (loud) {
+        if (already.length) alert(monthLabel(key) + ' is already complete. Everyone with a rate has a charge.');
+        else alert('Nothing to generate.\n\nNo corporate members were found with a monthly rate above $0.\n\nCheck that members have a Corporate Sponsor matching a partner, and that their Monthly Rate is not blank.');
+      }
       return;
     }
     setGeneratingCharges(true);
@@ -492,8 +497,10 @@ const getBaseRate = (p, b) => {
       const j = await res.json();
       if (j.success) {
         await loadCorpCharges();
-        writeLog({ user: (user && user.name) || 'System', center: (user && user.center) || '', recordType: 'Corporate', recordName: 'All corporate partners', action: 'Generated monthly charges', fields: monthLabel(key) + ': ' + j.created + ' charges created', notes: '' });
-        if (loud) showToast(j.created + ' charges created for ' + monthLabel(key) + '.', 'success', 5000);
+        writeLog({ user: (user && user.name) || 'System', center: (user && user.center) || '', recordType: 'Corporate', recordName: 'All corporate partners', action: already.length ? 'Added missing charges' : 'Generated monthly charges', fields: monthLabel(key) + ': ' + j.created + (already.length ? ' member(s) added' : ' charges created'), notes: '' });
+        if (loud) showToast(already.length
+          ? j.created + ' member' + (j.created === 1 ? '' : 's') + ' added to ' + monthLabel(key) + '.'
+          : j.created + ' charges created for ' + monthLabel(key) + '.', 'success', 5000);
       } else if (loud) {
         alert('Could not create the charges:\n\n' + (j.error || 'unknown error'));
       }
