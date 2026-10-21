@@ -2626,7 +2626,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                                    const nte = rws.find(c => c.notes && c.notes !== 'Generated automatically' && c.notes !== 'Added by hand');
                                    return (
                                      <div key={mo2} className="flex items-center justify-between gap-3 text-[11px] py-1">
-                                       <span className="text-slate-500 font-bold">{monthLabel(mo2)} <button onClick={() => markMonthUnpaid(corp, mo2)} className="ml-1 text-[10px] font-bold text-slate-300 hover:text-red-500 underline">undo</button></span>
+                                       <span className="text-slate-500 font-bold">{monthLabel(mo2)} <button onClick={() => markMonthUnpaid(corp, mo2)} className="ml-2 text-[10px] font-black uppercase tracking-widest text-red-500 bg-red-50 border border-red-200 rounded-full px-2 py-0.5 hover:bg-red-100">Undo</button></span>
                                        <span className="text-slate-400 font-medium truncate text-right">
                                          ${amt.toFixed(2)}
                                          {how2 ? ' \u00b7 ' + how2.paymentMethod : ''}
