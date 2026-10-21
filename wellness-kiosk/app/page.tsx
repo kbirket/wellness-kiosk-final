@@ -2310,6 +2310,92 @@ var showToast = function(message, type, duration) { setToast({ message: message,
     } catch (e) { alert('Network error.'); }
   };
 
+  const creditFor = (cp, ctr) => chargesFor(cp)
+    .filter(c => c.status === 'Credit' && (!ctr || (c.memberName || '').indexOf(ctr) === 0))
+    .reduce((s, c) => s + Math.abs(c.amount), 0);
+
+  const recordPayment = async (cp, ctr) => {
+    const owedRows = chargesFor(cp).filter(c => c.status === 'Owed' && (!ctr || centerOfCharge(c) === ctr))
+      .sort((a, b) => {
+        const pa = String(a.month).split('-'), pb = String(b.month).split('-');
+        return (parseInt(pa[1]) - parseInt(pb[1])) || (parseInt(pa[0]) - parseInt(pb[0]));
+      });
+    const owedTotalNow = owedRows.reduce((s, c) => s + c.amount, 0);
+    const creditNow = creditFor(cp, ctr);
+
+    const amtRaw = window.prompt(
+      'Record a payment from ' + cp.name + (ctr ? ' - ' + ctr + ' side' : '') + '.\n\n' +
+      'Currently owed: $' + owedTotalNow.toFixed(2) +
+      (creditNow ? '\nCredit on file: $' + creditNow.toFixed(2) : '') +
+      '\n\nHow much did they send?', '');
+    if (amtRaw === null) return;
+    const paid = parseFloat(String(amtRaw).replace(/[^0-9.]/g, ''));
+    if (isNaN(paid) || paid <= 0) { alert('Enter a dollar amount.'); return; }
+
+    const how = window.prompt('How did they pay?\n\nCheck number, ACH, cash, etc.', 'Check');
+    if (how === null) return;
+    const whenRaw = window.prompt('What date did they pay?\n\nUse MM/DD/YYYY, or leave it as today.', new Date().toLocaleDateString('en-US'));
+    if (whenRaw === null) return;
+    let payDate = new Date().toISOString().split('T')[0];
+    if (whenRaw.trim()) {
+      const d = new Date(whenRaw.trim());
+      if (isNaN(d.getTime())) { alert('That date did not make sense. Use MM/DD/YYYY.'); return; }
+      payDate = d.toLocaleDateString('en-CA');
+    }
+    const note = window.prompt('Anything to note? (optional)\n\nFor example: Sept and Oct together, short payment.', '');
+    if (note === null) return;
+
+    // the money plus any credit already on file, applied oldest month first
+    let pot = paid + creditNow;
+    const updates = [];
+    const creates = [];
+    const covered = [];
+    for (const row of owedRows) {
+      if (pot <= 0) break;
+      if (pot >= row.amount) {
+        pot -= row.amount;
+        updates.push({ recordId: row.airtableId, status: 'Paid', paidDate: payDate, paymentMethod: how, notes: note.trim() || row.notes });
+        covered.push(row.month);
+      } else {
+        // part of this line is covered — split it so the books still add up
+        const remainder = Number((row.amount - pot).toFixed(2));
+        const part = Number(pot.toFixed(2));
+        updates.push({ recordId: row.airtableId, amount: part, status: 'Paid', paidDate: payDate, paymentMethod: how, notes: (note.trim() ? note.trim() + ' - ' : '') + 'partial payment' });
+        creates.push({ companyId: cp.id, memberRecId: row.memberRecId, memberName: row.memberName, month: row.month, amount: remainder, status: 'Owed', notes: 'Remainder after a partial payment' });
+        pot = 0;
+        covered.push(row.month);
+      }
+    }
+    // any credit already on file has now been spent
+    const oldCredits = chargesFor(cp).filter(c => c.status === 'Credit' && (!ctr || (c.memberName || '').indexOf(ctr) === 0));
+    oldCredits.forEach(c => updates.push({ recordId: c.airtableId, status: 'Removed', notes: 'Applied to a payment on ' + payDate }));
+    // and whatever is left over becomes a new credit
+    const leftover = Number(pot.toFixed(2));
+    if (leftover > 0) {
+      creates.push({ companyId: cp.id, memberRecId: (owedRows[0] && owedRows[0].memberRecId) || '', memberName: (ctr ? ctr + ' credit on account' : 'Credit on account'), month: monthKey(), amount: leftover, status: 'Credit', notes: 'Overpayment on ' + payDate + (note.trim() ? ' - ' + note.trim() : '') });
+    }
+
+    try {
+      if (updates.length) {
+        const r1 = await window.fetch('/api/save-corporate-charge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ updates }) });
+        const j1 = await r1.json();
+        if (!j1.success) { alert('Could not apply the payment: ' + (j1.error || 'unknown error')); return; }
+      }
+      if (creates.length) {
+        const r2 = await window.fetch('/api/save-corporate-charge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ create: creates }) });
+        const j2 = await r2.json();
+        if (!j2.success) { alert('Payment applied, but a follow-up line failed: ' + (j2.error || 'unknown error')); }
+      }
+      await loadCorpCharges();
+      const months = Array.from(new Set(covered)).map(monthLabel);
+      writeLog({ user: (user && user.name) || 'Unknown', center: (user && user.center) || '', recordType: 'Corporate', recordName: cp.name + (ctr ? ' (' + ctr + ')' : ''), action: 'Recorded a payment',
+        fields: '$' + paid.toFixed(2) + ' ' + how + ' on ' + payDate + (months.length ? ' - covered ' + months.join(', ') : '') + (leftover > 0 ? ' - $' + leftover.toFixed(2) + ' credit left' : '') + (note.trim() ? ' - ' + note.trim() : ''), notes: '' });
+      alert('Payment recorded.\n\n$' + paid.toFixed(2) + (creditNow ? ' plus $' + creditNow.toFixed(2) + ' credit' : '') +
+        (months.length ? '\nCovered: ' + months.join(', ') : '\nNothing was owed.') +
+        (leftover > 0 ? '\nLeft over: $' + leftover.toFixed(2) + ' credit, applied to their next charges.' : ''));
+    } catch (e) { alert('Network error - nothing was changed.'); }
+  };
+
   const editCharge = async (cp, c) => {
     const what = window.prompt(c.memberName + ' - ' + monthLabel(c.month) + '\n\nType a new amount, or type REMOVE to take this charge off the bill.', String(c.amount));
     if (what === null) return;
@@ -2448,6 +2534,16 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                              <p className="text-[11px] font-black uppercase tracking-widest text-slate-400">Months owed</p>
                              <div className="flex items-center gap-2">
                                <span className={"px-3 py-1 rounded-full text-[11px] font-black " + (total > 0 ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700")}>{total > 0 ? "$" + total.toFixed(2) + " across " + months.length + " month" + (months.length === 1 ? "" : "s") : "Nothing owed"}</span>
+                               {isSplitPayer(corp) ? (<>
+                                 {creditFor(corp, 'Anthony') > 0 && <span className="px-3 py-1 rounded-full text-[11px] font-black bg-blue-100 text-blue-700">ANT ${creditFor(corp, 'Anthony').toFixed(2)} credit</span>}
+                                 {creditFor(corp, 'Harper') > 0 && <span className="px-3 py-1 rounded-full text-[11px] font-black bg-orange-100 text-orange-700">HRP ${creditFor(corp, 'Harper').toFixed(2)} credit</span>}
+                               </>) : (creditFor(corp) > 0 && <span className="px-3 py-1 rounded-full text-[11px] font-black bg-blue-100 text-blue-700">${creditFor(corp).toFixed(2)} credit</span>)}
+                               {isSplitPayer(corp) ? (<>
+                                 <button onClick={() => recordPayment(corp, 'Anthony')} className="bg-[#1080ad] text-white px-3 py-1.5 rounded-lg text-[11px] font-bold hover:bg-[#0d6f94]">Payment - Anthony</button>
+                                 <button onClick={() => recordPayment(corp, 'Harper')} className="bg-[#dd6d22] text-white px-3 py-1.5 rounded-lg text-[11px] font-bold hover:bg-[#c25d18]">Payment - Harper</button>
+                               </>) : (
+                                 <button onClick={() => recordPayment(corp)} className="bg-[#1080ad] text-white px-3 py-1.5 rounded-lg text-[11px] font-bold hover:bg-[#0d6f94]">Record a payment</button>
+                               )}
                                <button onClick={() => addOwedMonth(corp)} className="text-[11px] font-bold text-slate-400 hover:text-[#1080ad] underline">Add a month</button>
                              </div>
                            </div>
