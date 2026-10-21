@@ -2219,13 +2219,23 @@ var showToast = function(message, type, duration) { setToast({ message: message,
     const total = rows.reduce((s, c) => s + c.amount, 0);
     const how = window.prompt('How did ' + cp.name + ' pay ' + monthLabel(mo) + (ctr ? ' - ' + ctr + ' side' : '') + '? ($' + total.toFixed(2) + ')\n\nCheck number, ACH, cash, etc.', 'Check');
     if (how === null) return;
-    const today = new Date().toISOString().split('T')[0];
+    const todayISO = new Date().toISOString().split('T')[0];
+    const whenRaw = window.prompt('What date did they pay?\n\nUse MM/DD/YYYY, or leave it as today.', new Date().toLocaleDateString('en-US'));
+    if (whenRaw === null) return;
+    let today = todayISO;
+    if (whenRaw.trim()) {
+      const d = new Date(whenRaw.trim());
+      if (isNaN(d.getTime())) { alert('That date did not make sense. Use MM/DD/YYYY.'); return; }
+      today = d.toLocaleDateString('en-CA');
+    }
+    const payNote = window.prompt('Anything to note about this payment? (optional)\n\nFor example: Oct dues, partial payment, paid with Sept.', '');
+    if (payNote === null) return;
     try {
-      const res = await window.fetch('/api/save-corporate-charge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ updates: rows.map(r => ({ recordId: r.airtableId, status: 'Paid', paidDate: today, paymentMethod: how })) }) });
+      const res = await window.fetch('/api/save-corporate-charge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ updates: rows.map(r => ({ recordId: r.airtableId, status: 'Paid', paidDate: today, paymentMethod: how, notes: payNote.trim() || r.notes })) }) });
       const j = await res.json();
       if (!j.success) { alert('Could not mark paid: ' + (j.error || 'unknown error')); return; }
       setCorpCharges(prev => prev.map(c => rows.some(r => r.airtableId === c.airtableId) ? Object.assign({}, c, { status: 'Paid', paidDate: today, paymentMethod: how }) : c));
-      writeLog({ user: (user && user.name) || 'Unknown', center: (user && user.center) || '', recordType: 'Corporate', recordName: cp.name, action: 'Marked a month paid', fields: monthLabel(mo) + (ctr ? ' (' + ctr + ')' : '') + ': $' + total.toFixed(2) + ' - ' + how, notes: '' });
+      writeLog({ user: (user && user.name) || 'Unknown', center: (user && user.center) || '', recordType: 'Corporate', recordName: cp.name, action: 'Marked a month paid', fields: monthLabel(mo) + (ctr ? ' (' + ctr + ')' : '') + ': $' + total.toFixed(2) + ' - ' + how + ' on ' + today + (payNote.trim() ? ' - ' + payNote.trim() : ''), notes: '' });
       showToast(cp.name + ' - ' + monthLabel(mo) + (ctr ? ' ' + ctr : '') + ' marked paid.', 'success', 4000);
     } catch (e) { alert('Network error.'); }
   };
@@ -2468,6 +2478,34 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                                </div>
                              );
                            })}
+                           {(() => {
+                             const settled = chargesFor(corp).filter(c => c.status === 'Paid');
+                             if (!settled.length) return null;
+                             const byMonth = Array.from(new Set(settled.map(c => c.month))).sort(monthSort);
+                             return (
+                               <div className="mt-3 border-t border-slate-200 pt-3">
+                                 <p className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2">Paid</p>
+                                 {byMonth.map(mo2 => {
+                                   const rws = settled.filter(c => c.month === mo2);
+                                   const amt = rws.reduce((s, c) => s + c.amount, 0);
+                                   const when = rws.find(c => c.paidDate);
+                                   const how2 = rws.find(c => c.paymentMethod);
+                                   const nte = rws.find(c => c.notes && c.notes !== 'Generated automatically' && c.notes !== 'Added by hand');
+                                   return (
+                                     <div key={mo2} className="flex items-center justify-between gap-3 text-[11px] py-1">
+                                       <span className="text-slate-500 font-bold">{monthLabel(mo2)}</span>
+                                       <span className="text-slate-400 font-medium truncate text-right">
+                                         ${amt.toFixed(2)}
+                                         {how2 ? ' \u00b7 ' + how2.paymentMethod : ''}
+                                         {when ? ' \u00b7 ' + new Date(when.paidDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}
+                                         {nte ? ' \u00b7 ' + nte.notes : ''}
+                                       </span>
+                                     </div>
+                                   );
+                                 })}
+                               </div>
+                             );
+                           })()}
                          </div>
                        );
                      })()}
