@@ -3253,7 +3253,23 @@ const periodRefunds = payments.filter(p => { if (!p.date || !p.isRefund || !isIn
                     // Visit data for the selected period
                     const monthVisits = visits.filter(v => { if (!v.time || !isInPeriod(v.time)) return false; if (viewingCenter === 'both') return true; return v.center && v.center.toLowerCase().includes(viewingCenter); });
                     const monthDayPasses = monthVisits.filter(v => v.type && v.type.includes('VISITOR')).length;
-                    const avgPerDay = daysInMonth > 0 ? Math.round(monthVisits.length / daysInMonth) : 0;
+                                        // Weighted operating days: Mon-Fri count as a full day, Sat and Sun as half.
+                    // A month still in progress only counts the days that have actually happened.
+                    const weightedDays = (() => {
+                      const now = new Date();
+                      let from, to;
+                      if (isCustomRange) { from = new Date(rangeStart); to = new Date(rangeEnd); }
+                      else { from = new Date(yr, mo, 1); to = new Date(yr, mo + 1, 0); }
+                      const todayOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                      if (to > todayOnly) to = todayOnly;
+                      let total = 0;
+                      for (let d = new Date(from.getFullYear(), from.getMonth(), from.getDate()); d <= to; d.setDate(d.getDate() + 1)) {
+                        const wd = d.getDay();
+                        total += (wd === 0 || wd === 6) ? 0.5 : 1;
+                      }
+                      return Math.max(0.5, total);
+                    })();
+                    const avgPerDay = Math.round(monthVisits.length / weightedDays);
                     
                     // Employee + family visits
                     const corpVisits = monthVisits.filter(v => v.type && v.type.includes('CORPORATE'));                     const hd6hchfVisits = monthVisits.filter(v => v.type && (v.type.includes('HD6') || v.type === 'HCHF'));
@@ -3370,7 +3386,7 @@ const periodRefunds = payments.filter(p => { if (!p.date || !p.isRefund || !isIn
 
 <div class="kpi-grid">
 <div class="kpi" style="border-color:#1080ad"><div class="kpi-val" style="color:#1080ad">${monthVisits.length}</div><div class="kpi-lbl">Total Visits</div></div>
-<div class="kpi" style="border-color:#16a34a"><div class="kpi-val" style="color:#16a34a">${avgPerDay}</div><div class="kpi-lbl">Avg / Day</div></div>
+<div class="kpi" style="border-color:#16a34a"><div class="kpi-val" style="color:#16a34a">${avgPerDay}</div><div class="kpi-lbl">Avg / Day*</div></div>
 <div class="kpi" style="border-color:#f59e0b"><div class="kpi-val" style="color:#f59e0b">${newMembers.length}</div><div class="kpi-lbl">New Members</div></div>
 <div class="kpi" style="border-color:#8b5cf6"><div class="kpi-val" style="color:#8b5cf6">${totalClassMembers}</div><div class="kpi-lbl">Total Members</div></div>
 </div>
@@ -3383,8 +3399,7 @@ const periodRefunds = payments.filter(p => { if (!p.date || !p.isRefund || !isIn
 <div class="section-title">Monthly Overview</div>
 <table><thead><tr><th>Metric</th><th style="text-align:right">Value</th></tr></thead><tbody>
 <tr><td class="stat-label">Total Visits</td><td class="stat-value">${monthVisits.length}</td></tr>
-<tr><td class="stat-label">Average Visits Per Day</td><td class="stat-value">${avgPerDay}</td></tr>
-<tr><td class="stat-label">Employee & Family Visits</td><td class="stat-value">${empVisits.length}</td></tr>
+<tr><td class="stat-label">Average Visits Per Day*</td><td class="stat-value">${avgPerDay}</td></tr><tr><td class="stat-label" colspan="2" style="font-size:10px;color:#888;font-style:italic">*Based on ${weightedDays} operating days — weekdays count as one day, Saturday and Sunday as half, since the centers run limited hours then. A month in progress counts only the days so far.</td></tr><tr><td class="stat-label">Employee & Family Visits</td><td class="stat-value">${empVisits.length}</td></tr>
 <tr><td class="stat-label">Paying Corporate Visits</td><td class="stat-value">${corpVisits.length}</td></tr>
 <tr><td class="stat-label">HD6 / HCHF Visits</td><td class="stat-value">${hd6hchfVisits.length}</td></tr></tbody></table>
 
