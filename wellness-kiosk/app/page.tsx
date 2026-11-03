@@ -2216,13 +2216,32 @@ var showToast = function(message, type, duration) { setToast({ message: message,
     return ctr.toLowerCase().includes('harper') ? 'Harper' : 'Anthony';
   };
   const chargesFor = (cp) => corpCharges.filter(c => c.companyId === cp.id && c.status !== 'Removed');
-  const owedFor = (cp) => chargesFor(cp).filter(c => c.status === 'Owed');
+  // On a usage-based partner, a charge is only billable if that member actually came in that month.
+  // Charges are still created for everyone each month; this decides which ones count.
+  const chargeIsBillable = (cp, c) => {
+    if (!cp || !cp.usageBased) return true;
+    const kp = String(c.month || '').split('-');
+    if (kp.length !== 2) return true;
+    const kMo = parseInt(kp[0]) - 1, kYr = parseInt(kp[1]);
+    if (isNaN(kMo) || isNaN(kYr)) return true;
+    const mem = members.find(x => x.airtableId === c.memberRecId);
+    if (!mem) return false;
+    const full = (mem.firstName + ' ' + mem.lastName).toLowerCase();
+    return visits.some(v => {
+      if (!v.time || String(v.name || '').toLowerCase() !== full) return false;
+      const d = new Date(v.time);
+      return d.getFullYear() === kYr && d.getMonth() === kMo;
+    });
+  };
+  const owedFor = (cp) => chargesFor(cp).filter(c => c.status === 'Owed' && chargeIsBillable(cp, c));
   const owedTotal = (cp) => owedFor(cp).reduce((s, c) => s + c.amount, 0);
   const owedMonths = (cp) => Array.from(new Set(owedFor(cp).map(c => c.month))).sort(monthSort);
 
   const markMonthPaid = async (cp, mo, ctr) => {
-    const rows = chargesFor(cp).filter(c => c.month === mo && c.status === 'Owed' && (!ctr || centerOfCharge(c) === ctr));
-    if (!rows.length) return;
+    const allRows = chargesFor(cp).filter(c => c.month === mo && c.status === 'Owed' && (!ctr || centerOfCharge(c) === ctr));
+    const rows = allRows.filter(c => chargeIsBillable(cp, c));
+    const notBilled = allRows.filter(c => !chargeIsBillable(cp, c));
+    if (!rows.length && !notBilled.length) return;
     const total = rows.reduce((s, c) => s + c.amount, 0);
     const how = window.prompt('How did ' + cp.name + ' pay ' + monthLabel(mo) + (ctr ? ' - ' + ctr + ' side' : '') + '? ($' + total.toFixed(2) + ')\n\nCheck number, ACH, cash, etc.', 'Check');
     if (how === null) return;
@@ -2238,10 +2257,10 @@ var showToast = function(message, type, duration) { setToast({ message: message,
     const payNote = window.prompt('Anything to note about this payment? (optional)\n\nFor example: Oct dues, partial payment, paid with Sept.', '');
     if (payNote === null) return;
     try {
-      const res = await window.fetch('/api/save-corporate-charge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ updates: rows.map(r => ({ recordId: r.airtableId, status: 'Paid', paidDate: today, paymentMethod: how, notes: payNote.trim() || r.notes })) }) });
+      const res = await window.fetch('/api/save-corporate-charge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ updates: rows.map(r => ({ recordId: r.airtableId, status: 'Paid', paidDate: today, paymentMethod: how, notes: payNote.trim() || r.notes })).concat(notBilled.map(r => ({ recordId: r.airtableId, status: 'Removed', notes: 'Not billed - no visits that month (usage-based)' }))) }) });
       const j = await res.json();
       if (!j.success) { alert('Could not mark paid: ' + (j.error || 'unknown error')); return; }
-      setCorpCharges(prev => prev.map(c => rows.some(r => r.airtableId === c.airtableId) ? Object.assign({}, c, { status: 'Paid', paidDate: today, paymentMethod: how }) : c));
+      setCorpCharges(prev => prev.map(c => notBilled.some(r => r.airtableId === c.airtableId) ? Object.assign({}, c, { status: 'Removed' }) : rows.some(r => r.airtableId === c.airtableId) ? Object.assign({}, c, { status: 'Paid', paidDate: today, paymentMethod: how }) : c));
       writeLog({ user: (user && user.name) || 'Unknown', center: (user && user.center) || '', recordType: 'Corporate', recordName: cp.name, action: 'Marked a month paid', fields: monthLabel(mo) + (ctr ? ' (' + ctr + ')' : '') + ': $' + total.toFixed(2) + ' - ' + how + ' on ' + today + (payNote.trim() ? ' - ' + payNote.trim() : ''), notes: '' });
       showToast(cp.name + ' - ' + monthLabel(mo) + (ctr ? ' ' + ctr : '') + ' marked paid.', 'success', 4000);
     } catch (e) { alert('Network error.'); }
@@ -2345,7 +2364,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
     .reduce((s, c) => s + Math.abs(c.amount), 0);
 
   const recordPayment = async (cp, ctr) => {
-    const owedRows = chargesFor(cp).filter(c => c.status === 'Owed' && (!ctr || centerOfCharge(c) === ctr))
+    const owedRows = chargesFor(cp).filter(c => c.status === 'Owed' && chargeIsBillable(cp, c) && (!ctr || centerOfCharge(c) === ctr))
       .sort((a, b) => {
         const pa = String(a.month).split('-'), pb = String(b.month).split('-');
         return (parseInt(pa[1]) - parseInt(pb[1])) || (parseInt(pa[0]) - parseInt(pb[0]));
@@ -2542,7 +2561,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                  const paidMatch = corp.paidMonths ? corp.paidMonths.split(',').find(str => str.startsWith(reportMonth)) : null;
                  const paidMatchHarper = corp.paidMonthsHarper ? corp.paidMonthsHarper.split(',').find(str => str.startsWith(reportMonth)) : null;
                  const paidMatchAnthony = corp.paidMonthsAnthony ? corp.paidMonthsAnthony.split(',').find(str => str.startsWith(reportMonth)) : null;
-                 const corpOwedRows = corpCharges.filter(c => c.companyId === corp.id && c.status === 'Owed');
+                 const corpOwedRows = corpCharges.filter(c => c.companyId === corp.id && c.status === 'Owed' && chargeIsBillable(corp, c));
                  const corpOwedTotal = corpOwedRows.reduce((s, c) => s + c.amount, 0);
                  const corpOwedMonthCount = Array.from(new Set(corpOwedRows.map(c => c.month))).length;
                  const isPaidHarper = isInternal || !!paidMatchHarper;
@@ -2618,7 +2637,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                            {months.length === 0 ? (
                              <p className="text-xs text-slate-400 font-medium">Every charge on file has been paid.</p>
                            ) : months.map(mo => {
-                             const allRows = chargesFor(corp).filter(c => c.month === mo && c.status === 'Owed');
+                             const allRows = chargesFor(corp).filter(c => c.month === mo && c.status === 'Owed' && chargeIsBillable(corp, c));
                              const sub = allRows.reduce((s, c) => s + c.amount, 0);
                              const split = isSplitPayer(corp);
                              const sides = split
