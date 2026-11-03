@@ -416,6 +416,7 @@ const getBaseRate = (p, b) => {
   };
 
   const [corpCharges, setCorpCharges] = useState([]);
+  const [openChargeMonths, setOpenChargeMonths] = useState({});
   const [chargesLoaded, setChargesLoaded] = useState(false);
   const [generatingCharges, setGeneratingCharges] = useState(false);
 
@@ -2645,7 +2646,11 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                                : [[null, allRows]];
                              return (
                                <div key={mo} className="bg-white border border-slate-200 rounded-xl p-3 mb-2">
-                                 <p className="font-black text-[#001f3f] text-sm mb-2">{monthLabel(mo)} <span className="text-slate-400 font-bold">· ${sub.toFixed(2)} · {allRows.length} member{allRows.length === 1 ? '' : 's'}</span>{split && <span className="ml-2 text-[10px] font-black uppercase tracking-widest text-slate-400">billed separately</span>}</p>
+                                 <button onClick={() => setOpenChargeMonths(prev => Object.assign({}, prev, { [corp.id + '|' + mo]: !prev[corp.id + '|' + mo] }))} className="w-full flex items-center gap-2 text-left mb-2 group">
+                                   <span className={'text-slate-400 text-[11px] font-black transition-transform ' + (openChargeMonths[corp.id + '|' + mo] ? 'rotate-90' : '')}>▶</span>
+                                   <p className="font-black text-[#001f3f] text-sm group-hover:text-[#1080ad]">{monthLabel(mo)} <span className="text-slate-400 font-bold">· ${sub.toFixed(2)} · {allRows.length} member{allRows.length === 1 ? '' : 's'}</span>{split && <span className="ml-2 text-[10px] font-black uppercase tracking-widest text-slate-400">billed separately</span>}</p>
+                                   <span className="ml-auto text-[10px] font-bold text-slate-300 group-hover:text-slate-500">{openChargeMonths[corp.id + '|' + mo] ? 'hide' : 'show who'}</span>
+                                 </button>
                                  {sides.map(([ctr, rows]) => {
                                    const sideTotal = rows.reduce((s, c) => s + c.amount, 0);
                                    return (
@@ -2654,7 +2659,7 @@ var showToast = function(message, type, duration) { setToast({ message: message,
                                          {ctr ? <p className={'text-[11px] font-black uppercase tracking-widest ' + (ctr === 'Harper' ? 'text-orange-700' : 'text-blue-700')}>{ctr} Wellness Center · ${sideTotal.toFixed(2)} · {rows.length} member{rows.length === 1 ? '' : 's'}</p> : <span />}
                                          <button onClick={() => markMonthPaid(corp, mo, ctr)} className="bg-[#16a34a] text-white px-3 py-1.5 rounded-lg text-[11px] font-bold hover:bg-green-700">{ctr ? 'Mark ' + ctr + ' paid' : 'Mark this month paid'}</button>
                                        </div>
-                                       <div className="mt-1 space-y-1">
+                                       <div className={'mt-1 space-y-1 ' + (openChargeMonths[corp.id + '|' + mo] ? '' : 'hidden')}>
                                          {rows.map(c => (
                                            <div key={c.airtableId} className="flex items-center justify-between gap-3 text-[11px]">
                                              <span className="text-slate-500 font-medium truncate">{c.memberName}</span>
